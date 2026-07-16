@@ -52,6 +52,7 @@ func TestHPSearchLivePruning(t *testing.T) {
 	live := NewHPSearchJobInstance(mrts.GetRealm(REALM1), cfg)
 	progressDir, err := live.StartHPSearchPruningJob(PruneMargin)
 	assert.Nil(t, err, "Error StartHPSearchPruningJob: %v", err)
+	// Clean up the shared progress directory once the job is done.
 	defer func() {
 		live.RmDirEntries(progressDir)
 		live.RmDir(progressDir)
@@ -63,6 +64,7 @@ func TestHPSearchLivePruning(t *testing.T) {
 
 	liveActual := 0.0
 	nPruned := 0
+	// Tally real compute used and how many configs actually got pruned.
 	for _, c := range liveCurves {
 		liveActual += float64(len(c.Scores)) * iterSec
 		if c.Pruned {

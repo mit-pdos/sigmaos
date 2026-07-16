@@ -73,6 +73,7 @@ func syntheticCurve(seed int64, maxIters int) (asymptote float64, scores []float
 // variant (RunTrainer and RunPruningTrainer alike): configId, seed,
 // maxIters, iterDurMs.
 func parseTrainerArgs(args []string) (configId int, seed int64, maxIters int, iterDur time.Duration, err error) {
+	// Each arg is parsed independently so a bad one names itself in the error.
 	configId, err = strconv.Atoi(args[0])
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("configId %v not an int: %w", args[0], err)
@@ -89,16 +90,19 @@ func parseTrainerArgs(args []string) (configId int, seed int64, maxIters int, it
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("iterDurMs %v not an int: %w", args[3], err)
 	}
+	// Convert the raw millisecond count into a proper Duration for callers.
 	return configId, seed, maxIters, time.Duration(iterMs) * time.Millisecond, nil
 }
 
 // newStartedSigmaClnt is the boilerplate shared by every hpsearch trainer
 // variant: connect, then signal to the scheduler that this proc has started.
 func newStartedSigmaClnt() (*sigmaclnt.SigmaClnt, error) {
+	// Connect to SigmaOS using this proc's environment.
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, fmt.Errorf("NewSigmaClnt err %w", err)
 	}
+	// Tell the scheduler we're up and running.
 	if err := sc.Started(); err != nil {
 		return nil, fmt.Errorf("Started err %w", err)
 	}
@@ -124,12 +128,15 @@ func RunTrainer(args []string) {
 		db.DFatalf("RunTrainer: %v", err)
 	}
 
+	// Generate the full curve upfront; nothing is pruned in this baseline.
 	asymptote, scores := syntheticCurve(seed, maxIters)
 	for i := range scores {
+		// Simulate one iteration of training.
 		time.Sleep(iterDur)
 		db.DPrintf(db.HPSEARCH, "hp-trainer config %d iter %d score %f", configId, i, scores[i])
 	}
 
+	// Report the completed curve back to whoever is waiting on us.
 	curve := Curve{ConfigId: configId, Seed: seed, Asymptote: asymptote, Scores: scores}
 	sc.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK", curve))
 }

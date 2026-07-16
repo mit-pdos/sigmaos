@@ -28,8 +28,11 @@ func StartTrainer(sc *sigmaclnt.SigmaClnt, configId int, seed int64, maxIters in
 		strconv.Itoa(maxIters),
 		strconv.FormatInt(iterDur.Milliseconds(), 10),
 	}
+
 	p := proc.NewProc(TrainerBin, args)
 	p.SetMcpu(mcpu)
+
+	// Spawn the proc and wait for it to actually start running.
 	if err := sc.Spawn(p); err != nil {
 		return nil, err
 	}
@@ -46,6 +49,7 @@ func StartTrainer(sc *sigmaclnt.SigmaClnt, configId int, seed int64, maxIters in
 // behavior this benchmark measures.
 func StartJob(sc *sigmaclnt.SigmaClnt, nconfigs int, baseSeed int64, maxIters int, iterDur time.Duration, mcpu proc.Tmcpu) ([]*proc.Proc, error) {
 	procs := make([]*proc.Proc, nconfigs)
+	// Spawn one trainer per config, each with its own derived seed.
 	for i := 0; i < nconfigs; i++ {
 		p, err := StartTrainer(sc, i, baseSeed+int64(i), maxIters, iterDur, mcpu)
 		if err != nil {
@@ -61,6 +65,8 @@ func StartJob(sc *sigmaclnt.SigmaClnt, nconfigs int, baseSeed int64, maxIters in
 // shared progressDir and margin so the trainer can prune itself against
 // its siblings' live progress (see RunPruningTrainer in pruner.go).
 func StartPruningTrainer(sc *sigmaclnt.SigmaClnt, configId int, seed int64, maxIters int, iterDur time.Duration, mcpu proc.Tmcpu, progressDir string, margin float64) (*proc.Proc, error) {
+	// Same argv as StartTrainer, plus the progressDir/margin the trainer
+	// needs to prune itself against its siblings.
 	args := []string{
 		strconv.Itoa(configId),
 		strconv.FormatInt(seed, 10),
@@ -87,11 +93,13 @@ func StartPruningTrainer(sc *sigmaclnt.SigmaClnt, configId int, seed int64, maxI
 // completion. Returns the progress directory alongside the procs so the
 // caller can clean it up once the job is done.
 func StartPruningJob(sc *sigmaclnt.SigmaClnt, nconfigs int, baseSeed int64, maxIters int, iterDur time.Duration, mcpu proc.Tmcpu, margin float64) ([]*proc.Proc, string, error) {
+	// Give this run its own uniquely-named progress directory.
 	progressDir := ProgressDirTop + strconv.FormatInt(time.Now().UnixNano(), 10)
 	if err := sc.MkDirPath(sp.NAMED, strings.TrimPrefix(progressDir, sp.NAMED), 0777); err != nil {
 		return nil, "", err
 	}
 	procs := make([]*proc.Proc, nconfigs)
+	// Spawn one pruning trainer per config, all sharing progressDir.
 	for i := 0; i < nconfigs; i++ {
 		p, err := StartPruningTrainer(sc, i, baseSeed+int64(i), maxIters, iterDur, mcpu, progressDir, margin)
 		if err != nil {

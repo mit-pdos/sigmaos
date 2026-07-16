@@ -69,13 +69,17 @@ func (ji *HPSearchJobInstance) StartHPSearchPruningJob(margin float64) (string, 
 func (ji *HPSearchJobInstance) WaitJobExit() ([]*hpsearch.Curve, error) {
 	curves := make([]*hpsearch.Curve, len(ji.procs))
 	for i, p := range ji.procs {
+		// Block until this config's trainer exits.
 		status, err := ji.WaitExit(p.GetPid())
 		if err != nil {
 			return nil, err
 		}
+		// A non-OK status means the trainer crashed rather than reporting a
+		// curve; surface that instead of silently decoding a zero-valued Curve.
 		if !status.IsStatusOK() {
 			return nil, fmt.Errorf("hp-trainer %v exited with non-OK status %v: %v", p.GetPid(), status.StatusCode, status.Msg())
 		}
+		// Decode the Curve back out of the generic status data.
 		curve, err := hpsearch.NewCurve(status.Data())
 		if err != nil {
 			return nil, err

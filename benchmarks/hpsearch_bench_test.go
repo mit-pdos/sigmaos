@@ -33,6 +33,7 @@ type HPSearchResult struct {
 // for this baseline; it's computed after the fact from the full curves.
 func oraclePruneIters(curves []*hpsearch.Curve, margin float64) []int {
 	maxIters := len(curves[0].Scores)
+	// Compute the best score across all configs at each iteration.
 	bestAtIter := make([]float64, maxIters)
 	for i := 0; i < maxIters; i++ {
 		best := curves[0].Scores[i]
@@ -44,6 +45,7 @@ func oraclePruneIters(curves []*hpsearch.Curve, margin float64) []int {
 		bestAtIter[i] = best
 	}
 	pruneIters := make([]int, len(curves))
+	// For each config, find the earliest iteration it falls behind for good.
 	for ci, c := range curves {
 		pruneIters[ci] = maxIters // default: never pruned
 		for i := 0; i < maxIters; i++ {
@@ -79,10 +81,12 @@ func TestHPSearchBaseline(t *testing.T) {
 	err = ji.StartHPSearchJob()
 	assert.Nil(t, err, "Error StartHPSearchJob: %v", err)
 
+	// Run every config to completion (no pruning) and collect its curve.
 	curves, err := ji.WaitJobExit()
 	assert.Nil(t, err, "Error WaitJobExit: %v", err)
 	assert.Equal(t, cfg.NConfigs, len(curves))
 
+	// Compute, post-hoc, where an oracle would have pruned each config.
 	pruneIters := oraclePruneIters(curves, PruneMargin)
 
 	actual := 0.0

@@ -29,6 +29,7 @@ func progressPath(progressDir string, configId int) string {
 // see this iteration's score, not a fatal error for the trainer itself.
 func publishProgress(sc *fslib.FsLib, progressDir string, configId, iter int, score float64) {
 	pn := progressPath(progressDir, configId)
+	// Clear any previous iteration's file before writing the new one.
 	sc.Remove(pn)
 	if _, err := sc.PutFile(pn, 0777, sp.OWRITE, []byte(fmt.Sprintf("%d %f", iter, score))); err != nil {
 		db.DPrintf(db.HPSEARCH, "publishProgress: PutFile %v err %v", pn, err)
@@ -42,15 +43,18 @@ func publishProgress(sc *fslib.FsLib, progressDir string, configId, iter int, sc
 // post-hoc oracle in benchmarks/hpsearch_bench_test.go, which gets to look
 // at every config's completed curve).
 func bestSiblingScore(sc *fslib.FsLib, progressDir string, selfConfigId int) (best float64, found bool) {
+	// List every config that has published progress so far.
 	sts, err := sc.GetDir(progressDir)
 	if err != nil {
 		return 0, false
 	}
 	for _, st := range sts {
+		// Skip our own progress file and anything not named after a configId.
 		cid, err := strconv.Atoi(st.Name)
 		if err != nil || cid == selfConfigId {
 			continue
 		}
+		// Read that sibling's latest published "<iter> <score>".
 		b, err := sc.GetFile(path.Join(progressDir, st.Name))
 		if err != nil {
 			continue
@@ -60,6 +64,7 @@ func bestSiblingScore(sc *fslib.FsLib, progressDir string, selfConfigId int) (be
 		if _, err := fmt.Sscanf(string(b), "%d %f", &iter, &score); err != nil {
 			continue
 		}
+		// Track the best score seen across all siblings.
 		if !found || score > best {
 			best = score
 			found = true
@@ -81,6 +86,7 @@ func RunPruningTrainer(args []string) {
 	if len(args) != 6 {
 		db.DFatalf("RunPruningTrainer: wrong number of args %v", args)
 	}
+	// Args 0-3 are shared with RunTrainer; 4-5 are pruning-specific.
 	configId, seed, maxIters, iterDur, err := parseTrainerArgs(args[:4])
 	if err != nil {
 		db.DFatalf("RunPruningTrainer: %v", err)
@@ -91,26 +97,31 @@ func RunPruningTrainer(args []string) {
 		db.DFatalf("RunPruningTrainer: margin %v not a float: %v", args[5], err)
 	}
 
+	// Connect to SigmaOS and signal that this proc has started running.
 	sc, err := newStartedSigmaClnt()
 	if err != nil {
 		db.DFatalf("RunPruningTrainer: %v", err)
 	}
 
+	// Same deterministic synthetic curve as the baseline trainer.
 	asymptote, scores := syntheticCurve(seed, maxIters)
 
 	pruned := false
 	prunedAtIter := maxIters
 	behindStreak := 0
 	for i := range scores {
+		// Simulate one iteration of training, then publish the score.
 		time.Sleep(iterDur)
 		publishProgress(sc.FsLib, progressDir, configId, i, scores[i])
 		db.DPrintf(db.HPSEARCH, "hp-trainer-pruned config %d iter %d score %f", configId, i, scores[i])
 
+		// Track how many iterations in a row we've trailed the best sibling.
 		if best, ok := bestSiblingScore(sc.FsLib, progressDir, configId); ok && scores[i] < best-margin {
 			behindStreak++
 		} else {
 			behindStreak = 0
 		}
+		// Once behind for long enough, stop early and report a partial curve.
 		if behindStreak >= SustainIters {
 			pruned = true
 			prunedAtIter = i + 1
@@ -119,6 +130,7 @@ func RunPruningTrainer(args []string) {
 		}
 	}
 
+	// Report the (possibly partial) curve back to whoever is waiting on us.
 	curve := Curve{
 		ConfigId:     configId,
 		Seed:         seed,

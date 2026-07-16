@@ -64,6 +64,8 @@ type Coord struct {
 	nmaptask        int
 	nreducetask     int
 	maliciousMapper uint64
+	slowTaskId      int64
+	slowdownMs      int
 	linesz          string
 	wordsz          string
 	mapperbin       string
@@ -93,7 +95,7 @@ func (s *AStat) String() string {
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 12 {
+	if len(args) != 14 {
 		return nil, errors.New("NewCoord: wrong number of arguments")
 	}
 	c := &Coord{}
@@ -158,6 +160,18 @@ func NewCoord(args []string) (*Coord, error) {
 	c.mftid = task.FtTaskSvcId(args[10])
 	c.rftid = task.FtTaskSvcId(args[11])
 
+	slowTaskId, err := strconv.ParseInt(args[12], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: slowTaskId %v isn't int64", args[12])
+	}
+	c.slowTaskId = slowTaskId
+
+	slowdownMs, err := strconv.Atoi(args[13])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: slowdownMs %v isn't int", args[13])
+	}
+	c.slowdownMs = slowdownMs
+
 	return c, nil
 }
 
@@ -193,7 +207,13 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	if err != nil {
 		db.DFatalf("mapperProc: %v err %v", bin, err)
 	}
-	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), c.intOutdir, c.linesz, c.wordsz}, c.memPerTask)
+	// Delay only the one task designated as the straggler; every other task
+	// gets "0" (no delay).
+	slowdownMs := 0
+	if int64(t.Id) == c.slowTaskId {
+		slowdownMs = c.slowdownMs
+	}
+	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), c.intOutdir, c.linesz, c.wordsz, strconv.Itoa(slowdownMs)}, c.memPerTask)
 	return proc, nil
 }
 

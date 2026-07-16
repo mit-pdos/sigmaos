@@ -64,7 +64,9 @@ func (ji *MRJobInstance) PrepareMRJob() {
 
 func (ji *MRJobInstance) StartMRJob() {
 	db.DPrintf(db.TEST, "Start MR job %v %v", ji.jobname, ji.job)
-	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.memreq, 0, ji.mftid, ji.rftid)
+	// -1, 0: no straggler task is injected for this baseline job type. See
+	// MRStragglerJobInstance (mr_straggler_test.go) for the straggler variant.
+	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.memreq, 0, ji.mftid, ji.rftid, -1, 0)
 }
 
 func (ji *MRJobInstance) Wait() {

@@ -288,7 +288,11 @@ func CreateMapperIntOutDirUx(fsl *fslib.FsLib, job, intOutput string) error {
 	return nil
 }
 
-func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap int, memPerTask proc.Tmem, maliciousMapper int, mftid task.FtTaskSvcId, rftid task.FtTaskSvcId) *procgroupmgr.ProcGroupMgr {
+// slowTaskId (-1 to disable) and slowdownMs let the caller designate a
+// single map task as an artificial straggler, to measure how much a slow
+// task (as opposed to a failed one) hurts job completion time when nothing
+// detects or mitigates it.
+func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap int, memPerTask proc.Tmem, maliciousMapper int, mftid task.FtTaskSvcId, rftid task.FtTaskSvcId, slowTaskId int64, slowdownMs int) *procgroupmgr.ProcGroupMgr {
 	cfg := procgroupmgr.NewProcGroupConfig(NCOORD, "mr-coord",
 		[]string{
 			jobRoot,
@@ -302,6 +306,8 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap
 			strconv.Itoa(maliciousMapper),
 			string(mftid),
 			string(rftid),
+			strconv.FormatInt(slowTaskId, 10),
+			strconv.Itoa(slowdownMs),
 		}, 1000, jobName)
 	return cfg.StartGrpMgr(sc)
 }

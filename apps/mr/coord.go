@@ -769,8 +769,6 @@ func (c *Coord) makeReduceBins() error {
 	} else {
 		return c.createReducers(reduceBinIn)
 	}
-
-	return nil
 }
 
 func (c *Coord) Work() {

@@ -355,19 +355,25 @@ func (c *Coord) speculateMap(ch chan<- ftmgr.Tresult[[]byte, []byte]) {
 
 // speculateReduce is speculateMap's mirror for the reduce phase.
 func (c *Coord) speculateReduce(ch chan<- ftmgr.Tresult[[]byte, []byte]) {
-	// TODO make similar comments as above here
+	// Get number of tasks if enough of the reduce phase has completed to consider speculation. If not, return early.
 	done, err := c.rftclnt.GetNTasks(ftclnt.DONE)
 	if err != nil || float64(done) < SpecMinProgress*float64(c.nreducetask) {
 		return
 	}
+
+	// Get the list of currently running reduce tasks (WIP). If none, return early.
 	wip, err := c.rftclnt.GetTasksByStatus(ftclnt.WIP)
 	if err != nil || len(wip) == 0 {
 		return
 	}
+
+	// Compute the average duration of completed reduce tasks. If none have completed, return early.
 	avg := c.avgDuration(false)
 	if avg <= 0 {
 		return
 	}
+
+	// Check if each running reduce task has exceeded the threshold duration and claim a backup if so.
 	threshold := time.Duration(float64(avg) * SpecSlowFactor)
 	now := time.Now()
 	for _, id := range wip {

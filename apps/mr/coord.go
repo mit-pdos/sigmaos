@@ -134,7 +134,6 @@ func NewCoord(args []string) (*Coord, error) {
 	c := &Coord{}
 	c.jobRoot = args[1]
 	c.job = args[0]
-	// Connect to SigmaOS and set up perf tracking for this coord proc.
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
@@ -143,7 +142,6 @@ func NewCoord(args []string) (*Coord, error) {
 	c.perf = perf
 	db.DPrintf(db.MR_COORD, "Made fslib job %v", c.job)
 	c.SigmaClnt = sc
-	// Parse task-count args.
 	m, err := strconv.Atoi(args[2])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: nmaptask %v isn't int", args[2])
@@ -158,7 +156,6 @@ func NewCoord(args []string) (*Coord, error) {
 	c.mapperbin = args[4]
 	c.reducerbin = args[5]
 
-	// Parse the malicious-mapper injection rate (0 = disabled).
 	malmap, err := strconv.Atoi(args[9])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[9])
@@ -174,7 +171,6 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.memPerTask = proc.Tmem(mem)
 
-	// Look up where the job's output and intermediate dirs live.
 	b, err := c.GetFile(JobOutLink(c.jobRoot, c.job))
 	if err != nil {
 		db.DFatalf("Error GetFile JobOutLink [%v]: %v", JobOutLink(c.jobRoot, c.job), err)
@@ -187,8 +183,6 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.intOutdir = string(b)
 
-	// Tell the scheduler we're up, then set up leader election so only one
-	// coord instance actively claims tasks at a time.
 	c.Started()
 
 	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, LeaderElectDir(c.job)+"/coord-leader", 0)
@@ -781,7 +775,6 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
-	// Now that we're the leader, set up fenced task clients for both phases.
 	f := c.leaderclnt.Fence()
 
 	c.mftclnt = ftclnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid, &f)
@@ -794,7 +787,6 @@ func (c *Coord) Work() {
 		db.DFatalf("Fence reducer err %v", err)
 	}
 
-	// Build the shared results channel and per-phase task coordinators.
 	var err error
 	ch := make(chan ftmgr.Tresult[[]byte, []byte])
 	c.mcoord, err = fttaskmgr.NewFtTaskCoord[[]byte, []byte](c.SigmaClnt, c.mftclnt.AsRawClnt(), ch)
@@ -807,8 +799,6 @@ func (c *Coord) Work() {
 		crash.PartitionNamed(c.FsLib)
 	})
 
-	// Recover any tasks left mid-flight by a previous (crashed) coord, then
-	// resolve any pending reducer-triggered mapper restarts before we start.
 	start := time.Now()
 	if n, err := c.mftclnt.MoveTasksByStatus(ftclnt.WIP, ftclnt.TODO); err != nil {
 		db.DFatalf("RecoverTasks mapper err %v", err)
@@ -827,7 +817,6 @@ func (c *Coord) Work() {
 
 	c.doRestart()
 
-	// Check how much of the job (if any) was already done before we took over.
 	m, err := c.mftclnt.GetNTasks(ftclnt.DONE)
 	if err != nil {
 		db.DFatalf("NtaskDone mappers err %v\n", err)
@@ -839,8 +828,7 @@ func (c *Coord) Work() {
 
 	start = time.Now()
 	if int(m+r) < c.nmaptask+c.nreducetask {
-		// Drive the map and reduce phases concurrently, each claiming and
-		// executing tasks via fttaskmgr until its phase is fully done.
+
 		wg := &sync.WaitGroup{}
 		wg.Add(2)
 		go func() {
@@ -897,7 +885,6 @@ func (c *Coord) Work() {
 		db.DFatalf("job isn't done %v+%v != %v+%v", m, r, c.nmaptask, c.nreducetask)
 	}
 
-	// Job's done: report final stats and unblock anyone waiting on it.
 	db.DPrintf(db.ALWAYS, "job done stat %v", &c.stat)
 
 	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(start))

@@ -134,6 +134,7 @@ func NewCoord(args []string) (*Coord, error) {
 	c := &Coord{}
 	c.jobRoot = args[1]
 	c.job = args[0]
+	// Connect to SigmaOS and set up perf tracking for this coord proc.
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
@@ -142,6 +143,7 @@ func NewCoord(args []string) (*Coord, error) {
 	c.perf = perf
 	db.DPrintf(db.MR_COORD, "Made fslib job %v", c.job)
 	c.SigmaClnt = sc
+	// Parse task-count args.
 	m, err := strconv.Atoi(args[2])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: nmaptask %v isn't int", args[2])
@@ -156,6 +158,7 @@ func NewCoord(args []string) (*Coord, error) {
 	c.mapperbin = args[4]
 	c.reducerbin = args[5]
 
+	// Parse the malicious-mapper injection rate (0 = disabled).
 	malmap, err := strconv.Atoi(args[9])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: maliciousMapper %v isn't int", args[9])
@@ -171,6 +174,7 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.memPerTask = proc.Tmem(mem)
 
+	// Look up where the job's output and intermediate dirs live.
 	b, err := c.GetFile(JobOutLink(c.jobRoot, c.job))
 	if err != nil {
 		db.DFatalf("Error GetFile JobOutLink [%v]: %v", JobOutLink(c.jobRoot, c.job), err)
@@ -183,6 +187,8 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.intOutdir = string(b)
 
+	// Tell the scheduler we're up, then set up leader election so only one
+	// coord instance actively claims tasks at a time.
 	c.Started()
 
 	c.leaderclnt, err = leaderclnt.NewLeaderClnt(c.FsLib, LeaderElectDir(c.job)+"/coord-leader", 0)
@@ -193,6 +199,7 @@ func NewCoord(args []string) (*Coord, error) {
 	c.mftid = task.FtTaskSvcId(args[10])
 	c.rftid = task.FtTaskSvcId(args[11])
 
+	// Parse straggler-injection args (-1 slowTaskId disables it).
 	slowTaskId, err := strconv.ParseInt(args[12], 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: slowTaskId %v isn't int64", args[12])
@@ -205,6 +212,7 @@ func NewCoord(args []string) (*Coord, error) {
 	}
 	c.slowdownMs = slowdownMs
 
+	// Parse the speculative-execution toggle and initialize its bookkeeping.
 	specEnabled, err := strconv.ParseBool(args[14])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: specEnabled %v isn't bool", args[14])
@@ -231,6 +239,9 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 	return p
 }
 
+// mapperProc builds (but doesn't spawn) a mapper proc for task t; called both
+// for a task's primary attempt (via fttaskmgr) and for a speculative backup
+// (via runBackupMap).
 func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	bin, err := ftclnt.Decode[Bin](t.Data)
 	if err != nil {
@@ -264,6 +275,7 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	return proc, nil
 }
 
+// reducerProc is mapperProc's mirror for the reduce phase.
 func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	data, err := ftclnt.Decode[TreduceTask](t.Data)
 	if err != nil {
@@ -473,15 +485,9 @@ func (c *Coord) runBackupReduce(id ftclnt.TaskId, ch chan<- ftmgr.Tresult[[]byte
 	}
 }
 
-// evictSiblings evicts every other recorded attempt for task id (i.e.
-// every attempt pid except exclude) and clears the per-task speculative-
-// execution bookkeeping for id. Called whenever a task's fate is decided --
-// a clean win, a restart, or a plain failure/requeue -- since in every case
-// any other still-running attempt for the same id is now stale: left alone,
-// it could later report success and be treated as a fresh completion,
-// contradicting or racing with the decision that was just made (e.g. a
-// speculative backup reporting OK for a reduce task after its sibling
-// already triggered a restart because it couldn't read its input).
+// evictSiblings kills every other recorded attempt for task id and clears
+// its speculation bookkeeping, so a stale attempt can't later report
+// success once the task's fate (win, restart, or failure) is decided.
 func (c *Coord) evictSiblings(id ftclnt.TaskId, exclude sp.Tpid, isMap bool) {
 	c.specMu.Lock()
 	var losers []sp.Tpid
@@ -527,13 +533,10 @@ func (c *Coord) taskWon(id ftclnt.TaskId, winner sp.Tpid, dur time.Duration, isM
 	c.evictSiblings(id, winner, isMap)
 }
 
-// resetSpeculation clears per-map-task speculative-execution bookkeeping,
-// and evicts any still-recorded attempt (backup or original) for them, when
-// all previously-done mappers are about to be legitimately redone (see
-// doRestart). It also drops mDurations: those completion times belong to
-// the map generation being discarded, and keeping them would skew the
-// straggler-detection average computed for the redo. Reduce-side state
-// doesn't need resetting since reducers aren't bulk-restarted this way.
+// resetSpeculation clears map-side speculation bookkeeping (including
+// mDurations, now stale) and evicts any recorded attempt, since all
+// previously-done mappers are about to be redone (see doRestart). Reducers
+// aren't bulk-restarted this way, so reduce-side state is left alone.
 func (c *Coord) resetSpeculation() {
 	c.specMu.Lock()
 	var losers []sp.Tpid
@@ -750,6 +753,7 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "leader %s nmap %v nreduce %v\n", c.job, c.nmaptask, c.nreducetask)
 
+	// Now that we're the leader, set up fenced task clients for both phases.
 	f := c.leaderclnt.Fence()
 
 	c.mftclnt = ftclnt.NewFtTaskClnt[Bin, Bin](c.FsLib, c.mftid, &f)
@@ -762,6 +766,7 @@ func (c *Coord) Work() {
 		db.DFatalf("Fence reducer err %v", err)
 	}
 
+	// Build the shared results channel and per-phase task coordinators.
 	var err error
 	ch := make(chan ftmgr.Tresult[[]byte, []byte])
 	c.mcoord, err = fttaskmgr.NewFtTaskCoord[[]byte, []byte](c.SigmaClnt, c.mftclnt.AsRawClnt(), ch)
@@ -774,6 +779,8 @@ func (c *Coord) Work() {
 		crash.PartitionNamed(c.FsLib)
 	})
 
+	// Recover any tasks left mid-flight by a previous (crashed) coord, then
+	// resolve any pending reducer-triggered mapper restarts before we start.
 	start := time.Now()
 	if n, err := c.mftclnt.MoveTasksByStatus(ftclnt.WIP, ftclnt.TODO); err != nil {
 		db.DFatalf("RecoverTasks mapper err %v", err)
@@ -792,6 +799,7 @@ func (c *Coord) Work() {
 
 	c.doRestart()
 
+	// Check how much of the job (if any) was already done before we took over.
 	m, err := c.mftclnt.GetNTasks(ftclnt.DONE)
 	if err != nil {
 		db.DFatalf("NtaskDone mappers err %v\n", err)
@@ -803,7 +811,8 @@ func (c *Coord) Work() {
 
 	start = time.Now()
 	if int(m+r) < c.nmaptask+c.nreducetask {
-
+		// Drive the map and reduce phases concurrently, each claiming and
+		// executing tasks via fttaskmgr until its phase is fully done.
 		wg := &sync.WaitGroup{}
 		wg.Add(2)
 		go func() {
@@ -825,11 +834,14 @@ func (c *Coord) Work() {
 			spstats.Inc(&c.stat.Ntask, int64(n))
 		}()
 
+		// Consume results as they arrive, and (if enabled) watch for
+		// stragglers to back up in parallel with the two phases above.
 		go c.processResult(ch, m, r)
 		if c.specEnabled {
 			go c.speculate(ch)
 		}
 
+		// Wait for both phases to finish, then stop the speculation loop.
 		wg.Wait()
 		close(c.specDone)
 		// Deliberately not closing ch: a task can now be marked DONE by
@@ -857,6 +869,7 @@ func (c *Coord) Work() {
 		db.DFatalf("job isn't done %v+%v != %v+%v", m, r, c.nmaptask, c.nreducetask)
 	}
 
+	// Job's done: report final stats and unblock anyone waiting on it.
 	db.DPrintf(db.ALWAYS, "job done stat %v", &c.stat)
 
 	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(start))
@@ -953,15 +966,11 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 				s := newStringSlice(res.Status.Data().([]interface{}))
 				c.restart(s, res.Id)
 				nRestart += 1
-				// This reducer task is being redone; any other still-running
-				// attempt (a speculative backup) for it is now stale.
 				c.evictSiblings(res.Id, res.Proc.GetPid(), false)
 			} else { // if failure but not restart, rerun task immediately again
 				if err := res.Ftclnt.MoveTasks([]ftclnt.TaskId{res.Id}, ftclnt.TODO); err != nil {
 					db.DFatalf("MarkRunnable %v err %v", res.Id, err)
 				}
-				// This task (map or reduce) is being redone; any other
-				// still-running attempt for it is now stale.
 				c.evictSiblings(res.Id, res.Proc.GetPid(), res.Ftclnt == c.mftclnt.AsRawClnt())
 			}
 			c.stat.Nfail.Add(1)

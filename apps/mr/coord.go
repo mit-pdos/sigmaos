@@ -237,6 +237,16 @@ func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
 // for a task's primary attempt (via fttaskmgr) and for a speculative backup
 // (via runBackupMap).
 func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
+	return c.buildMapperProc(t, false)
+}
+
+// buildMapperProc builds (but doesn't spawn) a mapper proc for task t.
+// isBackup is true when building a speculative backup: the straggler-
+// injection delay (when t is the designated straggler task) is only applied
+// to the primary attempt. Applying it to a backup too would force it to pay
+// the identical fixed delay as the attempt it's racing against, so it could
+// never win.
+func (c *Coord) buildMapperProc(t ftclnt.Task[[]byte], isBackup bool) (*proc.Proc, error) {
 	bin, err := ftclnt.Decode[Bin](t.Data)
 	if err != nil {
 		db.DFatalf("mapperProc: failed to convert data to bin %v %v", t.Data, err)
@@ -258,10 +268,10 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	if err != nil {
 		db.DFatalf("mapperProc: %v err %v", bin, err)
 	}
-	// Delay only the one task designated as the straggler; every other task
-	// gets "0" (no delay).
+	// Delay only the primary attempt at the one task designated as the
+	// straggler; every other task/attempt gets "0" (no delay).
 	slowdownMs := 0
-	if int64(t.Id) == c.slowTaskId {
+	if !isBackup && int64(t.Id) == c.slowTaskId {
 		slowdownMs = c.slowdownMs
 	}
 	proc := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), c.intOutdir, c.linesz, c.wordsz, strconv.Itoa(slowdownMs)}, c.memPerTask)
@@ -445,7 +455,7 @@ func (c *Coord) runBackupMap(id ftclnt.TaskId, ch chan<- ftmgr.Tresult[[]byte, [
 	}
 
 	// Construct the process for the map task using the mapperProc function. If this fails, return early.
-	p, err := c.mapperProc(tasks[0])
+	p, err := c.buildMapperProc(tasks[0], true)
 	if err != nil {
 		return
 	}

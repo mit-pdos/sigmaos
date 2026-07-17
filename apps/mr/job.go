@@ -316,6 +316,14 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap
 	return cfg.StartGrpMgr(sc)
 }
 
+// StartMRJobDefault is StartMRJob with straggler injection and speculative
+// execution both disabled -- Go has no default parameters, so this wraps
+// StartMRJob with those two features' "off" sentinels for the common case
+// of callers that don't need either.
+func StartMRJobDefault(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap int, memPerTask proc.Tmem, maliciousMapper int, mftid task.FtTaskSvcId, rftid task.FtTaskSvcId) *procgroupmgr.ProcGroupMgr {
+	return StartMRJob(sc, jobRoot, jobName, job, nmap, memPerTask, maliciousMapper, mftid, rftid, -1, 0, false)
+}
+
 // XXX run as a proc?
 func MergeReducerOutput(fsl *fslib.FsLib, jobRoot, jobName, out string, nreduce int) error {
 	file, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE, 0644)

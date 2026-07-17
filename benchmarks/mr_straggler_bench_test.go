@@ -56,16 +56,6 @@ func runMRStragglerJob(mrts *test.MultiRealmTstate, slowdownMs int, specEnabled 
 	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
 
-	// Boot extra nodes so the 16 mappers + 13 reducers have real room to run
-	// concurrently (mirrors apps/mr/mr_test.go's own setup). Without this,
-	// procs queue for the handful of slots on a single node, and that
-	// queueing delay becomes noise large enough to swamp the deliberately
-	// injected straggler delay, making it unreliable to detect.
-	err := mrts.GetRealm(REALM1).BootNode(1)
-	assert.Nil(ts, err, "Error BootNode 1: %v", err)
-	err = mrts.GetRealm(REALM1).BootNode(1)
-	assert.Nil(ts, err, "Error BootNode 2: %v", err)
-
 	// Each call needs its own job name so that InitCoordFS's MkDir doesn't
 	// collide with a stale job dir from a previous run.
 	jobname := MR_APP + "-mr-straggler-" + rand.String(3) + "-" + mrts.GetRealm(REALM1).GetRealm().String()
@@ -79,7 +69,7 @@ func runMRStragglerJob(mrts *test.MultiRealmTstate, slowdownMs int, specEnabled 
 	dur := time.Since(start)
 	stati := ji.cm.WaitGroup()
 
-	err = mr.PrintMRStats(ji.FsLib, ji.jobRoot, ji.jobname)
+	err := mr.PrintMRStats(ji.FsLib, ji.jobRoot, ji.jobname)
 	assert.Nil(ts, err, "Error print MR stats: %v", err)
 
 	return dur, collectMRStats(ts, stati)

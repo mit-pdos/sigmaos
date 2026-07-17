@@ -126,14 +126,6 @@ func TestMRStragglerBaseline(t *testing.T) {
 // task is far behind the average and launch a backup execution of it,
 // letting whichever attempt (original or backup) finishes first win --
 // recovering most of the straggler's cost.
-//
-// This is deliberately its own standalone test (own fresh realm), rather
-// than running back-to-back with a no-mitigation baseline job in the same
-// test/realm: running two large MR jobs sequentially in one realm reliably
-// wedges the scheduler (see BUG.md) for reasons unrelated to this code, so
-// compare this test's printed completion time against
-// TestMRStragglerBaseline's separately-printed one instead of asserting a
-// direct in-process comparison.
 func TestMRSpeculativeExecution(t *testing.T) {
 	mrts, err := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
 	if !assert.Nil(t, err, "Error New Tstate: %v", err) {

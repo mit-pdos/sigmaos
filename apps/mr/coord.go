@@ -42,7 +42,7 @@ const (
 	// ~1.5x textbook value) because task durations here have enough natural
 	// variance (S3 read latency, local machine contention) that a low
 	// factor triggers on ordinary slow tasks instead of genuine stragglers.
-	SpecSlowFactor = 3.0
+	SpecSlowFactor = 1.5
 )
 
 // mr_test puts pathnames of input files (split into bins) in
@@ -331,18 +331,25 @@ func (c *Coord) speculate(ch chan<- ftmgr.Tresult[[]byte, []byte]) {
 // already-completed map tasks, once most of the map phase is done, and
 // launches one backup execution for each (at most once per task).
 func (c *Coord) speculateMap(ch chan<- ftmgr.Tresult[[]byte, []byte]) {
+	// Get number of tasks if enough of the map phase has completed to consider speculation. If not, return early.
 	done, err := c.mftclnt.GetNTasks(ftclnt.DONE)
 	if err != nil || float64(done) < SpecMinProgress*float64(c.nmaptask) {
 		return
 	}
+
+	// Get the list of currently running map tasks (WIP). If none, return early.
 	wip, err := c.mftclnt.GetTasksByStatus(ftclnt.WIP)
 	if err != nil || len(wip) == 0 {
 		return
 	}
+
+	// Compute the average duration of completed map tasks. If none have completed, return early.
 	avg := c.avgDuration(true)
 	if avg <= 0 {
 		return
 	}
+
+	// Check if each running map task has exceeded the threshold duration and claim a backup if so.
 	threshold := time.Duration(float64(avg) * SpecSlowFactor)
 	now := time.Now()
 	for _, id := range wip {
@@ -354,6 +361,7 @@ func (c *Coord) speculateMap(ch chan<- ftmgr.Tresult[[]byte, []byte]) {
 
 // speculateReduce is speculateMap's mirror for the reduce phase.
 func (c *Coord) speculateReduce(ch chan<- ftmgr.Tresult[[]byte, []byte]) {
+	// TODO make similar comments as above here
 	done, err := c.rftclnt.GetNTasks(ftclnt.DONE)
 	if err != nil || float64(done) < SpecMinProgress*float64(c.nreducetask) {
 		return
@@ -381,6 +389,7 @@ func (c *Coord) speculateReduce(ch chan<- ftmgr.Tresult[[]byte, []byte]) {
 func (c *Coord) claimMapBackup(id ftclnt.TaskId, now time.Time, threshold time.Duration) bool {
 	c.specMu.Lock()
 	defer c.specMu.Unlock()
+
 	start, ok := c.mStart[id]
 	if !ok || c.mBackedUp[id] || now.Sub(start) <= threshold {
 		return false
@@ -393,6 +402,7 @@ func (c *Coord) claimMapBackup(id ftclnt.TaskId, now time.Time, threshold time.D
 func (c *Coord) claimReduceBackup(id ftclnt.TaskId, now time.Time, threshold time.Duration) bool {
 	c.specMu.Lock()
 	defer c.specMu.Unlock()
+
 	start, ok := c.rStart[id]
 	if !ok || c.rBackedUp[id] || now.Sub(start) <= threshold {
 		return false
@@ -406,6 +416,7 @@ func (c *Coord) claimReduceBackup(id ftclnt.TaskId, now time.Time, threshold tim
 func (c *Coord) avgDuration(isMap bool) time.Duration {
 	c.specMu.Lock()
 	defer c.specMu.Unlock()
+
 	durs := c.mDurations
 	if !isMap {
 		durs = c.rDurations
@@ -413,6 +424,7 @@ func (c *Coord) avgDuration(isMap bool) time.Duration {
 	if len(durs) == 0 {
 		return 0
 	}
+
 	var sum time.Duration
 	for _, d := range durs {
 		sum += d
@@ -425,25 +437,36 @@ func (c *Coord) avgDuration(isMap bool) time.Duration {
 // task is still legitimately WIP under its original attempt), and reports
 // its result on ch exactly like fttaskmgr's own runTask/waitForTask would.
 func (c *Coord) runBackupMap(id ftclnt.TaskId, ch chan<- ftmgr.Tresult[[]byte, []byte]) {
+	// Read the task information for the given map task ID from the raw client. If the task cannot be read, return early.
 	raw := c.mftclnt.AsRawClnt()
 	tasks, err := raw.ReadTasks([]ftclnt.TaskId{id})
 	if err != nil || len(tasks) == 0 {
 		return
 	}
+
+	// Construct the process for the map task using the mapperProc function. If this fails, return early.
 	p, err := c.mapperProc(tasks[0])
 	if err != nil {
 		return
 	}
+
 	c.stat.Nspeculate.Add(1)
 	db.DPrintf(db.ALWAYS, "speculate: backup mapper for task %v", id)
 	start := time.Now()
+
+	// Spawn the process for the backup map task and wait for it to start. If either step fails, return early.
 	if err := c.Spawn(p); err != nil {
 		return
 	}
 	if err := c.WaitStart(p.GetPid()); err != nil {
 		return
 	}
+	// Wait for the backup map task to exit and collect its status and error.
 	status, err := c.WaitExit(p.GetPid())
+	if err != nil {
+		return
+	}
+	// Report the result on the channel exactly like fttaskmgr's runTask/waitForTask would.
 	ch <- ftmgr.Tresult[[]byte, []byte]{
 		Ms:     time.Since(start),
 		Err:    err,
@@ -471,10 +494,17 @@ func (c *Coord) runBackupReduce(id ftclnt.TaskId, ch chan<- ftmgr.Tresult[[]byte
 	if err := c.Spawn(p); err != nil {
 		return
 	}
+
+	// Wait for the backup reduce task to start. If this fails, return early.
 	if err := c.WaitStart(p.GetPid()); err != nil {
 		return
 	}
+
+	// Wait for the backup reduce task to exit and collect its status and error.
 	status, err := c.WaitExit(p.GetPid())
+	if err != nil {
+		return
+	}
 	ch <- ftmgr.Tresult[[]byte, []byte]{
 		Ms:     time.Since(start),
 		Err:    err,

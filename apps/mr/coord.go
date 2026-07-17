@@ -473,48 +473,84 @@ func (c *Coord) runBackupReduce(id ftclnt.TaskId, ch chan<- ftmgr.Tresult[[]byte
 	}
 }
 
+// evictSiblings evicts every other recorded attempt for task id (i.e.
+// every attempt pid except exclude) and clears the per-task speculative-
+// execution bookkeeping for id. Called whenever a task's fate is decided --
+// a clean win, a restart, or a plain failure/requeue -- since in every case
+// any other still-running attempt for the same id is now stale: left alone,
+// it could later report success and be treated as a fresh completion,
+// contradicting or racing with the decision that was just made (e.g. a
+// speculative backup reporting OK for a reduce task after its sibling
+// already triggered a restart because it couldn't read its input).
+func (c *Coord) evictSiblings(id ftclnt.TaskId, exclude sp.Tpid, isMap bool) {
+	c.specMu.Lock()
+	var losers []sp.Tpid
+	if isMap {
+		for _, pid := range c.mAttempts[id] {
+			if pid != exclude {
+				losers = append(losers, pid)
+			}
+		}
+		delete(c.mAttempts, id)
+		delete(c.mStart, id)
+		delete(c.mBackedUp, id)
+	} else {
+		for _, pid := range c.rAttempts[id] {
+			if pid != exclude {
+				losers = append(losers, pid)
+			}
+		}
+		delete(c.rAttempts, id)
+		delete(c.rStart, id)
+		delete(c.rBackedUp, id)
+	}
+	c.specMu.Unlock()
+	for _, pid := range losers {
+		db.DPrintf(db.MR_COORD, "evictSiblings: evicting %v for task %v (exclude %v)", pid, id, exclude)
+		if err := c.Evict(pid); err != nil {
+			db.DPrintf(db.MR_COORD, "evictSiblings: Evict %v err %v", pid, err)
+		}
+	}
+}
+
 // taskWon records that pid won task id (recording its duration for the
 // straggler-detection average), and evicts any other attempt (speculative
 // backup or original) still running for the same task.
 func (c *Coord) taskWon(id ftclnt.TaskId, winner sp.Tpid, dur time.Duration, isMap bool) {
 	c.specMu.Lock()
-	var losers []sp.Tpid
 	if isMap {
 		c.mDurations = append(c.mDurations, dur)
-		for _, pid := range c.mAttempts[id] {
-			if pid != winner {
-				losers = append(losers, pid)
-			}
-		}
-		delete(c.mAttempts, id)
 	} else {
 		c.rDurations = append(c.rDurations, dur)
-		for _, pid := range c.rAttempts[id] {
-			if pid != winner {
-				losers = append(losers, pid)
-			}
-		}
-		delete(c.rAttempts, id)
 	}
 	c.specMu.Unlock()
-	for _, pid := range losers {
-		db.DPrintf(db.MR_COORD, "taskWon: evicting loser %v for task %v (winner %v)", pid, id, winner)
-		if err := c.Evict(pid); err != nil {
-			db.DPrintf(db.MR_COORD, "taskWon: Evict %v err %v", pid, err)
-		}
-	}
+	c.evictSiblings(id, winner, isMap)
 }
 
-// resetSpeculation clears per-map-task speculative-execution bookkeeping
-// when all previously-done mappers are about to be legitimately redone (see
-// doRestart); reduce-side state doesn't need resetting since reducers
-// aren't bulk-restarted this way.
+// resetSpeculation clears per-map-task speculative-execution bookkeeping,
+// and evicts any still-recorded attempt (backup or original) for them, when
+// all previously-done mappers are about to be legitimately redone (see
+// doRestart). It also drops mDurations: those completion times belong to
+// the map generation being discarded, and keeping them would skew the
+// straggler-detection average computed for the redo. Reduce-side state
+// doesn't need resetting since reducers aren't bulk-restarted this way.
 func (c *Coord) resetSpeculation() {
 	c.specMu.Lock()
-	defer c.specMu.Unlock()
+	var losers []sp.Tpid
+	for _, pids := range c.mAttempts {
+		losers = append(losers, pids...)
+	}
 	c.mStart = make(map[ftclnt.TaskId]time.Time)
 	c.mBackedUp = make(map[ftclnt.TaskId]bool)
 	c.mAttempts = make(map[ftclnt.TaskId][]sp.Tpid)
+	c.mDurations = nil
+	c.specMu.Unlock()
+	for _, pid := range losers {
+		db.DPrintf(db.MR_COORD, "resetSpeculation: evicting stale attempt %v", pid)
+		if err := c.Evict(pid); err != nil {
+			db.DPrintf(db.MR_COORD, "resetSpeculation: Evict %v err %v", pid, err)
+		}
+	}
 }
 
 func newStringSlice(data []interface{}) []string {
@@ -917,10 +953,16 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 				s := newStringSlice(res.Status.Data().([]interface{}))
 				c.restart(s, res.Id)
 				nRestart += 1
+				// This reducer task is being redone; any other still-running
+				// attempt (a speculative backup) for it is now stale.
+				c.evictSiblings(res.Id, res.Proc.GetPid(), false)
 			} else { // if failure but not restart, rerun task immediately again
 				if err := res.Ftclnt.MoveTasks([]ftclnt.TaskId{res.Id}, ftclnt.TODO); err != nil {
 					db.DFatalf("MarkRunnable %v err %v", res.Id, err)
 				}
+				// This task (map or reduce) is being redone; any other
+				// still-running attempt for it is now stale.
+				c.evictSiblings(res.Id, res.Proc.GetPid(), res.Ftclnt == c.mftclnt.AsRawClnt())
 			}
 			c.stat.Nfail.Add(1)
 		}

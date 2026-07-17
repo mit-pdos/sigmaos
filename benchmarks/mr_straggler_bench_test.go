@@ -13,6 +13,7 @@ import (
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/rand"
 	"sigmaos/util/spstats"
 )
 
@@ -22,8 +23,10 @@ const (
 	// how many map tasks the job splits into).
 	StragglerSlowTaskId = 0
 	// StragglerSlowdownMs is how much extra time the straggler task takes,
-	// on top of however long it would normally take to run.
-	StragglerSlowdownMs = 30_000
+	// on top of however long it would normally take to run. Large enough
+	// that it clearly dominates this environment's natural task-time
+	// variance (S3 read latency, local machine contention).
+	StragglerSlowdownMs = 60_000
 )
 
 // collectMRStats mirrors apps/mr/mr_test.go's collectStats: it decodes each
@@ -45,15 +48,20 @@ func collectMRStats(t *testing.T, stati []*procgroupmgr.ProcStatus) *spstats.Tco
 }
 
 // runMRStragglerJob runs a single MR job (optionally with a straggler task
-// injected, when slowdownMs > 0) to completion and returns the total job
+// injected, when slowdownMs > 0, and/or classic speculative execution
+// enabled, when specEnabled) to completion and returns the total job
 // completion time plus the coordinator's final stats.
-func runMRStragglerJob(mrts *test.MultiRealmTstate, slowdownMs int) (time.Duration, *spstats.TcounterSnapshot) {
+func runMRStragglerJob(mrts *test.MultiRealmTstate, slowdownMs int, specEnabled bool) (time.Duration, *spstats.TcounterSnapshot) {
 	ts := mrts.T
 	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
 
+	// Each call needs its own job name -- TestMRSpeculativeExecution runs
+	// this twice in the same realm, and a fixed name would collide on the
+	// job dir the second time (InitCoordFS's MkDir would fail "file exists").
+	jobname := MR_APP + "-mr-straggler-" + rand.String(3) + "-" + mrts.GetRealm(REALM1).GetRealm().String()
 	ji := NewMRStragglerJobInstance(mrts.GetRealm(REALM1), p, MR_APP, chooseMRJobRoot(mrts.GetRealm(REALM1)),
-		MR_APP+"-mr-straggler-"+mrts.GetRealm(REALM1).GetRealm().String(), proc.Tmem(MR_MEM_REQ), StragglerSlowTaskId, slowdownMs)
+		jobname, proc.Tmem(MR_MEM_REQ), StragglerSlowTaskId, slowdownMs, specEnabled)
 	ji.PrepareMRJob()
 
 	start := time.Now()
@@ -79,7 +87,7 @@ func TestMRNoStraggler(t *testing.T) {
 	defer mrts.Shutdown()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	dur, mrst := runMRStragglerJob(mrts, 0)
+	dur, mrst := runMRStragglerJob(mrts, 0, false)
 	rs.Append(dur, 1.0)
 	printResultSummary(rs)
 
@@ -102,7 +110,7 @@ func TestMRStragglerBaseline(t *testing.T) {
 	defer mrts.Shutdown()
 
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
-	dur, mrst := runMRStragglerJob(mrts, StragglerSlowdownMs)
+	dur, mrst := runMRStragglerJob(mrts, StragglerSlowdownMs, false)
 	rs.Append(dur, 1.0)
 	printResultSummary(rs)
 
@@ -110,4 +118,38 @@ func TestMRStragglerBaseline(t *testing.T) {
 	assert.Equal(t, int64(0), mrst.Counters["Nfail"], "Straggler task shouldn't be treated as a failure")
 	assert.Equal(t, int64(0), mrst.Counters["Nrestart"], "Straggler task shouldn't be treated as a failure")
 	assert.True(t, dur >= time.Duration(StragglerSlowdownMs)*time.Millisecond, "Job completion time should reflect the injected straggler delay")
+}
+
+// TestMRSpeculativeExecution runs the same straggler-injected job twice,
+// back to back in the same test (to keep both runs under comparable local
+// machine/S3 contention): once with classic speculative execution disabled
+// (the TestMRStragglerBaseline scenario) and once with it enabled (apps/mr/
+// coord.go's speculate/speculateMap/speculateReduce). Once most of the map
+// phase is done, the coordinator should notice the artificially-slow task is
+// far behind the average and launch a backup execution of it, letting
+// whichever attempt (original or backup) finishes first win -- recovering
+// most of the straggler's cost.
+func TestMRSpeculativeExecution(t *testing.T) {
+	mrts, err := test.NewMultiRealmTstate(t, []sp.Trealm{REALM1})
+	if !assert.Nil(t, err, "Error New Tstate: %v", err) {
+		return
+	}
+	defer mrts.Shutdown()
+
+	rs := benchmarks.NewResults(2, benchmarks.E2E)
+
+	baseDur, baseMrst := runMRStragglerJob(mrts, StragglerSlowdownMs, false)
+	rs.Append(baseDur, 1.0)
+	db.DPrintf(db.ALWAYS, "MR straggler (task %d +%dms) without speculative execution: completion time %v, stats %v", StragglerSlowTaskId, StragglerSlowdownMs, baseDur, baseMrst)
+
+	specDur, specMrst := runMRStragglerJob(mrts, StragglerSlowdownMs, true)
+	rs.Append(specDur, 1.0)
+	db.DPrintf(db.ALWAYS, "MR straggler (task %d +%dms) with speculative execution: completion time %v, stats %v", StragglerSlowTaskId, StragglerSlowdownMs, specDur, specMrst)
+
+	printResultSummary(rs)
+
+	assert.Equal(t, int64(0), specMrst.Counters["Nfail"], "Straggler task shouldn't be treated as a failure")
+	assert.Equal(t, int64(0), specMrst.Counters["Nrestart"], "Straggler task shouldn't be treated as a failure")
+	assert.True(t, specMrst.Counters["Nspeculate"] > 0, "Expected speculative execution to back up the straggler task")
+	assert.True(t, specDur < baseDur, "Speculative execution should finish faster than leaving the straggler unmitigated (base %v, spec %v)", baseDur, specDur)
 }

@@ -16,19 +16,21 @@ import (
 // only StartMRJob is overridden.
 type MRStragglerJobInstance struct {
 	*MRJobInstance
-	slowTaskId int64
-	slowdownMs int
+	slowTaskId  int64
+	slowdownMs  int
+	specEnabled bool
 }
 
-func NewMRStragglerJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname string, memreq proc.Tmem, slowTaskId int64, slowdownMs int) *MRStragglerJobInstance {
+func NewMRStragglerJobInstance(ts *test.RealmTstate, p *perf.Perf, app, jobRoot, jobname string, memreq proc.Tmem, slowTaskId int64, slowdownMs int, specEnabled bool) *MRStragglerJobInstance {
 	return &MRStragglerJobInstance{
 		MRJobInstance: NewMRJobInstance(ts, p, app, jobRoot, jobname, memreq),
 		slowTaskId:    slowTaskId,
 		slowdownMs:    slowdownMs,
+		specEnabled:   specEnabled,
 	}
 }
 
 func (ji *MRStragglerJobInstance) StartMRJob() {
-	db.DPrintf(db.TEST, "Start MR job %v %v (straggler task %d +%dms)", ji.jobname, ji.job, ji.slowTaskId, ji.slowdownMs)
-	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.memreq, 0, ji.mftid, ji.rftid, ji.slowTaskId, ji.slowdownMs)
+	db.DPrintf(db.TEST, "Start MR job %v %v (straggler task %d +%dms, spec %v)", ji.jobname, ji.job, ji.slowTaskId, ji.slowdownMs, ji.specEnabled)
+	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.memreq, 0, ji.mftid, ji.rftid, ji.slowTaskId, ji.slowdownMs, ji.specEnabled)
 }

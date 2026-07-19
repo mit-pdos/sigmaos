@@ -133,6 +133,20 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 }
 
 func (m *Mapper) CloseWrt() (sp.Tlength, error) {
+	// Join the initOutput goroutine before closing the writers and
+	// reporting shard names. Only Emit waits for initOutput, so a mapper
+	// that emitted nothing (e.g., grep with no matches) would otherwise
+	// report its shard names and exit while initOutput is still creating
+	// the shard files: the proc's exit detaches its sessions, killing the
+	// in-flight creates, and a reducer later fails to read the promised
+	// (never-created) shards and exits with RESTART. See
+	// claude-slop/MR_REDUCER_UX_BUG.md.
+	if !m.init {
+		m.init = true
+		if err := <-m.ch; err != nil {
+			return 0, err
+		}
+	}
 	nout, err := m.closewrts()
 	if err != nil {
 		return 0, err

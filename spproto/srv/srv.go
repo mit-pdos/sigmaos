@@ -321,6 +321,18 @@ func (ps *ProtSrv) Create(args *sp.Tcreate, rets *sp.Rcreate) *sp.Rerror {
 		return sp.NewRerrorSerr(err)
 	}
 	if err := ps.fm.Update(args.Tfid(), nf); err != nil {
+		// The fid was clunked while the create was in flight (e.g., the
+		// client's proc exited and its session was detached, clunking its
+		// fids). The object was created (and opened); release it as clunk
+		// would have, so it isn't leaked.
+		db.DPrintf(db.PROTSRV, "%v: Create %v update err %v; closing %v", f.Ctx().ClntId(), args.Tfid(), err, nf)
+		if nf.IsOpen() {
+			if _, err := ps.vt.Delete(fs.Uid(nf.Obj())); err != nil {
+				db.DPrintf(db.PROTSRV, "%v: Create %v vt del failed %v err %v", f.Ctx().ClntId(), args.Tfid(), nf.Obj(), err)
+			}
+			nf.Obj().Close(f.Ctx(), nf.Mode())
+			nf.Close()
+		}
 		return sp.NewRerrorSerr(err)
 	}
 	//ps.fm.Free(f)

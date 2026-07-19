@@ -63,6 +63,11 @@ func (fm *FidMap) Insert(fid sp.Tfid, f *Fid) *serr.Err {
 
 func (fm *FidMap) Update(fid sp.Tfid, f *Fid) *serr.Err {
 	if ok := fm.fids.Update(fid, f); !ok {
+		// Flags bad client behavior: a clunk of this fid (e.g., a session
+		// detach because the client's proc exited with the request still
+		// in flight) removed it between the request's lookup and this
+		// update. Callers must clean up the update's target (see
+		// ProtSrv.Create).
 		db.DPrintf(db.ERROR, "Update err %v %v\n", fid, f)
 		return serr.NewErr(serr.TErrUnknownfid, fid)
 	}

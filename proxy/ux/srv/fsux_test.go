@@ -1,6 +1,8 @@
 package fsux
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -10,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	mr "sigmaos/apps/mr"
+	mrapi "sigmaos/apps/mr/mr"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
 	"sigmaos/path"
@@ -20,6 +24,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
+	"sigmaos/util/perf"
 )
 
 var fn string
@@ -125,6 +130,73 @@ func TestDir(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ts.Shutdown()
+}
+
+// TestMapperZeroOutputShardRace reproduces the MR bug in which an MR mapper
+// that emits nothing (e.g., grep over a split with no matches) never
+// synchronized with its asynchronous initOutput goroutine — only Emit did — so
+// DoMap could report its shard names and the proc could exit while the shard
+// files were still being created on UX. The proc's exit detaches its session,
+// clunking its fids and killing the in-flight creates (the fsuxd-side
+// fingerprint is FidMap.Update failing on the clunked fid,
+// spproto/srv/fid/fidmap.go), so the reported shard files may never exist. A
+// reducer that later reads them fails and exits with RESTART.
+//
+// The test mimics the zero-output mapper faithfully: run DoMap, then
+// immediately close the client (as the proc's exit would), and assert the
+// invariant the reducer depends on: every shard in the mapper's reported
+// output bin exists.
+func TestMapperZeroOutputShardRace(t *testing.T) {
+	const (
+		NTRIAL  = 10
+		NREDUCE = 8
+	)
+	ts, err1 := test.NewTstateAll(t)
+	if !assert.Nil(t, err1, "Error New Tstate: %v", err1) {
+		return
+	}
+	defer ts.Shutdown()
+
+	inPn := fn + "mr-race-in.txt"
+	d := []byte("a b c\n")
+	_, err := ts.PutFile(inPn, 0777, sp.OWRITE, d)
+	if !assert.Nil(t, err, "PutFile: %v", err) {
+		return
+	}
+	bin, err := json.Marshal([]mrapi.Split{{File: inPn, Offset: 0, Length: sp.Tlength(len(d))}})
+	if !assert.Nil(t, err, "Marshal: %v", err) {
+		return
+	}
+
+	// A mapper that emits nothing, like grep over a split with no matches
+	zeroMap := func(string, *bufio.Scanner, mrapi.EmitT) error { return nil }
+
+	pe := proc.NewAddedProcEnv(ts.ProcEnv())
+	p := &perf.Perf{}
+	for i := 0; i < NTRIAL; i++ {
+		sc, err := sigmaclnt.NewSigmaClnt(pe)
+		if !assert.Nil(t, err, "NewSigmaClnt: %v", err) {
+			break
+		}
+		job := fmt.Sprintf("mr-uxrace-%d", i)
+		m, err := mr.NewMapper(sc, zeroMap, nil, "name/mr/", job, p, NREDUCE, 8192, 40, string(bin), "name/ux/~local/mr-intermediate", false, false, 0)
+		if !assert.Nil(t, err, "NewMapper: %v", err) {
+			break
+		}
+		_, _, obin, err := m.DoMap()
+		if !assert.Nil(t, err, "DoMap: %v", err) {
+			break
+		}
+		// The mapper proc exits right after DoMap; closing the client
+		// detaches its sessions the same way, killing any shard creates
+		// still in flight.
+		sc.Close()
+		// The reducer's view: every shard the mapper reported must exist
+		for _, s := range obin {
+			_, err := ts.Stat(s.File)
+			assert.Nil(t, err, "reported shard %v missing (trial %d): %v", s.File, i, err)
+		}
+	}
 }
 
 func writer(t *testing.T, ch chan struct{}, ch2 chan struct{}, pe *proc.ProcEnv, idx int) {

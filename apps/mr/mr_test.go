@@ -280,7 +280,7 @@ func TestMapperReducer(t *testing.T) {
 
 		binData, err := json.Marshal(bin.Data)
 		assert.Nil(t, err, "json %v", err)
-		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, job.Wordsz, string(binData), job.Intermediate)
+		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, job.Wordsz, string(binData), job.Intermediate, 0)
 		assert.Nil(t, err, "NewMapper %v", err)
 		db.DPrintf(db.TEST, "Newmapper %v", time.Since(start))
 		start = time.Now()
@@ -515,7 +515,7 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	assert.Nil(ts.mrts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.mrts.T, 0, nmap)
 
-	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper, ts.tasks.Mftsrv.Id, ts.tasks.Rftsrv.Id)
+	cm := mr.StartMRJobDefault(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper, ts.tasks.Mftsrv.Id, ts.tasks.Rftsrv.Id)
 
 	var wg sync.WaitGroup
 	for k, v := range srvs {

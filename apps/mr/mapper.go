@@ -47,9 +47,10 @@ type Mapper struct {
 	init        bool
 	ckrs        []*chunkreader.ChunkReader
 	ch          chan error
+	slowdownMs  int
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string, slowdownMs int) (*Mapper, error) {
 	m := &Mapper{
 		SigmaClnt:   sc,
 		mapf:        mapf,
@@ -66,6 +67,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		perf:        p,
 		ch:          make(chan error),
 		ckrs:        make([]*chunkreader.ChunkReader, CONCURRENCY),
+		slowdownMs:  slowdownMs,
 	}
 	for i := 0; i < CONCURRENCY; i++ {
 		m.ckrs[i] = chunkreader.NewChunkReader(lsz, wsz, combinef, p)
@@ -78,7 +80,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 }
 
 func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
-	if len(args) != 7 {
+	if len(args) != 7 && len(args) != 8 {
 		return nil, fmt.Errorf("NewMapper: too few arguments %v", args)
 	}
 	nr, err := strconv.Atoi(args[2])
@@ -93,11 +95,20 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper: wordsz %v isn't int", args[6])
 	}
+	// The straggler delay is an optional 8th arg, for callers (e.g. mr_test.go)
+	// that construct a Mapper directly without it.
+	slowdownMs := 0
+	if len(args) == 8 {
+		slowdownMs, err = strconv.Atoi(args[7])
+		if err != nil {
+			return nil, fmt.Errorf("NewMapper: slowdownMs %v isn't int", args[7])
+		}
+	}
 	sc, err := sigmaclnt.NewSigmaClnt(proc.GetProcEnv())
 	if err != nil {
 		return nil, err
 	}
-	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4])
+	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4], slowdownMs)
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
@@ -275,6 +286,11 @@ func (m *Mapper) doSplit(s *mr.Split) (sp.Tlength, error) {
 }
 
 func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
+	if m.slowdownMs > 0 {
+		// Artificially slow down this one task, to measure straggler impact.
+		db.DPrintf(db.MR, "doMap: straggler delay %dms", m.slowdownMs)
+		time.Sleep(time.Duration(m.slowdownMs) * time.Millisecond)
+	}
 	db.DPrintf(db.MR, "doMap %v", m.input)
 	getInputStart := time.Now()
 	var bin Bin

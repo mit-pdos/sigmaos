@@ -26,7 +26,7 @@ const (
 	// on top of however long it would normally take to run. Large enough
 	// that it clearly dominates this environment's natural task-time
 	// variance (S3 read latency, local machine contention).
-	StragglerSlowdownMs = 60_000
+	StragglerSlowdownMs = 180_000
 )
 
 // collectMRStats mirrors apps/mr/mr_test.go's collectStats: it decodes each

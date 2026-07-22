@@ -42,16 +42,11 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 	sort.Slice(results, func(i, j int) bool {
 		return test.Tput(results[i].In+results[i].Out, results[i].MsInner) > test.Tput(results[j].In+results[j].Out, results[j].MsInner)
 	})
-	// Per-task overhead (MsOuter-MsInner) is a proxy for admission-slot
-	// pressure: time spent waiting for a slot on top of actual compute.
-	// Aggregate it split by phase.
+	// MsOuter-MsInner is time a task spent waiting for an admission slot.
 	var mOverTot, rOverTot, mOverMax, rOverMax int64
 	var nM, nR int
 	for _, r := range results {
-		over := r.MsOuter - r.MsInner
-		if over < 0 {
-			over = 0
-		}
+		over := max(r.MsOuter-r.MsInner, 0)
 		if r.IsM {
 			mOverTot += over
 			nM++

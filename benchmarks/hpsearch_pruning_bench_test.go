@@ -43,7 +43,7 @@ func TestHPSearchLivePruning(t *testing.T) {
 	pruneIters := oraclePruneIters(baseCurves, PruneMargin)
 	actual := 0.0
 	oracle := 0.0
-	bestAll := math.Inf(-1) // best quality reachable running every config fully
+	bestAll := math.Inf(-1)
 	for ci, c := range baseCurves {
 		actual += float64(len(c.Scores)) * iterSec
 		oracle += float64(pruneIters[ci]) * iterSec
@@ -69,7 +69,7 @@ func TestHPSearchLivePruning(t *testing.T) {
 
 	liveActual := 0.0
 	nPruned := 0
-	bestLive := math.Inf(-1) // best quality the live-pruned run actually kept
+	bestLive := math.Inf(-1)
 	// Tally real compute used and how many configs actually got pruned.
 	for _, c := range liveCurves {
 		liveActual += float64(len(c.Scores)) * iterSec
@@ -83,8 +83,7 @@ func TestHPSearchLivePruning(t *testing.T) {
 			c.ConfigId, c.Asymptote, c.Pruned, c.PrunedAtIter, cfg.MaxIters)
 	}
 
-	// Time-to-target uses the same absolute target for both runs so they're
-	// comparable: does aggressive live pruning delay or miss reaching it?
+	// Both runs use the same absolute target so their times are comparable.
 	target := TargetFrac * bestAll
 	baseIters, _ := firstIterToTarget(baseCurves, target)
 	liveIters, liveHit := firstIterToTarget(liveCurves, target)
@@ -94,9 +93,8 @@ func TestHPSearchLivePruning(t *testing.T) {
 	db.DPrintf(db.ALWAYS, "HPSearch live pruning quality: best-all %.3f, best-live-kept %.3f, quality lost %.3f; time-to-target (%.0f%% of best) baseline %d iters vs live %d iters (live reached target: %v)",
 		bestAll, bestLive, bestAll-bestLive, TargetFrac*100, baseIters, liveIters, liveHit)
 
-	// liveActual <= actual holds by construction (every pruned curve is a
-	// strict prefix of the full one), so this is a sanity check, not a
-	// meaningful result on its own -- the DPrintf line above is the result.
+	// A sanity check only: every pruned curve is a strict prefix of the full
+	// one, so liveActual <= actual holds by construction.
 	assert.True(t, liveActual <= actual, "Live-pruned run used more compute than the baseline")
 	assert.True(t, nPruned > 0, "Expected the live policy to prune at least one config")
 }

@@ -16,12 +16,11 @@ import (
 // (and stay) before the oracle would have pruned it.
 const PruneMargin = 0.1
 
-// TargetFrac sets the time-to-target-accuracy threshold as a fraction of the
-// best score any config reaches: the target is TargetFrac * best-achievable.
+// TargetFrac is the time-to-target-accuracy threshold, as a fraction of the
+// best score any config reaches.
 const TargetFrac = 0.9
 
-// bestScore returns the highest score in s[:n] (the quality reachable if a
-// config is stopped after n iterations). Returns -Inf for n<=0.
+// bestScore returns the highest score in s[:n], or -Inf for n<=0.
 func bestScore(s []float64, n int) float64 {
 	if n > len(s) {
 		n = len(s)
@@ -36,9 +35,8 @@ func bestScore(s []float64, n int) float64 {
 }
 
 // firstIterToTarget returns the earliest iteration at which any curve reaches
-// target within the iterations it actually ran (len(Scores)), and whether any
-// did. A curve pruned early has a truncated Scores, so it can't reach target
-// after its prune point.
+// target, and whether any did. A pruned curve has a truncated Scores, so it
+// can't reach target past its prune point.
 func firstIterToTarget(curves []*hpsearch.Curve, target float64) (int, bool) {
 	best := -1
 	for _, c := range curves {
@@ -62,14 +60,12 @@ type HPSearchResult struct {
 	OracleCoreSeconds float64
 	WastedCoreSeconds float64
 	WastedFrac        float64
-	// BestQualityAll is the best score any config reaches running every config
-	// to completion; BestQualityKept is the best still reachable if the oracle
-	// prunes; QualityLost is what pruning gives up (0 means it kept a winner).
+	// Best score with every config run to completion, best score still
+	// reachable under oracle pruning, and the difference.
 	BestQualityAll  float64
 	BestQualityKept float64
 	QualityLost     float64
-	// ItersToTarget / SecsToTarget: when the search first reaches
-	// TargetFrac*BestQualityAll.
+	// When the search first reaches TargetFrac*BestQualityAll.
 	ItersToTarget   int
 	SecsToTarget    float64
 	PerConfigCurves []*hpsearch.Curve

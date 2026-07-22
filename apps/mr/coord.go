@@ -108,9 +108,8 @@ type Coord struct {
 	rAttempts   map[ftclnt.TaskId][]sp.Tpid
 	mDurations  []time.Duration
 	rDurations  []time.Duration
-	// attemptStart records, per attempt pid, when that attempt was built (in
-	// recordAttempt). Used to charge the wall-time an evicted/discarded loser
-	// consumed to the wasted-compute counters. specMu guards it.
+	// attemptStart is when each attempt was built, so a loser's wall-time can
+	// be charged to the wasted-compute counters.
 	attemptStart map[sp.Tpid]time.Time
 }
 
@@ -123,9 +122,8 @@ type AStat struct {
 	NrecoverMap    spstats.Tcounter
 	NrecoverReduce spstats.Tcounter
 	Nspeculate     spstats.Tcounter
-	// Nwasted / MsWasted account duplicate (backup or restart) attempts evicted
-	// or discarded after losing their task's race: how many, and their summed
-	// wall-time (ms) before losing.
+	// Duplicate attempts evicted or discarded after losing their task's race,
+	// and their summed wall-time before losing.
 	Nwasted  spstats.Tcounter
 	MsWasted spstats.Tcounter
 }
@@ -310,8 +308,6 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 func (c *Coord) recordAttempt(id ftclnt.TaskId, pid sp.Tpid, isMap bool) {
 	c.specMu.Lock()
 	defer c.specMu.Unlock()
-	// Stamp this attempt's start so a later eviction/discard can charge the
-	// time it ran to the wasted-compute counters (see recordWasted).
 	c.attemptStart[pid] = time.Now()
 	if isMap {
 		if _, ok := c.mStart[id]; !ok {
@@ -538,9 +534,8 @@ func (c *Coord) runBackupReduce(id ftclnt.TaskId, ch chan<- ftmgr.Tresult[[]byte
 	}
 }
 
-// recordWasted charges the wall-time each attempt in pids consumed (measured
-// from its recordAttempt stamp) to the wasted-compute counters, then forgets
-// its start so it is counted at most once. Caller must hold specMu.
+// recordWasted charges the wall-time each attempt in pids ran to the
+// wasted-compute counters, at most once per pid. Caller must hold specMu.
 func (c *Coord) recordWasted(pids []sp.Tpid) {
 	now := time.Now()
 	for _, pid := range pids {
@@ -552,9 +547,8 @@ func (c *Coord) recordWasted(pids []sp.Tpid) {
 	}
 }
 
-// recordWastedFinished charges a duplicate attempt that ran to completion but
-// lost the race (its result is discarded) using its self-reported duration.
-// Skips it if it was already counted as an eviction (attemptStart cleared).
+// recordWastedFinished charges an attempt that ran to completion but had its
+// result discarded, using its self-reported duration d.
 func (c *Coord) recordWastedFinished(pid sp.Tpid, d time.Duration) {
 	c.specMu.Lock()
 	defer c.specMu.Unlock()
@@ -590,8 +584,6 @@ func (c *Coord) evictSiblings(id ftclnt.TaskId, exclude sp.Tpid, isMap bool) {
 		delete(c.rStart, id)
 		delete(c.rBackedUp, id)
 	}
-	// Charge the evicted losers as wasted compute; the winner (exclude) isn't
-	// wasted, so just forget its start.
 	c.recordWasted(losers)
 	delete(c.attemptStart, exclude)
 	c.specMu.Unlock()
@@ -631,8 +623,6 @@ func (c *Coord) resetSpeculation() {
 	c.mBackedUp = make(map[ftclnt.TaskId]bool)
 	c.mAttempts = make(map[ftclnt.TaskId][]sp.Tpid)
 	c.mDurations = nil
-	// The mappers being torn down here are about to be redone, so their work
-	// so far is wasted too.
 	c.recordWasted(losers)
 	c.specMu.Unlock()
 	for _, pid := range losers {

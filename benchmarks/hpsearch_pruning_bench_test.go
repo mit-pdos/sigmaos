@@ -1,6 +1,7 @@
 package benchmarks_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,9 +43,13 @@ func TestHPSearchLivePruning(t *testing.T) {
 	pruneIters := oraclePruneIters(baseCurves, PruneMargin)
 	actual := 0.0
 	oracle := 0.0
+	bestAll := math.Inf(-1) // best quality reachable running every config fully
 	for ci, c := range baseCurves {
 		actual += float64(len(c.Scores)) * iterSec
 		oracle += float64(pruneIters[ci]) * iterSec
+		if q := bestScore(c.Scores, len(c.Scores)); q > bestAll {
+			bestAll = q
+		}
 	}
 
 	// Live-pruning run: same config/seeds, but trainers prune themselves
@@ -64,18 +69,30 @@ func TestHPSearchLivePruning(t *testing.T) {
 
 	liveActual := 0.0
 	nPruned := 0
+	bestLive := math.Inf(-1) // best quality the live-pruned run actually kept
 	// Tally real compute used and how many configs actually got pruned.
 	for _, c := range liveCurves {
 		liveActual += float64(len(c.Scores)) * iterSec
 		if c.Pruned {
 			nPruned++
 		}
+		if q := bestScore(c.Scores, len(c.Scores)); q > bestLive {
+			bestLive = q
+		}
 		db.DPrintf(db.HPSEARCH, "hpsearch-live config %d asymptote %f pruned %v at %d/%d",
 			c.ConfigId, c.Asymptote, c.Pruned, c.PrunedAtIter, cfg.MaxIters)
 	}
 
+	// Time-to-target uses the same absolute target for both runs so they're
+	// comparable: does aggressive live pruning delay or miss reaching it?
+	target := TargetFrac * bestAll
+	baseIters, _ := firstIterToTarget(baseCurves, target)
+	liveIters, liveHit := firstIterToTarget(liveCurves, target)
+
 	db.DPrintf(db.ALWAYS, "HPSearch live pruning: actual %.2f core-s, live-pruned %.2f core-s (saved %.1f%%), oracle %.2f core-s (saved %.1f%%), %d/%d configs pruned",
 		actual, liveActual, (actual-liveActual)/actual*100, oracle, (actual-oracle)/actual*100, nPruned, cfg.NConfigs)
+	db.DPrintf(db.ALWAYS, "HPSearch live pruning quality: best-all %.3f, best-live-kept %.3f, quality lost %.3f; time-to-target (%.0f%% of best) baseline %d iters vs live %d iters (live reached target: %v)",
+		bestAll, bestLive, bestAll-bestLive, TargetFrac*100, baseIters, liveIters, liveHit)
 
 	// liveActual <= actual holds by construction (every pruned curve is a
 	// strict prefix of the full one), so this is a sanity check, not a

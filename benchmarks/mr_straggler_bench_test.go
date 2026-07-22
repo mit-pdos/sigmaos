@@ -139,6 +139,7 @@ func TestMRSpeculativeExecution(t *testing.T) {
 	printResultSummary(rs)
 
 	db.DPrintf(db.ALWAYS, "MR straggler (task %d +%dms) with speculative execution: completion time %v, stats %v -- compare against TestMRStragglerBaseline's printed completion time", StragglerSlowTaskId, StragglerSlowdownMs, dur, mrst)
+	db.DPrintf(db.ALWAYS, "MR speculative execution wasted compute: %d killed/discarded backup attempts, %d ms total wasted wall-time (Nspeculate %d backups fired)", mrst.Counters["Nwasted"], mrst.Counters["MsWasted"], mrst.Counters["Nspeculate"])
 	assert.Equal(t, int64(0), mrst.Counters["Nfail"], "Straggler task shouldn't be treated as a failure")
 	assert.Equal(t, int64(0), mrst.Counters["Nrestart"], "Straggler task shouldn't be treated as a failure")
 	assert.True(t, mrst.Counters["Nspeculate"] > 0, "Expected speculative execution to back up the straggler task")

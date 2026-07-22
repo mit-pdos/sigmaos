@@ -42,7 +42,20 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 	sort.Slice(results, func(i, j int) bool {
 		return test.Tput(results[i].In+results[i].Out, results[i].MsInner) > test.Tput(results[j].In+results[j].Out, results[j].MsInner)
 	})
+	// MsOuter-MsInner is time a task spent waiting for an admission slot.
+	var mOverTot, rOverTot, mOverMax, rOverMax int64
+	var nM, nR int
 	for _, r := range results {
+		over := max(r.MsOuter-r.MsInner, 0)
+		if r.IsM {
+			mOverTot += over
+			nM++
+			mOverMax = max(mOverMax, over)
+		} else {
+			rOverTot += over
+			nR++
+			rOverMax = max(rOverMax, over)
+		}
 		fmt.Printf("[%s, kid:%v]:\n\tin %v out %v tot %v inner %vms outer %vms (%s)\n", r.Task, r.KernelID, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), test.Mbyte(r.In+r.Out), r.MsInner, r.MsOuter, test.TputStr(r.In+r.Out, r.MsInner))
 	}
 	fmt.Printf("==== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
@@ -51,6 +64,15 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 		humanize.Bytes(uint64(totWTmp)),
 		humanize.Bytes(uint64(totRTmp)),
 	)
+	mOverMean, rOverMean := int64(0), int64(0)
+	if nM > 0 {
+		mOverMean = mOverTot / int64(nM)
+	}
+	if nR > 0 {
+		rOverMean = rOverTot / int64(nR)
+	}
+	fmt.Printf("==== slot pressure (outer-inner queueing overhead): map tot %dms mean %dms max %dms (n=%d); reduce tot %dms mean %dms max %dms (n=%d)\n",
+		mOverTot, mOverMean, mOverMax, nM, rOverTot, rOverMean, rOverMax, nR)
 	return nil
 }
 

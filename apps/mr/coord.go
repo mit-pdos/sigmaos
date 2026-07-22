@@ -108,6 +108,9 @@ type Coord struct {
 	rAttempts   map[ftclnt.TaskId][]sp.Tpid
 	mDurations  []time.Duration
 	rDurations  []time.Duration
+	// attemptStart is when each attempt was built, so a loser's wall-time can
+	// be charged to the wasted-compute counters.
+	attemptStart map[sp.Tpid]time.Time
 }
 
 type AStat struct {
@@ -119,10 +122,14 @@ type AStat struct {
 	NrecoverMap    spstats.Tcounter
 	NrecoverReduce spstats.Tcounter
 	Nspeculate     spstats.Tcounter
+	// Duplicate attempts evicted or discarded after losing their task's race,
+	// and their summed wall-time before losing.
+	Nwasted  spstats.Tcounter
+	MsWasted spstats.Tcounter
 }
 
 func (s *AStat) String() string {
-	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d nspec %d}", s.Ntask.Load(), s.Nmap.Load(), s.Nreduce.Load(), s.Nfail.Load(), s.Nrestart.Load(), s.NrecoverMap.Load(), s.NrecoverReduce.Load(), s.Nspeculate.Load())
+	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d nspec %d nwasted %d mswasted %d}", s.Ntask.Load(), s.Nmap.Load(), s.Nreduce.Load(), s.Nfail.Load(), s.Nrestart.Load(), s.NrecoverMap.Load(), s.NrecoverReduce.Load(), s.Nspeculate.Load(), s.Nwasted.Load(), s.MsWasted.Load())
 }
 
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
@@ -219,6 +226,7 @@ func NewCoord(args []string) (*Coord, error) {
 	c.rBackedUp = make(map[ftclnt.TaskId]bool)
 	c.mAttempts = make(map[ftclnt.TaskId][]sp.Tpid)
 	c.rAttempts = make(map[ftclnt.TaskId][]sp.Tpid)
+	c.attemptStart = make(map[sp.Tpid]time.Time)
 
 	return c, nil
 }
@@ -300,6 +308,7 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 func (c *Coord) recordAttempt(id ftclnt.TaskId, pid sp.Tpid, isMap bool) {
 	c.specMu.Lock()
 	defer c.specMu.Unlock()
+	c.attemptStart[pid] = time.Now()
 	if isMap {
 		if _, ok := c.mStart[id]; !ok {
 			c.mStart[id] = time.Now()
@@ -525,6 +534,31 @@ func (c *Coord) runBackupReduce(id ftclnt.TaskId, ch chan<- ftmgr.Tresult[[]byte
 	}
 }
 
+// recordWasted charges the wall-time each attempt in pids ran to the
+// wasted-compute counters, at most once per pid. Caller must hold specMu.
+func (c *Coord) recordWasted(pids []sp.Tpid) {
+	now := time.Now()
+	for _, pid := range pids {
+		if start, ok := c.attemptStart[pid]; ok {
+			c.stat.Nwasted.Add(1)
+			c.stat.MsWasted.Add(now.Sub(start).Milliseconds())
+			delete(c.attemptStart, pid)
+		}
+	}
+}
+
+// recordWastedFinished charges an attempt that ran to completion but had its
+// result discarded, using its self-reported duration d.
+func (c *Coord) recordWastedFinished(pid sp.Tpid, d time.Duration) {
+	c.specMu.Lock()
+	defer c.specMu.Unlock()
+	if _, ok := c.attemptStart[pid]; ok {
+		c.stat.Nwasted.Add(1)
+		c.stat.MsWasted.Add(d.Milliseconds())
+		delete(c.attemptStart, pid)
+	}
+}
+
 // evictSiblings kills every other recorded attempt for task id and clears
 // its speculation bookkeeping, so a stale attempt can't later report
 // success once the task's fate (win, restart, or failure) is decided.
@@ -550,6 +584,8 @@ func (c *Coord) evictSiblings(id ftclnt.TaskId, exclude sp.Tpid, isMap bool) {
 		delete(c.rStart, id)
 		delete(c.rBackedUp, id)
 	}
+	c.recordWasted(losers)
+	delete(c.attemptStart, exclude)
 	c.specMu.Unlock()
 	for _, pid := range losers {
 		db.DPrintf(db.MR_COORD, "evictSiblings: evicting %v for task %v (exclude %v)", pid, id, exclude)
@@ -587,6 +623,7 @@ func (c *Coord) resetSpeculation() {
 	c.mBackedUp = make(map[ftclnt.TaskId]bool)
 	c.mAttempts = make(map[ftclnt.TaskId][]sp.Tpid)
 	c.mDurations = nil
+	c.recordWasted(losers)
 	c.specMu.Unlock()
 	for _, pid := range losers {
 		db.DPrintf(db.MR_COORD, "resetSpeculation: evicting stale attempt %v", pid)
@@ -954,6 +991,7 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 			// instead of overwriting the winner's stored output.
 			if (r.IsM && ts[res.Id]) || (!r.IsM && tsR[res.Id]) {
 				db.DPrintf(db.MR_COORD, "processResult: discarding late/speculative result for already-finished task %v", res.Id)
+				c.recordWastedFinished(res.Proc.GetPid(), res.Ms)
 				continue
 			}
 

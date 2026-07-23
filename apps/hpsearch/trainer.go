@@ -111,7 +111,7 @@ func newStartedSigmaClnt() (*sigmaclnt.SigmaClnt, error) {
 
 // RunTrainer is the entry point for the hp-trainer proc. Args are
 // [configId, seed, maxIters, iterDurMs]. It always runs all maxIters
-// iterations (no early stopping) — that is the point of this baseline. See
+// iterations (no early stopping); that is the point of this baseline. See
 // RunPruningTrainer (pruner.go) for the live-pruning variant, which shares
 // syntheticCurve/Curve/parseTrainerArgs/newStartedSigmaClnt with this one.
 func RunTrainer(args []string) {
@@ -122,6 +122,9 @@ func RunTrainer(args []string) {
 	if err != nil {
 		db.DFatalf("RunTrainer: %v", err)
 	}
+	// Log the whole configuration of this run upfront, so a per-iteration
+	// log line can be traced back to the config that produced it.
+	db.DPrintf(db.HPSEARCH, "hp-trainer start config %d seed %d maxIters %d iterDur %v args %v", configId, seed, maxIters, iterDur, args)
 
 	sc, err := newStartedSigmaClnt()
 	if err != nil {
@@ -132,7 +135,7 @@ func RunTrainer(args []string) {
 	asymptote, scores := syntheticCurve(seed, maxIters)
 	for i := range scores {
 		// Simulate one iteration of training.
-		time.Sleep(iterDur)
+		SleepBurn(iterDur)
 		db.DPrintf(db.HPSEARCH, "hp-trainer config %d iter %d score %f", configId, i, scores[i])
 	}
 

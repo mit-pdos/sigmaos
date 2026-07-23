@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path"
 	"strconv"
-	"time"
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -37,11 +36,10 @@ func publishProgress(sc *fslib.FsLib, progressDir string, configId, iter int, sc
 }
 
 // bestSiblingScore scans every other config's published progress and
-// returns the best (highest) score any sibling has reported so far — i.e.
-// exactly what a live, causal policy can see, with no knowledge of how
-// those siblings' curves will look in the future (contrast with the
-// post-hoc oracle in benchmarks/hpsearch_bench_test.go, which gets to look
-// at every config's completed curve).
+// returns the best (highest) score any sibling has reported so far: what a
+// live, causal policy can see, with no knowledge of how those siblings'
+// curves develop later. Contrast OraclePruneIters (analysis.go), which
+// looks at every config's completed curve.
 func bestSiblingScore(sc *fslib.FsLib, progressDir string, selfConfigId int) (best float64, found bool) {
 	// List every config that has published progress so far.
 	sts, err := sc.GetDir(progressDir)
@@ -74,14 +72,13 @@ func bestSiblingScore(sc *fslib.FsLib, progressDir string, selfConfigId int) (be
 }
 
 // RunPruningTrainer is the entry point for the hp-trainer-pruned proc. It
-// generates the exact same synthetic curve as RunTrainer (same seeded
+// generates the same synthetic curve as RunTrainer (same seeded
 // syntheticCurve, same Curve result type), but instead of always running to
 // completion, it publishes its score after every iteration and prunes
-// itself the first time it has trailed the best sibling score seen so far
-// by more than margin, for SustainIters iterations in a row. Because this
-// decision is made online — with no knowledge of the future — it can (and
-// sometimes will) prune a config that would have caught up later, unlike
-// the post-hoc oracle.
+// itself once it has trailed the best sibling score by more than margin for
+// SustainIters iterations in a row. That decision is online, with no
+// knowledge of the future, so it can prune a config that would have caught
+// up later, unlike the post-hoc oracle.
 func RunPruningTrainer(args []string) {
 	if len(args) != 6 {
 		db.DFatalf("RunPruningTrainer: wrong number of args %v", args)
@@ -96,6 +93,10 @@ func RunPruningTrainer(args []string) {
 	if err != nil {
 		db.DFatalf("RunPruningTrainer: margin %v not a float: %v", args[5], err)
 	}
+	// Log the whole configuration of this run upfront, including the pruning
+	// policy's parameters, so a per-iteration log line (or a prune decision)
+	// can be traced back to the config that produced it.
+	db.DPrintf(db.HPSEARCH, "hp-trainer-pruned start config %d seed %d maxIters %d iterDur %v progressDir %v margin %f sustainIters %d args %v", configId, seed, maxIters, iterDur, progressDir, margin, SustainIters, args)
 
 	// Connect to SigmaOS and signal that this proc has started running.
 	sc, err := newStartedSigmaClnt()
@@ -111,9 +112,8 @@ func RunPruningTrainer(args []string) {
 	behindStreak := 0
 	for i := range scores {
 		// Simulate one iteration of training, then publish the score.
-		time.Sleep(iterDur)
+		SleepBurn(iterDur)
 		publishProgress(sc.FsLib, progressDir, configId, i, scores[i])
-		db.DPrintf(db.HPSEARCH, "hp-trainer-pruned config %d iter %d score %f", configId, i, scores[i])
 
 		// Track how many iterations in a row we've trailed the best sibling.
 		if best, ok := bestSiblingScore(sc.FsLib, progressDir, configId); ok && scores[i] < best-margin {

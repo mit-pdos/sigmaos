@@ -8,6 +8,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 
+	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
@@ -117,6 +118,15 @@ func ReadResults(fsl *fslib.FsLib, jobRoot, job string) ([]*Result, error) {
 	return results, nil
 }
 
+// Read the map/reduce phase durations the coordinator logged for a job.
+func ReadPhaseDurations(fsl *fslib.FsLib, jobRoot, job string) (*PhaseDurations, error) {
+	pd := &PhaseDurations{}
+	if err := fsl.GetFileJson(MRPhaseStats(jobRoot, job), pd); err != nil {
+		return nil, err
+	}
+	return pd, nil
+}
+
 func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 	results, err := ReadResults(fsl, jobRoot, job)
 	if err != nil {
@@ -150,6 +160,12 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 	)
 	fmt.Println("==== TASK RUNTIMES:")
 	fmt.Println(NewJobRuntimeStats(results))
+	if pd, err := ReadPhaseDurations(fsl, jobRoot, job); err != nil {
+		db.DPrintf(db.MR, "ReadPhaseDurations err %v", err)
+	} else {
+		fmt.Println("==== PHASE DURATIONS:")
+		fmt.Printf("map phase %vms reduce phase %vms\n", pd.MapMs, pd.ReduceMs)
+	}
 	return nil
 }
 

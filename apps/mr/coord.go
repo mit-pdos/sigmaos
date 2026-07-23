@@ -79,6 +79,9 @@ type Coord struct {
 	useCosandbox    bool
 	tailProbeSz     int
 	mrBootWASM      []byte
+	phaseStart      time.Time
+	mapPhaseMs      int64
+	mapPhaseDone    bool
 }
 
 type AStat struct {
@@ -490,6 +493,7 @@ func (c *Coord) Work() {
 	}
 
 	start = time.Now()
+	c.phaseStart = start
 	if int(m+r) < c.nmaptask+c.nreducetask {
 
 		wg := &sync.WaitGroup{}
@@ -545,6 +549,34 @@ func (c *Coord) Work() {
 	defer c.perf.Done()
 }
 
+// Record the wall-clock time (measured from the coordinator's start of task
+// execution) at which the map phase completed. Called the first time all map
+// tasks are done. Note: on recovery/failure the phase boundary isn't corrected
+// for.
+func (c *Coord) recordMapPhaseDone() {
+	if c.mapPhaseDone {
+		return
+	}
+	c.mapPhaseDone = true
+	c.mapPhaseMs = time.Since(c.phaseStart).Milliseconds()
+	db.DPrintf(db.ALWAYS, "map phase took %vms", c.mapPhaseMs)
+}
+
+// Record the wall-clock duration of the reduce phase (time from the end of the
+// map phase to the completion of all reduce tasks) and persist both phase
+// durations to the job's phase-stats file so the driver can report them.
+func (c *Coord) recordReducePhaseDone() {
+	totalMs := time.Since(c.phaseStart).Milliseconds()
+	pd := &PhaseDurations{
+		MapMs:    c.mapPhaseMs,
+		ReduceMs: totalMs - c.mapPhaseMs,
+	}
+	db.DPrintf(db.ALWAYS, "reduce phase took %vms", pd.ReduceMs)
+	if err := c.PutFileJson(MRPhaseStats(c.jobRoot, c.job), 0777, pd); err != nil {
+		db.DPrintf(db.ERROR, "PutFileJson %v err %v", MRPhaseStats(c.jobRoot, c.job), err)
+	}
+}
+
 func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int32) {
 	db.DPrintf(db.MR_COORD, "processResults %d %d", m, r)
 	nM := int(m)
@@ -554,6 +586,7 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 	// we may recovery with all mappers done and we should kick off
 	// the reducers
 	if nM >= c.nmaptask {
+		c.recordMapPhaseDone()
 		if err := c.makeReduceBins(); err != nil {
 			db.DFatalf("ReduceBins err %v", err)
 		}
@@ -598,6 +631,7 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 				ts[res.Id] = true
 				nM += 1
 				if nM >= c.nmaptask { // kick off reducers?
+					c.recordMapPhaseDone()
 					if err := c.makeReduceBins(); err != nil {
 						db.DFatalf("ReduceBins err %v", err)
 					}
@@ -605,6 +639,7 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 			} else {
 				nR += 1
 				if nR >= c.nreducetask {
+					c.recordReducePhaseDone()
 					db.DPrintf(db.MR_COORD, "processResult: SubmittedLastTask")
 					c.mftclnt.SubmittedLastTask()
 					c.rftclnt.SubmittedLastTask()

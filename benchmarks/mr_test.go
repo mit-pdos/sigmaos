@@ -78,6 +78,14 @@ func (ji *MRJobInstance) Wait() {
 	mr.WaitJobDone(ji.FsLib, ji.jobRoot, ji.jobname)
 }
 
+// Report the map and reduce phase durations recorded by the coordinator. Must
+// be called after the job is done (i.e., after Wait).
+func (ji *MRJobInstance) PrintPhaseDurations() {
+	pd, err := mr.ReadPhaseDurations(ji.FsLib, ji.jobRoot, ji.jobname)
+	assert.Nil(ji.Ts.T, err, "Error read MR phase durations: %v", err)
+	db.DPrintf(db.ALWAYS, "MR job %v map phase %vms reduce phase %vms", ji.jobname, pd.MapMs, pd.ReduceMs)
+}
+
 func (ji *MRJobInstance) WaitJobExit() {
 	ji.cm.WaitGroup()
 }

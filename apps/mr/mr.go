@@ -113,6 +113,13 @@ func (b Bin) String() string {
 	return r
 }
 
+// Wall-clock duration of a job's map and reduce phases, as measured by the
+// coordinator and persisted for the driver to report.
+type PhaseDurations struct {
+	MapMs    int64 `json:"MapMs"`
+	ReduceMs int64 `json:"ReduceMs"`
+}
+
 // Result of mapper or reducer
 type Result struct {
 	IsM      bool       `json:"IsM"`

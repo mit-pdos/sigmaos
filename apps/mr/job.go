@@ -62,6 +62,10 @@ func MRstats(jobRoot, job string) string {
 	return filepath.Join(JobDir(jobRoot, job), "stats.txt")
 }
 
+func MRPhaseStats(jobRoot, job string) string {
+	return filepath.Join(JobDir(jobRoot, job), "phases.txt")
+}
+
 func MapTask(jobRoot, job string) string {
 	return filepath.Join(JobDir(jobRoot, job), "/m")
 }

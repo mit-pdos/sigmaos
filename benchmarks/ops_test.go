@@ -157,6 +157,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	db.DPrintf(db.BENCH, "Done MR job")
 	dur := time.Since(start)
 	ji.WaitJobExit()
+	ji.PrintPhaseDurations()
 	err := mr.PrintMRStats(ts.FsLib, ji.jobRoot, ji.jobname)
 	assert.Nil(ts.Ts.T, err, "Error print MR stats: %v", err)
 	// Sleep a bit to allow util to update.

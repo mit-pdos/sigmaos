@@ -18,6 +18,7 @@ import (
 	"sigmaos/proc"
 	"sigmaos/proxy/getput"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
@@ -76,6 +77,20 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 	}
 	for i := 0; i < CONCURRENCY; i++ {
 		m.ckrs[i] = chunkreader.NewChunkReader(lsz, wsz, combinef, p)
+	}
+	// Mount the local UX server from the endpoint the coordinator cached for
+	// us, so that neither initOutput's MkDir/Create nor the getput RPC
+	// channel has to find it through named (see claude-slop/CACHE_EPs.md).
+	// Inline rather than in a goroutine: initOutput needs the mount, and the
+	// mount replaces work initOutput would otherwise do. Best-effort — on
+	// failure we walk the namespace as before.
+	if strings.HasPrefix(m.intOutput, sp.UX) {
+		start := time.Now()
+		if ok, err := procclnt.MountCachedLocalSrv(sc.FsLib, sp.UX); err != nil {
+			db.DPrintf(db.MR, "Mapper MountCachedLocalSrv %v err %v", sp.UX, err)
+		} else if ok {
+			perf.LogSpawnLatency("Mapper.MountCachedLocalSrv", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
+		}
 	}
 	if m.useGetPut {
 		m.clnts = getput.NewClnts(sc.FsLib)
@@ -229,6 +244,9 @@ func (m *Mapper) outputBin() (Bin, error) {
 		var err error
 		pn, err = m.ResolveMounts(outDirPath)
 		db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
+		// Not covered by the cached-EP mount: resolveMount reads the endpoint
+		// file from named to check locality. See claude-slop/CACHE_EPs.md.
+		perf.LogSpawnLatency("Mapper.outputBin.ResolveMounts", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), start)
 		if err != nil {
 			return nil, fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)
 		}

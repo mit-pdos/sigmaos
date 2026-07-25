@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +22,7 @@ import (
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
+	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/crash"
@@ -44,6 +46,11 @@ type Reducer struct {
 	pwrt         *perf.PerfWriter
 	wrt          *fslib.FileWriter
 	perf         *perf.Perf
+
+	// UX servers we have already mounted from the endpoints the coordinator
+	// cached for us, keyed by server pathname. readFile may run concurrently.
+	mu      sync.Mutex
+	uxMnted map[string]bool
 }
 
 func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
@@ -53,6 +60,7 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 		reducef:      reducef,
 		SigmaClnt:    sc,
 		perf:         p,
+		uxMnted:      make(map[string]bool),
 	}
 	id, err := strconv.Atoi(args[0])
 	if err != nil {
@@ -138,11 +146,44 @@ func (rtot *readResult) sum(r *readResult) {
 	}
 }
 
+// mountUxSrv mounts the UX server holding pn from the endpoint the
+// coordinator cached for us, so that reading pn doesn't have to find the
+// server through named (see claude-slop/CACHE_EPs.md). A reducer reads from
+// one UX server per mapper, so this is done lazily, once per server: the
+// attach count stays what it would have been. Best-effort; a server we can't
+// mount here is found by walking, as before.
+func (r *Reducer) mountUxSrv(pn string) {
+	rest, ok := strings.CutPrefix(pn, sp.UX)
+	if !ok {
+		return
+	}
+	kid := strings.SplitN(rest, "/", 2)[0]
+	// Union elements (~local/~any) don't name a server we have an endpoint
+	// for; mapper output paths are concrete (Mapper.outputBin resolves them).
+	if kid == "" || strings.HasPrefix(kid, "~") {
+		return
+	}
+	srvpn := filepath.Join(sp.UX, kid)
+
+	r.mu.Lock()
+	if r.uxMnted[srvpn] {
+		r.mu.Unlock()
+		return
+	}
+	r.uxMnted[srvpn] = true
+	r.mu.Unlock()
+
+	if _, err := procclnt.MountCachedEndpoint(r.FsLib, srvpn); err != nil {
+		db.DPrintf(db.MR, "Reducer MountCachedEndpoint %v err %v", srvpn, err)
+	}
+}
+
 func (r *Reducer) readFile(rr *readResult) {
 	pn, ok := sp.S3ClientPath(rr.f)
 	if ok {
 		rr.f = pn
 	}
+	r.mountUxSrv(rr.f)
 	rdr, err := r.OpenBufReader(rr.f)
 	if err != nil {
 		db.DPrintf(db.MR, "NewReader %v err %v", rr.f, err)

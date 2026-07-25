@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"sigmaos/proc"
 	wasmer "sigmaos/proxy/wasm/rpc/wasmer"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
@@ -79,6 +81,7 @@ type Coord struct {
 	useCosandbox    bool
 	tailProbeSz     int
 	mrBootWASM      []byte
+	uxEPs           *procclnt.SrvEPCache
 	phaseStart      time.Time
 	mapPhaseMs      int64
 	mapPhaseDone    bool
@@ -192,7 +195,38 @@ func NewCoord(args []string) (*Coord, error) {
 		}
 	}
 
+	// If the intermediate output lives in UX, learn every UX server's
+	// endpoint once here, so that each mapper/reducer can mount the UX
+	// servers it needs without walking the namespace to find them (see
+	// claude-slop/CACHE_EPs.md). Warm the cache now, off the task-execution
+	// path, so that mapperProc/reducerProc never block on named. Note this
+	// only keys off the intermediate output: a mapper's input directory
+	// isn't visible here (it comes per-task, in the bin), so a job with UX
+	// input but non-UX intermediate output doesn't get the optimization.
+	if strings.HasPrefix(c.intOutdir, sp.UX) {
+		c.uxEPs = procclnt.NewSrvEPCache(c.FsLib, sp.UX)
+		start := time.Now()
+		if eps, err := c.uxEPs.Endpoints(); err != nil {
+			// Not fatal: children fall back to walking the namespace.
+			db.DPrintf(db.MR_COORD, "NewCoord: discover %v EPs err %v", sp.UX, err)
+		} else {
+			db.DPrintf(db.MR_COORD, "NewCoord: discovered %d %v EPs in %v", len(eps), sp.UX, time.Since(start))
+		}
+	}
+
 	return c, nil
+}
+
+// Hand the UX servers' endpoints to a proc we are about to spawn, so that it
+// can mount the ones it uses directly. Best-effort: a proc that doesn't get
+// them (or gets a stale one) walks the namespace as it did before.
+func (c *Coord) cacheUxEPs(p *proc.Proc) {
+	if c.uxEPs == nil {
+		return
+	}
+	if err := c.uxEPs.CacheEndpoints(p); err != nil {
+		db.DPrintf(db.MR_COORD, "cacheUxEPs %v err %v", p.GetPid(), err)
+	}
 }
 
 func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
@@ -244,6 +278,7 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		// until the reply for each rpcIdx materializes, so the mapper
 		// starts immediately and pipelines against in-flight prefetches.
 	}
+	c.cacheUxEPs(p)
 	return p, nil
 }
 
@@ -255,7 +290,9 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	outlink := ReduceOut(c.jobRoot, c.job) + data.Task
 	outTarget := ReduceOutTarget(c.outdir, c.job) + data.Task
 	c.stat.Nreduce.Add(1)
-	return c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask), nil
+	p := c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask)
+	c.cacheUxEPs(p)
+	return p, nil
 }
 
 func newStringSlice(data []interface{}) []string {
@@ -288,6 +325,14 @@ func (c *Coord) restart(files []string, task ftclnt.TaskId) {
 // reducers, mark all mappers as errored.
 func (c *Coord) doRestart() {
 	start := time.Now()
+	if c.uxEPs != nil {
+		// Tasks failed and we are about to respawn them. A UX server may
+		// have restarted with a new endpoint, so re-discover in the
+		// background; the procs we spawn meanwhile keep the endpoints we
+		// already have. This is hygiene, not correctness: a child that finds
+		// a stale endpoint falls back to walking the namespace.
+		c.uxEPs.Refresh()
+	}
 	ts, err := c.rftclnt.GetTasksByStatus(ftclnt.ERROR)
 	if err != nil {
 		db.DFatalf("doRestart: move error err %v\n", err)

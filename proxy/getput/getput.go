@@ -11,12 +11,14 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	db "sigmaos/debug"
 	s3clnt "sigmaos/proxy/s3/clnt"
 	uxclnt "sigmaos/proxy/ux/clnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 )
 
 // SplitReader is the input-side surface Mapper.doSplit needs.
@@ -106,6 +108,7 @@ func (c *Clnts) UX() (*uxclnt.UXClnt, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.uxc == nil {
+		start := time.Now()
 		pn := filepath.Join(sp.UX, c.fsl.ProcEnv().GetKernelID())
 		uxc, err := uxclnt.NewUXClnt(c.fsl, pn)
 		if err != nil {
@@ -113,6 +116,8 @@ func (c *Clnts) UX() (*uxclnt.UXClnt, error) {
 			return nil, err
 		}
 		c.uxc = uxc
+		pe := c.fsl.ProcEnv()
+		perf.LogSpawnLatency("getput.Clnts.UX", pe.GetPID(), pe.GetSpawnTime(), start)
 	}
 	return c.uxc, nil
 }

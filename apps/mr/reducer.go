@@ -24,10 +24,10 @@ import (
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/test"
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	"sigmaos/util/rand"
+	"sigmaos/util/tput"
 )
 
 const (
@@ -296,7 +296,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 	}
 
 	ms := rtot.d.Milliseconds()
-	db.DPrintf(db.MR, "DoReduce: Readfiles %v: in %s %vms (%s)\n", len(r.input), humanize.Bytes(uint64(rtot.n)), ms, test.TputStr(rtot.n, ms))
+	db.DPrintf(db.MR, "DoReduce: Readfiles %v: in %s %vms (%s)\n", len(r.input), humanize.Bytes(uint64(rtot.n)), ms, tput.TputStr(rtot.n, ms))
 
 	start := time.Now()
 

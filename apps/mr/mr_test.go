@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/mr"
+	mrcoord "sigmaos/apps/mr/coord"
 	"sigmaos/apps/mr/chunkreader"
 	api "sigmaos/apps/mr/mr"
 	mrscanner "sigmaos/apps/mr/scanner"
@@ -371,7 +372,7 @@ func TestMapperReducer(t *testing.T) {
 		assert.Nil(ts.mrts.T, err, "UploadDir %v %v err %v", job.Local, job.Input, err)
 	}
 
-	nmap, err := mr.PrepareJob(ts.mrts.GetRealm(test.REALM1).FsLib, ts.tasks, ts.jobRoot, ts.job, job)
+	nmap, err := mrcoord.PrepareJob(ts.mrts.GetRealm(test.REALM1).FsLib, ts.tasks, ts.jobRoot, ts.job, job)
 	assert.Nil(ts.mrts.T, err, "PrepareJob err %v: %v", job, err)
 	assert.NotEqual(ts.mrts.T, 0, nmap)
 
@@ -466,7 +467,7 @@ type Tstate struct {
 	jobRoot     string
 	job         string
 	nreducetask int
-	tasks       *mr.Tasks
+	tasks       *mrcoord.Tasks
 	crashmu     sync.Mutex
 }
 
@@ -486,7 +487,7 @@ func newTstate(mrts *test.MultiRealmTstate, jobRoot, app string) *Tstate {
 	// directly through the os for now.
 	os.RemoveAll(filepath.Join(sp.SIGMAHOME, "mr"))
 
-	tasks, err := mr.InitCoordFS(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.jobRoot, ts.job, ts.nreducetask)
+	tasks, err := mrcoord.InitCoordFS(ts.mrts.GetRealm(test.REALM1).SigmaClnt, ts.jobRoot, ts.job, ts.nreducetask)
 	assert.Nil(mrts.T, err, "Error InitCoordFS: %v", err)
 	ts.tasks = tasks
 	os.Remove(OUTPUT)
@@ -637,11 +638,11 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 		defer sdc.Done()
 	}
 
-	nmap, err := mr.PrepareJob(sc.FsLib, ts.tasks, ts.jobRoot, ts.job, job)
+	nmap, err := mrcoord.PrepareJob(sc.FsLib, ts.tasks, ts.jobRoot, ts.job, job)
 	assert.Nil(ts.mrts.T, err, "Err prepare job %v: %v", job, err)
 	assert.NotEqual(ts.mrts.T, 0, nmap)
 
-	cm := mr.StartMRJob(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper, ts.tasks.Mftsrv.Id, ts.tasks.Rftsrv.Id)
+	cm := mrcoord.StartMRJob(sc, ts.jobRoot, ts.job, job, nmap, MEM_REQ, maliciousMapper, ts.tasks.Mftsrv.Id, ts.tasks.Rftsrv.Id)
 
 	var wg sync.WaitGroup
 	for k, v := range srvs {
@@ -669,7 +670,7 @@ func runN(t *testing.T, em *crash.TeventMap, srvs map[string]crash.Tselector, ma
 	}
 	db.DPrintf(db.TEST, "Done check Job")
 
-	err = mr.PrintMRStats(ts.mrts.GetRealm(test.REALM1).FsLib, ts.jobRoot, ts.job)
+	err = mrcoord.PrintMRStats(ts.mrts.GetRealm(test.REALM1).FsLib, ts.jobRoot, ts.job)
 	assert.Nil(ts.mrts.T, err, "Error print MR stats: %v", err)
 
 	db.DPrintf(db.TEST, "Cleanup tasks state")
@@ -737,7 +738,7 @@ func TestCrashCoordOnly(t *testing.T) {
 	coordEv.Insert(e1)
 	repeatTest(t, func() bool {
 		_, nr, _ := runN(t, coordEv, nil, 0, false)
-		return nr <= mr.NCOORD
+		return nr <= mrcoord.NCOORD
 	}, 10)
 }
 
@@ -746,7 +747,7 @@ func TestCrashPartitionCoordOnly(t *testing.T) {
 	coordEv = crash.NewTeventMapOne(e0)
 	repeatTest(t, func() bool {
 		_, nr, _ := runN(t, coordEv, nil, 0, false)
-		return nr <= mr.NCOORD
+		return nr <= mrcoord.NCOORD
 	}, 10)
 }
 
@@ -764,7 +765,7 @@ func TestCrashTaskAndCoord(t *testing.T) {
 
 	repeatTest(t, func() bool {
 		ntask, nr, st := runN(t, em, nil, 0, true)
-		return nr <= mr.NCOORD && st.Counters["Ntask"] <= ntask
+		return nr <= mrcoord.NCOORD && st.Counters["Ntask"] <= ntask
 	}, 10)
 }
 

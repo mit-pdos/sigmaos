@@ -24,6 +24,18 @@ func Khash(key []byte) int {
 	return int(h.Sum32() & 0x7fffffff)
 }
 
+// RESTART is the message a reducer returns when it could not read a mapper's
+// output and the mapper must be re-run. Produced by the reducer, interpreted by
+// the coordinator.
+const RESTART = "restart"
+
+// TreduceTask is a reducer's task data: which reducer it is, and the mapper
+// output shards it reads. Written by the coordinator, read by the reducer.
+type TreduceTask struct {
+	Task  string `json:"Task"`
+	Input Bin
+}
+
 type Bin []mr.Split
 
 // Threshold (the sigmap max message size) above which a bin's JSON

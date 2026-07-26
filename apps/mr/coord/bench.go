@@ -1,4 +1,4 @@
-package mr
+package coord
 
 import (
 	"encoding/json"
@@ -8,10 +8,11 @@ import (
 
 	"github.com/dustin/go-humanize"
 
+	"sigmaos/apps/mr"
 	db "sigmaos/debug"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
-	"sigmaos/test"
+	"sigmaos/util/tput"
 )
 
 // Summary statistics for a set of task runtimes (in ms).
@@ -74,7 +75,7 @@ type JobRuntimeStats struct {
 	ReduceOuter *RuntimeStats
 }
 
-func NewJobRuntimeStats(results []*Result) *JobRuntimeStats {
+func NewJobRuntimeStats(results []*mr.Result) *JobRuntimeStats {
 	mInner := []int64{}
 	mOuter := []int64{}
 	rInner := []int64{}
@@ -101,15 +102,15 @@ func (jst *JobRuntimeStats) String() string {
 }
 
 // Read the per-task results the coordinator logged for a job.
-func ReadResults(fsl *fslib.FsLib, jobRoot, job string) ([]*Result, error) {
-	rdr, err := fsl.OpenReader(MRstats(jobRoot, job))
+func ReadResults(fsl *fslib.FsLib, jobRoot, job string) ([]*mr.Result, error) {
+	rdr, err := fsl.OpenReader(mr.MRstats(jobRoot, job))
 	if err != nil {
 		return nil, err
 	}
 	dec := json.NewDecoder(rdr)
-	results := []*Result{}
+	results := []*mr.Result{}
 	for {
-		r := &Result{}
+		r := &mr.Result{}
 		if err := dec.Decode(r); err == io.EOF {
 			break
 		}
@@ -119,9 +120,9 @@ func ReadResults(fsl *fslib.FsLib, jobRoot, job string) ([]*Result, error) {
 }
 
 // Read the map/reduce phase durations the coordinator logged for a job.
-func ReadPhaseDurations(fsl *fslib.FsLib, jobRoot, job string) (*PhaseDurations, error) {
-	pd := &PhaseDurations{}
-	if err := fsl.GetFileJson(MRPhaseStats(jobRoot, job), pd); err != nil {
+func ReadPhaseDurations(fsl *fslib.FsLib, jobRoot, job string) (*mr.PhaseDurations, error) {
+	pd := &mr.PhaseDurations{}
+	if err := fsl.GetFileJson(mr.MRPhaseStats(jobRoot, job), pd); err != nil {
 		return nil, err
 	}
 	return pd, nil
@@ -147,10 +148,10 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 		}
 	}
 	sort.Slice(results, func(i, j int) bool {
-		return test.Tput(results[i].In+results[i].Out, results[i].MsInner) > test.Tput(results[j].In+results[j].Out, results[j].MsInner)
+		return tput.Tput(results[i].In+results[i].Out, results[i].MsInner) > tput.Tput(results[j].In+results[j].Out, results[j].MsInner)
 	})
 	for _, r := range results {
-		fmt.Printf("[%s, kid:%v]:\n\tin %v out %v tot %v inner %vms outer %vms (%s)\n", r.Task, r.KernelID, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), test.Mbyte(r.In+r.Out), r.MsInner, r.MsOuter, test.TputStr(r.In+r.Out, r.MsInner))
+		fmt.Printf("[%s, kid:%v]:\n\tin %v out %v tot %v inner %vms outer %vms (%s)\n", r.Task, r.KernelID, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), tput.Mbyte(r.In+r.Out), r.MsInner, r.MsOuter, tput.TputStr(r.In+r.Out, r.MsInner))
 	}
 	fmt.Printf("==== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
 		humanize.Bytes(uint64(totIn)), totIn,
@@ -170,5 +171,5 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 }
 
 func RemoveJob(fsl *fslib.FsLib, jobRoot, job string) error {
-	return fsl.RmDir(JobDir(jobRoot, job))
+	return fsl.RmDir(mr.JobDir(jobRoot, job))
 }

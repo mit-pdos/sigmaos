@@ -29,13 +29,17 @@ func (ps *pstats) Update(pn path.Tpathname, c spstats.Tcounter) {
 	spstats.Add(c0, c)
 }
 
-// For reading and marshaling
-type PstatsSnapshot struct {
-	Counters map[string]int64
-}
+// For reading and marshaling.
+//
+// Aliased to spstats.TcounterSnapshot (which it duplicated) so that readers —
+// notably fslib.ReadPstats — can name the type without importing this package,
+// and with it the etcd client and gRPC. That import made every sigmaos proc
+// link etcd: ~1.5-6ms of package init before main. See
+// claude-slop/SLOW_MAPPER_EXEC.md.
+type PstatsSnapshot = spstats.TcounterSnapshot
 
 func NewPstatsSnapshot() *PstatsSnapshot {
-	return &PstatsSnapshot{Counters: make(map[string]int64)}
+	return spstats.NewTcounterSnapshot()
 }
 
 type PstatInode struct {

@@ -1,10 +1,11 @@
-package mr
+package coord
 
 import (
 	"encoding/binary"
 	"strconv"
 
-	"sigmaos/apps/mr/mr"
+	"sigmaos/apps/mr"
+	mrapi "sigmaos/apps/mr/mr"
 	"sigmaos/proxy/getput"
 	wasmer "sigmaos/proxy/wasm/rpc/wasmer"
 	sp "sigmaos/sigmap"
@@ -17,7 +18,7 @@ import (
 // index — the same order (and, via mr.SplitReadWindow, the same window)
 // the mapper's GetPutReader uses to retrieve them. If the two ever
 // diverge, the mapper hangs (missing rpcIdx) or maps corrupted boundaries.
-func mapperBootInput(bin Bin, linesz, probesz int) ([]byte, error) {
+func mapperBootInput(bin mr.Bin, linesz, probesz int) ([]byte, error) {
 	strs := make([]string, 0, 1+5*len(bin))
 	strs = append(strs, sp.LOCAL)
 	for i := range bin {
@@ -26,7 +27,7 @@ func mapperBootInput(bin Bin, linesz, probesz int) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		off, body, probe := mr.SplitReadWindow(s, linesz, probesz)
+		off, body, probe := mrapi.SplitReadWindow(s, linesz, probesz)
 		cnt := uint64(body) + uint64(probe)
 		offStr := strconv.FormatUint(uint64(off), 10)
 		cntStr := strconv.FormatUint(cnt, 10)

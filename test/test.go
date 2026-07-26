@@ -5,7 +5,6 @@ package test
 
 import (
 	"flag"
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -20,6 +19,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/util/auth"
 	iputil "sigmaos/util/ip"
+	"sigmaos/util/tput"
 )
 
 var Start bool
@@ -61,18 +61,20 @@ func init() {
 
 var savedTstate *Tstate
 
+// Size/throughput formatting lives in util/tput, so that procs can use it
+// without linking this package (and with it the Docker client, via
+// sigmaos/kernel). Re-exported here for the many tests that already call it.
+
 func Mbyte(sz sp.Tlength) float64 {
-	return float64(sz) / float64(sp.MBYTE)
+	return tput.Mbyte(sz)
 }
 
 func TputStr(sz sp.Tlength, ms int64) string {
-	s := float64(ms) / 1000
-	return fmt.Sprintf("%.2fMB/s", Mbyte(sz)/s)
+	return tput.TputStr(sz, ms)
 }
 
 func Tput(sz sp.Tlength, ms int64) float64 {
-	t := float64(ms) / 1000
-	return Mbyte(sz) / t
+	return tput.Tput(sz, ms)
 }
 
 type TstateMin struct {

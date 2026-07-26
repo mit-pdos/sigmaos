@@ -7,7 +7,6 @@ import (
 
 	db "sigmaos/debug"
 	leaseproto "sigmaos/ft/lease/proto"
-	"sigmaos/namesrv/fsetcd"
 	sp "sigmaos/sigmap"
 )
 
@@ -40,7 +39,7 @@ func (l *Lease) extender() {
 		case <-l.ch:
 			db.DPrintf(db.LEASECLNT, "extender: end lid %v\n", l)
 			return
-		case <-time.After(fsetcd.LeaseTTL / 3 * time.Second):
+		case <-time.After(sp.EtcdSessionTTL / 3 * time.Second):
 			db.DPrintf(db.LEASECLNT, "extender: extend lid %v\n", l)
 			if err := l.extendLease(); err != nil {
 				db.DPrintf(db.LEASECLNT, "extender: expire lid %v err %v\n", l, err)

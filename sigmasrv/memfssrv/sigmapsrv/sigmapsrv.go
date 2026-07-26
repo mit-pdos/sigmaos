@@ -16,7 +16,6 @@ import (
 	"sigmaos/ctx"
 	db "sigmaos/debug"
 	dialproxyclnt "sigmaos/dialproxy/clnt"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/path"
 	"sigmaos/proc"
 	"sigmaos/serr"
@@ -136,7 +135,7 @@ func (psrv *SigmaPSrv) postMount(sc *sigmaclnt.SigmaClnt, pn string, ep *sp.Tend
 		pn = mountPathName(pn, ep)
 	}
 
-	li, err := sc.LeaseClnt.AskLease(pn, fsetcd.LeaseTTL)
+	li, err := sc.LeaseClnt.AskLease(pn, sp.EtcdSessionTTL)
 	if err != nil {
 		return "", err
 	}

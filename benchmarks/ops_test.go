@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"sigmaos/apps/mr"
+	mrcoord "sigmaos/apps/mr/coord"
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/proc"
@@ -158,7 +158,7 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	dur := time.Since(start)
 	ji.WaitJobExit()
 	ji.PrintPhaseDurations()
-	err := mr.PrintMRStats(ts.FsLib, ji.jobRoot, ji.jobname)
+	err := mrcoord.PrintMRStats(ts.FsLib, ji.jobRoot, ji.jobname)
 	assert.Nil(ts.Ts.T, err, "Error print MR stats: %v", err)
 	// Sleep a bit to allow util to update.
 	time.Sleep(4 * time.Second)

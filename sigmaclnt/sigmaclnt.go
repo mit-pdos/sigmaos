@@ -157,6 +157,7 @@ func (sc *SigmaClnt) NewProcClnt() error {
 }
 
 func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
+	perf.LogProcExitRusage(sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime())
 	sc.ProcAPI.Exited(status)
 	db.DPrintf(db.SIGMACLNT, "Exited done")
 	if sc.LeaseClnt != nil {

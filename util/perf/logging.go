@@ -76,6 +76,29 @@ func logRuntimeInitRusage(pid sp.Tpid, spawnTime time.Time) {
 	db.DPrintf(db.SPAWN_LAT, "[%s] Setup.RuntimeInit.rusage cpu:%v utime:%v stime:%v trampCPU:%v minflt:%d majflt:%d nvcsw:%d nivcsw:%d", pid, cpu, utime, stime, tramp, ru.Minflt, ru.Majflt, ru.Nvcsw, ru.Nivcsw)
 }
 
+// LogProcExitRusage reports the CPU and memory a proc consumed over its whole
+// lifetime, logged as it exits. Read it against Setup.RuntimeInit.CPU to see
+// what fraction of a proc's CPU went into getting to main rather than into its
+// work — the thing that decides how much shrinking the setup path can buy. As
+// with Setup.RuntimeInit.rusage, the counters include the trampoline's share
+// (reported separately as trampCPU there), since execve preserves them.
+func LogProcExitRusage(pid sp.Tpid, spawnTime time.Time) {
+	if !db.WillBePrinted(db.SPAWN_LAT) {
+		return
+	}
+	var ru syscall.Rusage
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
+		db.DPrintf(db.SPAWN_LAT, "[%s] Proc.exit.rusage err %v", pid, err)
+		return
+	}
+	utime := time.Duration(ru.Utime.Nano())
+	stime := time.Duration(ru.Stime.Nano())
+	// Logged as an op duration too, so it shows up in the spawn-latency stats
+	// next to Setup.RuntimeInit.CPU.
+	LogSpawnLatency("Proc.exit.CPU", pid, spawnTime, time.Now().Add(-(utime + stime)))
+	db.DPrintf(db.SPAWN_LAT, "[%s] Proc.exit.rusage cpu:%v utime:%v stime:%v maxrssKB:%d minflt:%d majflt:%d nvcsw:%d nivcsw:%d", pid, utime+stime, utime, stime, ru.Maxrss, ru.Minflt, ru.Majflt, ru.Nvcsw, ru.Nivcsw)
+}
+
 // Some convenience functions for logging performance-related data
 func LogSpawnLatency(format string, pid sp.Tpid, spawnTime time.Time, opStart time.Time, v ...interface{}) {
 	// Bail out early if not logging

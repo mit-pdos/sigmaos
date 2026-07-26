@@ -11,17 +11,10 @@ import (
 	"strings"
 
 	db "sigmaos/debug"
-	"sigmaos/ft/procgroupmgr"
-	"sigmaos/ft/task"
-	"sigmaos/proc"
 	"sigmaos/serr"
-	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/coordination/semaphore"
-
-	fttask_clnt "sigmaos/ft/task/clnt"
-	fttask_srv "sigmaos/ft/task/srv"
 )
 
 const (
@@ -165,62 +158,6 @@ func ReadJobConfig(app string) (*Job, error) {
 	return job, nil
 }
 
-type Tasks struct {
-	Mftsrv  *fttask_srv.FtTaskSrvMgr
-	Mftclnt fttask_clnt.FtTaskClnt[Bin, any]
-
-	Rftsrv  *fttask_srv.FtTaskSrvMgr
-	Rftclnt fttask_clnt.FtTaskClnt[TreduceTask, any]
-}
-
-func (ts *Tasks) SubmitReducers(nreducetask int) error {
-	rTasks := make([]*fttask_clnt.Task[TreduceTask], nreducetask)
-	for r := 0; r < nreducetask; r++ {
-		t := TreduceTask{strconv.Itoa(r), nil}
-		rTasks[r] = &fttask_clnt.Task[TreduceTask]{Id: fttask_clnt.TaskId(r), Data: t}
-	}
-	return ts.Rftclnt.SubmitTasks(rTasks)
-}
-
-func InitCoordFS(sc *sigmaclnt.SigmaClnt, jobRoot, jobname string, nreducetask int) (*Tasks, error) {
-	sc.FsLib.MkDir(MRDIRTOP, 0777)
-	sc.FsLib.MkDir(MRDIRELECT, 0777)
-	sc.FsLib.MkDir(jobRoot, 0777)
-
-	mftsrv, err := fttask_srv.NewFtTaskSrvMgr(sc, jobname+"-mtasks", false, 1000)
-	if err != nil {
-		db.DPrintf(db.ERROR, "NewFtTaskSrvMgr %v err %v\n", jobname, err)
-		return nil, err
-	}
-	mftclnt := fttask_clnt.NewFtTaskClnt[Bin, any](sc.FsLib, mftsrv.Id, sp.NullFence())
-
-	rftsrv, err := fttask_srv.NewFtTaskSrvMgr(sc, jobname+"-rtasks", false, 1000)
-	if err != nil {
-		db.DPrintf(db.ERROR, "NewFtTaskSrvMgr %v err %v\n", jobname, err)
-		return nil, err
-	}
-	rftclnt := fttask_clnt.NewFtTaskClnt[TreduceTask, any](sc.FsLib, rftsrv.Id, sp.NullFence())
-
-	dirs := []string{
-		JobDir(jobRoot, jobname),
-		LeaderElectDir(jobname),
-		MapTask(jobRoot, jobname),
-		ReduceTask(jobRoot, jobname),
-	}
-	for _, n := range dirs {
-		if err := sc.FsLib.MkDir(n, 0777); err != nil {
-			db.DPrintf(db.ERROR, "Mkdir %v err %v\n", n, err)
-			return nil, err
-		}
-	}
-	if err := InitJobSem(sc.FsLib, jobRoot, jobname); err != nil {
-		db.DPrintf(db.ERROR, "Err init job sem")
-		return nil, err
-	}
-
-	return &Tasks{mftsrv, mftclnt, rftsrv, rftclnt}, err
-}
-
 // Clean up all old MR outputs
 func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string, swapLocalForAny bool) error {
 	db.DPrintf(db.MR, "Clean up MR outputs: %v %v", outputDir, intOutputDir)
@@ -320,56 +257,6 @@ func copyS3InputToUxSrv(fsl *fslib.FsLib, s3Input string, inputs []*sp.Tstat, ux
 	return nil
 }
 
-func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *Job) (int, error) {
-	job := JobLocalToAny(j, false, false, true)
-	db.DPrintf(db.TEST, "job %v", job)
-
-	if job.Output == "" || job.Intermediate == "" {
-		return 0, fmt.Errorf("Err job output (\"%v\") or intermediate (\"%v\") not supplied", job.Output, job.Intermediate)
-	}
-	if job.Splitsz == 0 {
-		return 0, fmt.Errorf("Err job splitsz not supplied")
-	}
-	fsl.MkDir(job.Output, 0777)
-	outDir := JobOut(job.Output, jobName)
-	if err := fsl.MkDir(outDir, 0777); err != nil {
-		db.DPrintf(db.ALWAYS, "Error mkdir job dir %v: %v", outDir, err)
-		return 0, err
-	}
-	if _, err := fsl.PutFile(JobOutLink(jobRoot, jobName), 0777, sp.OWRITE, []byte(job.Output)); err != nil {
-		db.DPrintf(db.ALWAYS, "Error link output dir [%v] [%v]: %v", job.Output, JobOutLink(jobRoot, jobName), err)
-		return 0, err
-	}
-
-	// If intermediate output directory lives in S3, make it only
-	// once.  Mappers make intermediate and out dirs in their local ux
-	if strings.Contains(job.Intermediate, "/s3/") {
-		intOutDir := MapIntermediateDir(jobName, job.Intermediate)
-		if err := fsl.MkDir(job.Intermediate, 0777); err != nil {
-			return 0, err
-		}
-		if err := fsl.MkDir(intOutDir, 0777); err != nil {
-			return 0, err
-		}
-	}
-
-	if _, err := fsl.PutFile(JobIntOutLink(jobRoot, jobName), 0777, sp.OWRITE, []byte(job.Intermediate)); err != nil {
-		db.DPrintf(db.ALWAYS, "Error link intermediate dir [%v] [%v]: %v", job.Output, JobOutLink(jobRoot, jobName), err)
-		return 0, err
-	}
-
-	bins, err := NewBins(fsl, job.Input, true, sp.Tlength(job.Binsz), sp.Tlength(job.Splitsz))
-	if err != nil || len(bins) == 0 {
-		return len(bins), err
-	}
-	mtasks := make([]*fttask_clnt.Task[Bin], len(bins))
-	for i, b := range bins {
-		mtasks[i] = &fttask_clnt.Task[Bin]{Id: fttask_clnt.TaskId(i), Data: b}
-	}
-	err = ts.Mftclnt.SubmitTasks(mtasks)
-	return len(bins), err
-}
-
 func CreateMapperIntOutDirUx(fsl *fslib.FsLib, job, intOutput string) error {
 	if strings.Contains(intOutput, "/ux/") {
 		if _, err := fsl.Stat(intOutput); err != nil {
@@ -390,28 +277,6 @@ func CreateMapperIntOutDirUx(fsl *fslib.FsLib, job, intOutput string) error {
 		}
 	}
 	return nil
-}
-
-func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap int, memPerTask proc.Tmem, maliciousMapper int, mftid task.FtTaskSvcId, rftid task.FtTaskSvcId) *procgroupmgr.ProcGroupMgr {
-	cfg := procgroupmgr.NewProcGroupConfig(NCOORD, "mr-coord",
-		[]string{
-			jobRoot,
-			strconv.Itoa(nmap),
-			strconv.Itoa(job.Nreduce),
-			"mr-m-" + job.App,
-			"mr-r-" + job.App,
-			strconv.Itoa(job.Linesz),
-			strconv.Itoa(job.Wordsz),
-			strconv.Itoa(int(memPerTask)),
-			strconv.Itoa(maliciousMapper),
-			string(mftid),
-			string(rftid),
-			strconv.FormatBool(job.UseGetPut),
-			strconv.FormatBool(job.UseCosandboxes),
-			strconv.Itoa(job.TailProbeSz),
-			strconv.Itoa(job.MapperGOMAXPROCS),
-		}, 1000, jobName)
-	return cfg.StartGrpMgr(sc)
 }
 
 // XXX run as a proc?

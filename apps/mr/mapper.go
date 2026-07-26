@@ -20,10 +20,10 @@ import (
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
-	"sigmaos/test"
 	"sigmaos/util/crash"
 	"sigmaos/util/perf"
 	"sigmaos/util/rand"
+	"sigmaos/util/tput"
 )
 
 const (
@@ -454,7 +454,7 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	db.DPrintf(db.MR, "Mapper [%v] init time: %v", args[2], time.Since(init))
 	start := time.Now()
 	nin, nout, outbin, err := m.DoMap()
-	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), test.Mbyte(nin+nout), time.Since(start).Milliseconds(), test.TputStr(nin+nout, time.Since(start).Milliseconds()))
+	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), tput.Mbyte(nin+nout), time.Since(start).Milliseconds(), tput.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK",
 			Result{true, m.ProcEnv().GetPID().String(), nin, nout, outbin, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))

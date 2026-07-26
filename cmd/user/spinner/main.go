@@ -7,7 +7,6 @@ import (
 	"runtime"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib/dirwatcher"
@@ -58,7 +57,7 @@ func NewSpinner(args []string) (*Spinner, error) {
 }
 
 func (s *Spinner) putFileWatch(ch chan bool) {
-	li, err := s.LeaseClnt.AskLease(s.outdir, fsetcd.LeaseTTL)
+	li, err := s.LeaseClnt.AskLease(s.outdir, sp.EtcdSessionTTL)
 	if err != nil {
 		db.DFatalf("Error AskLease: %v", err)
 	}

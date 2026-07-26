@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/mr"
+	mrcoord "sigmaos/apps/mr/coord"
 	db "sigmaos/debug"
 	"sigmaos/ft/procgroupmgr"
 	fttask "sigmaos/ft/task"
@@ -55,13 +56,13 @@ func (ji *MRJobInstance) PrepareMRJob() {
 		db.DPrintf(db.TEST, "Done copy MR job input from S3 %v to UX %v", ji.job.S3Input, ji.job.Input)
 	}
 	db.DPrintf(db.TEST, "Prepare MR FS %v", ji.jobname)
-	tasks, err := mr.InitCoordFS(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job.Nreduce)
+	tasks, err := mrcoord.InitCoordFS(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job.Nreduce)
 	assert.Nil(ji.Ts.T, err, "Error InitCoordFS: %v", err)
 	ji.mftid = tasks.Mftsrv.Id
 	ji.rftid = tasks.Rftsrv.Id
 	db.DPrintf(db.TEST, "Done prepare MR FS %v", ji.jobname)
 	db.DPrintf(db.TEST, "Prepare MR job %v %v", ji.jobname, ji.job)
-	nmap, err := mr.PrepareJob(ji.FsLib, tasks, ji.jobRoot, ji.jobname, ji.job)
+	nmap, err := mrcoord.PrepareJob(ji.FsLib, tasks, ji.jobRoot, ji.jobname, ji.job)
 	db.DPrintf(db.TEST, "Done prepare MR job %v %v", ji.jobname, ji.job)
 	ji.nmap = nmap
 	assert.Nil(ji.Ts.T, err, "Error PrepareJob: %v", err)
@@ -71,7 +72,7 @@ func (ji *MRJobInstance) PrepareMRJob() {
 
 func (ji *MRJobInstance) StartMRJob() {
 	db.DPrintf(db.TEST, "Start MR job %v %v", ji.jobname, ji.job)
-	ji.cm = mr.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.memreq, 0, ji.mftid, ji.rftid)
+	ji.cm = mrcoord.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.memreq, 0, ji.mftid, ji.rftid)
 }
 
 func (ji *MRJobInstance) Wait() {
@@ -81,7 +82,7 @@ func (ji *MRJobInstance) Wait() {
 // Report the map and reduce phase durations recorded by the coordinator. Must
 // be called after the job is done (i.e., after Wait).
 func (ji *MRJobInstance) PrintPhaseDurations() {
-	pd, err := mr.ReadPhaseDurations(ji.FsLib, ji.jobRoot, ji.jobname)
+	pd, err := mrcoord.ReadPhaseDurations(ji.FsLib, ji.jobRoot, ji.jobname)
 	assert.Nil(ji.Ts.T, err, "Error read MR phase durations: %v", err)
 	db.DPrintf(db.ALWAYS, "MR job %v map phase %vms reduce phase %vms", ji.jobname, pd.MapMs, pd.ReduceMs)
 }

@@ -5,7 +5,6 @@ import (
 
 	db "sigmaos/debug"
 	leaseclnt "sigmaos/ft/lease/clnt"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/proc"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
@@ -25,7 +24,7 @@ func MakeKProcSemaphores(fsl *fslib.FsLib, lc *leaseclnt.LeaseClnt) error {
 	db.DPrintf(db.PROCCLNT, "MakeKProcSemaphores")
 	exitSemPN := filepath.Join(fsl.ProcEnv().GetProcDir(), proc.EXIT_SEM)
 	evictSemPN := filepath.Join(fsl.ProcEnv().GetProcDir(), proc.EVICT_SEM)
-	li, err := lc.AskLease(exitSemPN, fsetcd.LeaseTTL)
+	li, err := lc.AskLease(exitSemPN, sp.EtcdSessionTTL)
 	if err != nil {
 		db.DPrintf(db.PROCCLNT_ERR, "Err AskLease: %v", err)
 	}

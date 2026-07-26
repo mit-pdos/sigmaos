@@ -11,7 +11,6 @@ import (
 	"time"
 
 	db "sigmaos/debug"
-	"sigmaos/namesrv/fsetcd"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/fslib/dirwatcher"
@@ -206,7 +205,7 @@ func (dc *DirCache[E]) watchDir(dw *dirwatcher.DirWatcher) {
 // watchdog thread that wakes up waiters periodically
 func (dc *DirCache[E]) watchdog() {
 	for dc.isDone.Load() == 0 {
-		time.Sleep(fsetcd.LeaseTTL * time.Second)
+		time.Sleep(sp.EtcdSessionTTL * time.Second)
 		db.DPrintf(dc.LSelector, "watchdog: broadcast")
 		dc.hasEntries.Broadcast()
 	}

@@ -41,6 +41,19 @@ fn print_elapsed_time(
     }
 }
 
+// CPU time (user + system, in microseconds) this process has consumed so far.
+fn self_cpu_us() -> i64 {
+    match nix::sys::resource::getrusage(nix::sys::resource::UsageWho::RUSAGE_SELF) {
+        Ok(ru) => {
+            let ut = ru.user_time();
+            let st = ru.system_time();
+            (ut.tv_sec() as i64 * 1_000_000 + ut.tv_usec() as i64)
+                + (st.tv_sec() as i64 * 1_000_000 + st.tv_usec() as i64)
+        }
+        Err(_) => 0,
+    }
+}
+
 fn main() {
     let debug_pid = env::var("SIGMADEBUGPID").unwrap();
     let debug_pid_2 = env::var("SIGMADEBUGPID").unwrap();
@@ -152,6 +165,12 @@ fn main() {
             .as_micros()
             .to_string(),
     );
+
+    // Hand over how much CPU this process has burned so far. execve keeps the
+    // process's CPU counters (only fork resets them), so the exec'd program's
+    // own getrusage would otherwise include all of the trampoline's work; it
+    // subtracts this to get the CPU cost of exec -> main alone.
+    env::set_var("SIGMA_EXEC_CPU_US", self_cpu_us().to_string());
 
     if VERBOSE {
         log::info!("exec: {} {:?}", program, new_args);

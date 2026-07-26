@@ -13,6 +13,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 
 	db "sigmaos/debug"
+	sp "sigmaos/sigmap"
 	"sigmaos/util/perf"
 )
 
@@ -69,6 +70,19 @@ func (f *binfsFile) Read(ctx context.Context, buf []byte, off int64) (res fuse.R
 func (f *binfsFile) Release(ctx context.Context) syscall.Errno {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	// One line per exec: how much FUSE work this proc's binary cost procd.
+	// nread/nbyte is what the kernel had to page in through us (rather than
+	// from its own page cache), npresent/presentMs is the per-read
+	// chunksrv.IsPresent scan, and nfetch should be 0 after the first proc
+	// for this binary on this node.
+	st := f.dl.Stats()
+	// dl.p is set from ProcSrv.LookupProc, which can in principle hand back
+	// nil; don't let logging take procd down.
+	pid := sp.Tpid(sp.NOT_SET)
+	if f.dl.p != nil {
+		pid = f.dl.p.GetPid()
+	}
+	db.DPrintf(db.SPAWN_LAT, "[%s] BinFs.exec %q nread:%d nbyte:%d npresent:%d presentMs:%v nfetch:%d fetchMs:%v", pid, f.pn, st.nread, st.nbyte, st.npresent, st.presentMs, st.nfetch, st.fetchMs)
 	if f.fd != -1 {
 		err := syscall.Close(f.fd)
 		f.fd = -1

@@ -28,6 +28,41 @@ type downloader struct {
 	pds schedproc.ProcSrv
 	err error
 	tot time.Duration
+
+	// Per-open (i.e., per-exec) counters, reported by Stats and logged when
+	// the file handle is released. They measure how much FUSE work an exec
+	// of this binary costs procd: how many reads the kernel sent us to page
+	// the binary in, how much of the file we handed back, how much time went
+	// into deciding whether chunks were present (chunksrv.IsPresent reopens
+	// and scans the cache file on every read), and how many chunks we had to
+	// fetch (should be 0 after the first proc for this binary on this node).
+	nread     int
+	nbyte     int64
+	npresent  int
+	presentMs time.Duration
+	nfetch    int
+}
+
+type dlStats struct {
+	nread     int
+	nbyte     int64
+	npresent  int
+	presentMs time.Duration
+	nfetch    int
+	fetchMs   time.Duration
+}
+
+func (dl *downloader) Stats() dlStats {
+	dl.mu.Lock()
+	defer dl.mu.Unlock()
+	return dlStats{
+		nread:     dl.nread,
+		nbyte:     dl.nbyte,
+		npresent:  dl.npresent,
+		presentMs: dl.presentMs,
+		nfetch:    dl.nfetch,
+		fetchMs:   dl.tot,
+	}
 }
 
 func newDownloader(pn string, pds schedproc.ProcSrv, sz sp.Tsize, p *proc.Proc, pid uint32) *downloader {
@@ -42,7 +77,28 @@ func newDownloader(pn string, pds schedproc.ProcSrv, sz sp.Tsize, p *proc.Proc, 
 }
 
 func (dl *downloader) String() string {
-	return fmt.Sprintf("{pn %q sz %d ckclnt %v}", dl.pn, dl.sz)
+	return fmt.Sprintf("{pn %q sz %d}", dl.pn, dl.sz)
+}
+
+func (dl *downloader) countRead(nbyte int64) {
+	dl.mu.Lock()
+	defer dl.mu.Unlock()
+	dl.nread++
+	dl.nbyte += nbyte
+}
+
+func (dl *downloader) countPresent(d time.Duration) {
+	dl.mu.Lock()
+	defer dl.mu.Unlock()
+	dl.npresent++
+	dl.presentMs += d
+}
+
+func (dl *downloader) countFetch(d time.Duration) {
+	dl.mu.Lock()
+	defer dl.mu.Unlock()
+	dl.nfetch++
+	dl.tot += d
 }
 
 // Fetch chunk through procd, which will fill in the realm and
@@ -74,7 +130,9 @@ func (dl *downloader) read(off int64, nbyte int) (int, error) {
 	start := time.Now()
 	for c := i; c < j; c++ {
 		pn := binCachePath(dl.pn)
+		presentStart := time.Now()
 		sz, ok := chunksrv.IsPresent(pn, c, dl.sz)
+		dl.countPresent(time.Since(presentStart))
 		if !ok {
 			db.DPrintf(db.BINSRV, "read %d %d: chunk %v not present, need to fetch", off, nbyte, c)
 			s := time.Now()
@@ -85,12 +143,13 @@ func (dl *downloader) read(off int64, nbyte int) (int, error) {
 				sz = sz0
 			}
 			d := time.Since(s)
-			dl.tot += d
+			dl.countFetch(d)
 			perf.LogSpawnLatencyVerbose("BinSrv.downloader.read.fetchChunk %d sz %v", dl.p.GetPid(), dl.p.GetSpawnTime(), s, c, sz)
 		}
 		n += sz
 		db.DPrintf(db.BINSRV, "read %q ck %d sz %d", pn, c, sz)
 	}
+	dl.countRead(int64(min(n-o, nbyte)))
 	perf.LogSpawnLatencyVerbose("BinSrv.downloader.read nbyte %v", dl.p.GetPid(), dl.p.GetSpawnTime(), start, nbyte)
 	db.DPrintf(db.BINSRV, "read done %d %d: chunks [%d,%d)", off, nbyte, i, j)
 	return min(n-o, nbyte), nil

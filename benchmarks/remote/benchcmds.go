@@ -211,7 +211,11 @@ func GetBEImgResizeRPCMultiplexingCmdConstructor(nRealm int, sleep time.Duration
 func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, prewarmRealm bool, mrCfg *benchmarks.MRBenchConfig) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
 		const (
-			debugSelectors string = "\"TEST;BENCH;MR_COORD;MR;\""
+			// PROCCLNT_EPCACHE: the coordinator now hands mappers/reducers
+			// cached UX endpoints to mount, which is on the path being
+			// measured — log it so a problem there can't be mistaken for
+			// spawn-latency noise.
+			debugSelectors string = "\"TEST;BENCH;MR_COORD;MR;SPAWN_LAT;PROCCLNT_EPCACHE;PROCCLNT_EPCACHE_ERR;\""
 		)
 		prewarm := ""
 		if prewarmRealm {

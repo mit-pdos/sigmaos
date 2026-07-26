@@ -37,6 +37,8 @@ func init() {
 	flag.BoolVar(&noShutdownArg, "no-shutdown-after-test", false, "Avoid shutting down the cluster after running a benchmark (useful for debugging).")
 	flag.BoolVar(&reloadGVisor, "reload-gvisor", false, "Refresh gvisor container.")
 	flag.BoolVar(&k8sArg, "k8s", false, "Run the k8s version of the experiment.")
+	flag.IntVar(&mrMemReqArg, "mr_mem_req", 1200, "MR benchmarks: mem request (MB) per mapper/reducer, which is what bounds how many run concurrently per node.")
+	flag.IntVar(&mrGOMAXPROCSArg, "mr_gomaxprocs", 0, "MR benchmarks: GOMAXPROCS for mapper procs (0 = Go default, i.e. the node's core count).")
 	proc.SetSigmaDebugPid("remote-bench")
 }
 
@@ -975,12 +977,22 @@ func TestBEMRMultiplexing(t *testing.T) {
 	const (
 		sleepBetweenRealms time.Duration = 5 * time.Second
 		nRealms            int           = 1
-		memPerWorker       proc.Tmem     = 2500
 		prewarmRealm       bool          = true
 		useGetPut          bool          = false
 		useCosandboxes     bool          = false
-		benchConfig        string        = "mr-grep-wiki1G-granular-bench.json"
+		//		benchConfig        string        = "mr-grep-wiki1G-granular-bench.json"
+		benchConfig string = "mr-grep-wiki128M-granular-bench.json"
 	)
+	// Mem request per worker is what bounds concurrent mappers per node
+	// (msched admits on memory), so it is the knob for the packing sweep:
+	// --mr_mem_req 8000 ~1/node, 3000 ~5/node, 1500 ~10/node, 1200 ~13/node.
+	memPerWorker := proc.Tmem(mrMemReqArg)
+	// Each configuration gets its own results directory, so a sweep doesn't
+	// overwrite itself.
+	benchName = fmt.Sprintf("%s_mem%d", benchName, mrMemReqArg)
+	if mrGOMAXPROCSArg > 0 {
+		benchName = fmt.Sprintf("%s_gomaxprocs%d", benchName, mrGOMAXPROCSArg)
+	}
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
@@ -993,6 +1005,8 @@ func TestBEMRMultiplexing(t *testing.T) {
 	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 		return
 	}
+	mrCfg.JobCfg.MapperGOMAXPROCS = mrGOMAXPROCSArg
+	db.DPrintf(db.ALWAYS, "MR multiplexing config: benchName %v memPerWorker %v mapperGOMAXPROCS %v", benchName, memPerWorker, mrGOMAXPROCSArg)
 	ts.RunStandardBenchmark(benchName, driverVM, GetBEMRMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, prewarmRealm, mrCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 }
 

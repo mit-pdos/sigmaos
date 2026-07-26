@@ -55,38 +55,39 @@ type TreduceTask struct {
 
 type Coord struct {
 	*sigmaclnt.SigmaClnt
-	mftid           task.FtTaskSvcId
-	rftid           task.FtTaskSvcId
-	mftclnt         ftclnt.FtTaskClnt[Bin, Bin]
-	rftclnt         ftclnt.FtTaskClnt[TreduceTask, Bin]
-	mcoord          *fttaskmgr.FtTaskCoord[[]byte, []byte]
-	rcoord          *fttaskmgr.FtTaskCoord[[]byte, []byte]
-	jobRoot         string
-	job             string
-	nmaptask        int
-	nreducetask     int
-	maliciousMapper uint64
-	linesz          string
-	lineszInt       int
-	wordsz          string
-	mapperbin       string
-	reducerbin      string
-	leaderclnt      *leaderclnt.LeaderClnt
-	outdir          string
-	intOutdir       string
-	memPerTask      proc.Tmem
-	stat            AStat
-	perf            *perf.Perf
-	useGetPut       bool
-	useCosandbox    bool
-	tailProbeSz     int
-	mrBootWASM      []byte
-	uxEPs           *procclnt.SrvEPCache
-	s3EPs           *procclnt.SrvEPCache
-	intOutS3        bool
-	phaseStart      time.Time
-	mapPhaseMs      int64
-	mapPhaseDone    bool
+	mftid            task.FtTaskSvcId
+	rftid            task.FtTaskSvcId
+	mftclnt          ftclnt.FtTaskClnt[Bin, Bin]
+	rftclnt          ftclnt.FtTaskClnt[TreduceTask, Bin]
+	mcoord           *fttaskmgr.FtTaskCoord[[]byte, []byte]
+	rcoord           *fttaskmgr.FtTaskCoord[[]byte, []byte]
+	jobRoot          string
+	job              string
+	nmaptask         int
+	nreducetask      int
+	maliciousMapper  uint64
+	linesz           string
+	lineszInt        int
+	wordsz           string
+	mapperbin        string
+	reducerbin       string
+	leaderclnt       *leaderclnt.LeaderClnt
+	outdir           string
+	intOutdir        string
+	memPerTask       proc.Tmem
+	stat             AStat
+	perf             *perf.Perf
+	useGetPut        bool
+	useCosandbox     bool
+	tailProbeSz      int
+	mrBootWASM       []byte
+	uxEPs            *procclnt.SrvEPCache
+	s3EPs            *procclnt.SrvEPCache
+	intOutS3         bool
+	mapperGOMAXPROCS int
+	phaseStart       time.Time
+	mapPhaseMs       int64
+	mapPhaseDone     bool
 }
 
 type AStat struct {
@@ -106,8 +107,8 @@ func (s *AStat) String() string {
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 15 {
-		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 15 (stale mr-coord binary?): %v", len(args), args)
+	if len(args) != 16 {
+		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 16 (stale mr-coord binary?): %v", len(args), args)
 	}
 	c := &Coord{}
 	c.jobRoot = args[1]
@@ -186,6 +187,10 @@ func NewCoord(args []string) (*Coord, error) {
 	c.lineszInt, err = strconv.Atoi(c.linesz)
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: linesz %v isn't int", c.linesz)
+	}
+	c.mapperGOMAXPROCS, err = strconv.Atoi(args[15])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: mapperGOMAXPROCS %v isn't int", args[15])
 	}
 
 	if c.useCosandbox {
@@ -284,6 +289,12 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		db.DFatalf("mapperProc: %v err %v", bin, err)
 	}
 	p := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), c.intOutdir, c.linesz, c.wordsz, strconv.FormatBool(c.useGetPut), strconv.FormatBool(c.useCosandbox), strconv.Itoa(c.tailProbeSz)}, c.memPerTask)
+	if c.mapperGOMAXPROCS > 0 {
+		// Bound the mapper's Go runtime instead of letting it size itself to
+		// the whole machine, which every proc sharing the machine otherwise
+		// does independently.
+		p.AppendEnv("GOMAXPROCS", strconv.Itoa(c.mapperGOMAXPROCS))
+	}
 	if c.useGetPut {
 		// The UX/S3 proxy client RPC channels — and the delegated-RPC path
 		// in particular — are serviced by spproxy.

@@ -23,6 +23,13 @@ var k8sArg bool
 var oneByOne bool
 var reloadGVisor bool
 
+// Knobs for the MR-multiplexing experiments (see
+// claude-slop/SLOW_MAPPER_EXEC.md): mem request per worker, which on these
+// nodes is what sets how many mappers run concurrently, and GOMAXPROCS for
+// mapper procs.
+var mrMemReqArg int
+var mrGOMAXPROCSArg int
+
 type BenchConfig struct {
 	Platform     sp.Tplatform `json:"platform"`
 	VPC          string       `json:"vpc"`

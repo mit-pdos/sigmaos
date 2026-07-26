@@ -39,6 +39,7 @@ import (
 	"sigmaos/sigmasrv"
 	"sigmaos/util/crash"
 	iputil "sigmaos/util/ip"
+	"sigmaos/util/linux/nodestats"
 	linuxsched "sigmaos/util/linux/sched"
 	"sigmaos/util/perf"
 	"sigmaos/util/syncmap"
@@ -189,6 +190,14 @@ func RunProcSrv(kernelId string, dialproxy bool, gvisor bool, spproxydPID sp.Tpi
 	go func() {
 		binsrv.StartBinFs(ps)
 	}()
+
+	// Sample node state (CPU pressure, utilization, free memory) alongside
+	// the number of procs this node is running, so that per-proc spawn
+	// latencies can be read against how oversubscribed the node was.
+	stopNodeStats := nodestats.Start(500*time.Millisecond, func() string {
+		return fmt.Sprintf("nproc:%d", ps.procs.Len())
+	})
+	defer stopNodeStats()
 
 	ps.ckclnt = chunkclnt.NewChunkClnt(ps.sc.FsLib, false)
 

@@ -20,3 +20,4 @@ env/user.sh
 *.priv
 cpp/build
 *.etcd
+__pycache__

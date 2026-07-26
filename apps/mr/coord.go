@@ -82,6 +82,8 @@ type Coord struct {
 	tailProbeSz     int
 	mrBootWASM      []byte
 	uxEPs           *procclnt.SrvEPCache
+	s3EPs           *procclnt.SrvEPCache
+	intOutS3        bool
 	phaseStart      time.Time
 	mapPhaseMs      int64
 	mapPhaseDone    bool
@@ -195,38 +197,58 @@ func NewCoord(args []string) (*Coord, error) {
 		}
 	}
 
-	// If the intermediate output lives in UX, learn every UX server's
-	// endpoint once here, so that each mapper/reducer can mount the UX
-	// servers it needs without walking the namespace to find them (see
-	// claude-slop/CACHE_EPs.md). Warm the cache now, off the task-execution
-	// path, so that mapperProc/reducerProc never block on named. Note this
-	// only keys off the intermediate output: a mapper's input directory
-	// isn't visible here (it comes per-task, in the bin), so a job with UX
-	// input but non-UX intermediate output doesn't get the optimization.
+	// Learn the endpoints of the servers this job's procs will use, once
+	// here, so that each mapper/reducer can mount the ones it needs without
+	// walking the namespace to find them.
+	c.intOutS3 = strings.HasPrefix(c.intOutdir, sp.S3)
 	if strings.HasPrefix(c.intOutdir, sp.UX) {
-		c.uxEPs = procclnt.NewSrvEPCache(c.FsLib, sp.UX)
-		start := time.Now()
-		if eps, err := c.uxEPs.Endpoints(); err != nil {
-			// Not fatal: children fall back to walking the namespace.
-			db.DPrintf(db.MR_COORD, "NewCoord: discover %v EPs err %v", sp.UX, err)
-		} else {
-			db.DPrintf(db.MR_COORD, "NewCoord: discovered %d %v EPs in %v", len(eps), sp.UX, time.Since(start))
-		}
+		c.uxEPs = c.newSrvEPCache(sp.UX)
+	}
+	// The local S3 proxy is only reached on the getput path. Mappers on the
+	// fslib path don't need its endpoint — sp.S3ClientPath rewrites
+	// name/s3/~local to the s3clnt path client, which talks to S3 directly —
+	// and neither do reducers (see reducerProc).
+	if c.useGetPut {
+		c.s3EPs = c.newSrvEPCache(sp.S3)
 	}
 
 	return c, nil
 }
 
-// Hand the UX servers' endpoints to a proc we are about to spawn, so that it
-// can mount the ones it uses directly. Best-effort: a proc that doesn't get
-// them (or gets a stale one) walks the namespace as it did before.
-func (c *Coord) cacheUxEPs(p *proc.Proc) {
-	if c.uxEPs == nil {
+// Create an endpoint cache for the servers under unionpn and warm it here,
+// off the task-execution path, so that mapperProc/reducerProc never block on
+// named. Discovery failures aren't fatal: children fall back to walking.
+func (c *Coord) newSrvEPCache(unionpn string) *procclnt.SrvEPCache {
+	epc := procclnt.NewSrvEPCache(c.FsLib, unionpn)
+	start := time.Now()
+	if eps, err := epc.Endpoints(); err != nil {
+		db.DPrintf(db.ALWAYS, "EP cache %v: discovery failed (%v); procs will walk the namespace instead", unionpn, err)
+	} else if len(eps) == 0 {
+		db.DPrintf(db.ALWAYS, "EP cache %v: no servers found; procs will walk the namespace instead", unionpn)
+	} else {
+		db.DPrintf(db.MR_COORD, "EP cache %v warmed in %v: %v", unionpn, time.Since(start), epc.Srvs())
+	}
+	return epc
+}
+
+// Hand a set of servers' endpoints to a proc we are about to spawn, so that
+// it can mount the ones it uses directly. Best-effort: a proc that doesn't
+// get them (or gets a stale one) walks the namespace as it did before.
+func (c *Coord) cacheEPs(p *proc.Proc, epc *procclnt.SrvEPCache) {
+	if epc == nil {
 		return
 	}
-	if err := c.uxEPs.CacheEndpoints(p); err != nil {
-		db.DPrintf(db.MR_COORD, "cacheUxEPs %v err %v", p.GetPid(), err)
+	if err := epc.CacheEndpoints(p); err != nil {
+		db.DPrintf(db.MR_COORD, "cacheEPs %v %v err %v", epc, p.GetPid(), err)
+		return
 	}
+	db.DPrintf(db.MR_COORD, "cacheEPs %v -> %v", epc, p.GetPid())
+}
+
+// The splits in a bin all name files in the same input directory (NewBins),
+// so the first one tells us where a mapper's input lives.
+func binUsesS3(bin Bin) bool {
+	return len(bin) > 0 && sp.IsS3Path(bin[0].File)
 }
 
 func (c *Coord) newTask(bin string, args []string, mb proc.Tmem) *proc.Proc {
@@ -278,7 +300,13 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		// until the reply for each rpcIdx materializes, so the mapper
 		// starts immediately and pipelines against in-flight prefetches.
 	}
-	c.cacheUxEPs(p)
+	c.cacheEPs(p, c.uxEPs)
+	// A mapper reaches S3 through the local S3 proxy only on the getput path:
+	// for its input, when the bin is in S3, and for its output, when the
+	// intermediate directory is.
+	if c.useGetPut && (c.intOutS3 || binUsesS3(bin)) {
+		c.cacheEPs(p, c.s3EPs)
+	}
 	return p, nil
 }
 
@@ -291,7 +319,13 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	outTarget := ReduceOutTarget(c.outdir, c.job) + data.Task
 	c.stat.Nreduce.Add(1)
 	p := c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask)
-	c.cacheUxEPs(p)
+	// Only UX: a reducer reading UX intermediate output walks to a concrete
+	// name/ux/<kid> per mapper (Mapper.outputBin resolved ~local for them),
+	// but S3 intermediate output keeps its ~local (outputBin deliberately
+	// doesn't resolve S3 paths), which sp.S3ClientPath rewrites to the s3clnt
+	// path client — no endpoint involved. The reducer's own output goes
+	// through ~any, which we deliberately don't mount.
+	c.cacheEPs(p, c.uxEPs)
 	return p, nil
 }
 
@@ -325,13 +359,17 @@ func (c *Coord) restart(files []string, task ftclnt.TaskId) {
 // reducers, mark all mappers as errored.
 func (c *Coord) doRestart() {
 	start := time.Now()
-	if c.uxEPs != nil {
-		// Tasks failed and we are about to respawn them. A UX server may
-		// have restarted with a new endpoint, so re-discover in the
-		// background; the procs we spawn meanwhile keep the endpoints we
-		// already have. This is hygiene, not correctness: a child that finds
-		// a stale endpoint falls back to walking the namespace.
-		c.uxEPs.Refresh()
+	// Tasks failed and we are about to respawn them. A server may have
+	// restarted with a new endpoint, so re-discover in the background; the
+	// procs we spawn meanwhile keep the endpoints we already have. This is
+	// hygiene, not correctness: a child that finds a stale endpoint falls
+	// back to walking the namespace. The refresh logs its own outcome (and
+	// what changed) when it completes.
+	for _, epc := range []*procclnt.SrvEPCache{c.uxEPs, c.s3EPs} {
+		if epc != nil {
+			db.DPrintf(db.MR_COORD, "doRestart: refresh EP cache %v srvs %v", epc, epc.Srvs())
+			epc.Refresh()
+		}
 	}
 	ts, err := c.rftclnt.GetTasksByStatus(ftclnt.ERROR)
 	if err != nil {

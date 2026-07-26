@@ -148,10 +148,16 @@ func (rtot *readResult) sum(r *readResult) {
 
 // mountUxSrv mounts the UX server holding pn from the endpoint the
 // coordinator cached for us, so that reading pn doesn't have to find the
-// server through named (see claude-slop/CACHE_EPs.md). A reducer reads from
-// one UX server per mapper, so this is done lazily, once per server: the
-// attach count stays what it would have been. Best-effort; a server we can't
-// mount here is found by walking, as before.
+// server through named. A reducer reads from one UX server per mapper, so this
+// is done lazily, once per server: the attach count stays what it would have
+// been. Best-effort; a server we can't mount here is found by walking, as
+// before.
+//
+// There is no S3 equivalent: S3 intermediate output keeps the ~local that
+// Mapper.outputBin left in place (it deliberately doesn't resolve S3 paths),
+// and sp.S3ClientPath — called in readFile, before we are — rewrites that to
+// the s3clnt path client, which talks to S3 directly, with no endpoint
+// involved. The reducer's own output goes to ~any, which we don't mount.
 func (r *Reducer) mountUxSrv(pn string) {
 	rest, ok := strings.CutPrefix(pn, sp.UX)
 	if !ok {

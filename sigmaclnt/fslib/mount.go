@@ -155,7 +155,27 @@ func (fsl *FsLib) resolveMount(d sp.Tsigmapath, q sp.Tsigmapath) (sp.Tsigmapath,
 
 	if fsl.pe.GetKernelID() != sp.NOT_SET {
 		rname = fsl.pe.GetKernelID()
-		ok, ep, err := fsl.isLocal(filepath.Join(d, rname))
+		pn := filepath.Join(d, rname)
+		// If our parent cached this server's endpoint (see
+		// procclnt.SrvEPCache), check locality against the cached copy instead
+		// of reading the endpoint file from named. Having the server itself
+		// mounted at pn can't help here: reading the endpoint file at pn
+		// deliberately bypasses a mount installed there (resolveMnt skips an
+		// exact match when the last component isn't resolved), since that is
+		// how endpoint files are read at all. A cached endpoint that doesn't
+		// look local is stale rather than a bug, so fall through and read the
+		// real one.
+		if ep, ok := fsl.pe.GetCachedEndpoint(pn); ok {
+			local, err := fsl.FileAPI.IsLocalMount(ep)
+			if err == nil && local {
+				db.DPrintf(db.MOUNT, "resolveMount %v %v: resolved to %v from cached ep %v", d, q, rname, ep)
+				return rname, ep, nil
+			}
+			db.DPrintf(db.MOUNT, "resolveMount %v %v: cached ep %v for %v isn't local (err %v); read ep file from named", d, q, ep, pn, err)
+		} else {
+			db.DPrintf(db.MOUNT, "resolveMount %v %v: no cached ep for %v; read ep file from named. Cached eps: %v", d, q, pn, fsl.pe.CachedEndpoints)
+		}
+		ok, ep, err := fsl.isLocal(pn)
 		if err != nil {
 			return "", nil, err
 		}

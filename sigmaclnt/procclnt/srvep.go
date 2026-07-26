@@ -3,6 +3,7 @@ package procclnt
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -37,6 +38,7 @@ type SrvEPCache struct {
 	eps        map[string]*sp.Tendpoint // "name/ux/<kid>" -> EP
 	discovered bool
 	refreshing bool
+	gen        int // bumped on every publish, to tell log lines apart
 }
 
 func NewSrvEPCache(fsl *fslib.FsLib, unionpn string) *SrvEPCache {
@@ -46,7 +48,24 @@ func NewSrvEPCache(fsl *fslib.FsLib, unionpn string) *SrvEPCache {
 func (c *SrvEPCache) String() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return fmt.Sprintf("{unionpn %v neps %d}", c.unionpn, len(c.eps))
+	return fmt.Sprintf("{unionpn %v neps %d gen %d refreshing %t}", c.unionpn, len(c.eps), c.gen, c.refreshing)
+}
+
+// Srvs returns the pathnames of the servers whose endpoints are cached, in
+// sorted order, for logging.
+func (c *SrvEPCache) Srvs() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return srvPaths(c.eps)
+}
+
+func srvPaths(eps map[string]*sp.Tendpoint) []string {
+	pns := make([]string, 0, len(eps))
+	for pn := range eps {
+		pns = append(pns, pn)
+	}
+	slices.Sort(pns)
+	return pns
 }
 
 // Endpoints returns the endpoints of the servers under the union directory,
@@ -96,13 +115,16 @@ func (c *SrvEPCache) CacheEndpoints(p *proc.Proc) error {
 func (c *SrvEPCache) Refresh() {
 	c.mu.Lock()
 	if c.refreshing {
+		db.DPrintf(db.PROCCLNT, "SrvEPCache.Refresh %v: already in flight, skip", c.unionpn)
 		c.mu.Unlock()
 		return
 	}
 	c.refreshing = true
 	c.mu.Unlock()
 
+	db.DPrintf(db.PROCCLNT, "SrvEPCache.Refresh start %v", c)
 	go func() {
+		start := time.Now()
 		c.discoverMu.Lock()
 		eps, err := c.discover()
 		c.discoverMu.Unlock()
@@ -113,12 +135,41 @@ func (c *SrvEPCache) Refresh() {
 		if err != nil {
 			// Keep the endpoints we have; they may still be good, and a
 			// child that finds one stale falls back to walking.
-			db.DPrintf(db.PROCCLNT_ERR, "SrvEPCache.Refresh %v err %v", c.unionpn, err)
+			db.DPrintf(db.PROCCLNT_ERR, "SrvEPCache.Refresh %v failed after %v, keeping %d eps: %v", c.unionpn, time.Since(start), len(c.eps), err)
 			return
 		}
+		added, removed, changed := diffEPs(c.eps, eps)
 		c.eps = eps
 		c.discovered = true
+		c.gen++
+		if len(added)+len(removed)+len(changed) == 0 {
+			db.DPrintf(db.PROCCLNT, "SrvEPCache.Refresh %v done in %v: unchanged, %d eps (gen %d)", c.unionpn, time.Since(start), len(eps), c.gen)
+			return
+		}
+		// The set of servers, or one of their endpoints, changed underneath a
+		// running job: worth seeing without turning on a selector, since it
+		// means procs already spawned may be holding a stale endpoint.
+		db.DPrintf(db.ALWAYS, "SrvEPCache.Refresh %v done in %v (gen %d): %d eps, added %v removed %v changed %v", c.unionpn, time.Since(start), c.gen, len(eps), added, removed, changed)
 	}()
+}
+
+// diffEPs reports which server pathnames were added, removed, and had their
+// endpoint change between two discoveries.
+func diffEPs(old, cur map[string]*sp.Tendpoint) (added, removed, changed []string) {
+	for _, pn := range srvPaths(cur) {
+		oldEP, ok := old[pn]
+		if !ok {
+			added = append(added, pn)
+		} else if oldEP.String() != cur[pn].String() {
+			changed = append(changed, pn)
+		}
+	}
+	for _, pn := range srvPaths(old) {
+		if _, ok := cur[pn]; !ok {
+			removed = append(removed, pn)
+		}
+	}
+	return added, removed, changed
 }
 
 func (c *SrvEPCache) cached() (map[string]*sp.Tendpoint, bool) {
@@ -169,7 +220,7 @@ func (c *SrvEPCache) discover() (map[string]*sp.Tendpoint, error) {
 			eps[r.pn] = r.ep
 		}
 	}
-	db.DPrintf(db.PROCCLNT, "SrvEPCache.discover %v: %d/%d eps lat %v", c.unionpn, len(eps), len(names), time.Since(start))
+	db.DPrintf(db.PROCCLNT, "SrvEPCache.discover %v: %d/%d eps lat %v srvs %v", c.unionpn, len(eps), len(names), time.Since(start), srvPaths(eps))
 	return eps, nil
 }
 

@@ -14,10 +14,10 @@ import (
 	"sigmaos/test"
 )
 
-// Tests for the explicit UX-endpoint caching helpers (see
-// claude-slop/CACHE_EPs.md). The parent half (SrvEPCache) is exercised
-// directly; for the child half these tests play the child themselves, by
-// stamping endpoints into their own ProcEnv the way a parent's Spawn would.
+// Tests for the explicit server-endpoint caching helpers. The parent half
+// (SrvEPCache) is exercised directly; for the child half these tests play the
+// child themselves, by stamping endpoints into their own ProcEnv the way a
+// parent's Spawn would.
 
 func uxSrvs(ts *test.Tstate) []string {
 	sts, err := ts.GetDir(sp.UX)

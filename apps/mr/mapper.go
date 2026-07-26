@@ -78,18 +78,20 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 	for i := 0; i < CONCURRENCY; i++ {
 		m.ckrs[i] = chunkreader.NewChunkReader(lsz, wsz, combinef, p)
 	}
-	// Mount the local UX server from the endpoint the coordinator cached for
-	// us, so that neither initOutput's MkDir/Create nor the getput RPC
-	// channel has to find it through named (see claude-slop/CACHE_EPs.md).
-	// Inline rather than in a goroutine: initOutput needs the mount, and the
-	// mount replaces work initOutput would otherwise do. Best-effort — on
-	// failure we walk the namespace as before.
-	if strings.HasPrefix(m.intOutput, sp.UX) {
+	// Mount the local UX and S3 servers from the endpoints the coordinator
+	// cached for us, so that neither initOutput's MkDir/Create nor the getput
+	// RPC channels have to find them through named. The coordinator caches a
+	// server's endpoint only for the procs that will use it, so mounting
+	// whatever it cached is exactly right: an unused service simply isn't
+	// there to mount. Inline rather than in a goroutine: initOutput needs the
+	// UX mount, and the mount replaces work initOutput would otherwise do.
+	// Best-effort — on failure we walk the namespace as before.
+	for _, unionpn := range []string{sp.UX, sp.S3} {
 		start := time.Now()
-		if ok, err := procclnt.MountCachedLocalSrv(sc.FsLib, sp.UX); err != nil {
-			db.DPrintf(db.MR, "Mapper MountCachedLocalSrv %v err %v", sp.UX, err)
+		if ok, err := procclnt.MountCachedLocalSrv(sc.FsLib, unionpn); err != nil {
+			db.DPrintf(db.MR, "Mapper MountCachedLocalSrv %v err %v", unionpn, err)
 		} else if ok {
-			perf.LogSpawnLatency("Mapper.MountCachedLocalSrv", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
+			perf.LogSpawnLatency("Mapper.MountCachedLocalSrv."+unionpn, sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
 		}
 	}
 	if m.useGetPut {
@@ -244,8 +246,11 @@ func (m *Mapper) outputBin() (Bin, error) {
 		var err error
 		pn, err = m.ResolveMounts(outDirPath)
 		db.DPrintf(db.MR, "Mapper informReducer ResolveMounts time: %v", time.Since(start))
-		// Not covered by the cached-EP mount: resolveMount reads the endpoint
-		// file from named to check locality. See claude-slop/CACHE_EPs.md.
+		// Not covered by the mount we installed at startup — resolveMount
+		// reads the endpoint file at name/ux/<kid>, which lives in named, and
+		// reading that pathname deliberately bypasses a mount installed there
+		// — but served from the coordinator's cached endpoint instead (see
+		// fslib.resolveMount).
 		perf.LogSpawnLatency("Mapper.outputBin.ResolveMounts", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), start)
 		if err != nil {
 			return nil, fmt.Errorf("%v: ResolveMount %v err %v\n", m.ProcEnv().GetPID(), outDirPath, err)

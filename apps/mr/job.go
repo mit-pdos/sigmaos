@@ -123,6 +123,10 @@ type Job struct {
 	// Initial size of the tail probe read past each split's end on the
 	// getput path (0 = mr.DEFAULT_TAIL_PROBE_SZ; capped at Linesz).
 	TailProbeSz int `json:"tailprobesz,omitempty"`
+	// If > 0, GOMAXPROCS for mapper procs. Unset (0) leaves the Go default,
+	// which is the machine's core count regardless of how many procs share
+	// the machine — see claude-slop/SLOW_MAPPER_EXEC.md.
+	MapperGOMAXPROCS int `json:"mapper_gomaxprocs,omitempty"`
 }
 
 // Wait until the job is done
@@ -405,6 +409,7 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *Job, nmap
 			strconv.FormatBool(job.UseGetPut),
 			strconv.FormatBool(job.UseCosandboxes),
 			strconv.Itoa(job.TailProbeSz),
+			strconv.Itoa(job.MapperGOMAXPROCS),
 		}, 1000, jobName)
 	return cfg.StartGrpMgr(sc)
 }

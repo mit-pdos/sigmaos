@@ -9,6 +9,7 @@ import (
 	sprpcchan "sigmaos/rpc/clnt/channel/spchannel"
 	sessp "sigmaos/session/proto"
 	"sigmaos/sigmaclnt"
+	"sigmaos/sigmaclnt/procclnt"
 	"sigmaos/util/perf"
 )
 
@@ -58,7 +59,10 @@ func (rpcs *RPCState) GetRPCChannel(sc *sigmaclnt.SigmaClnt, rpcIdx uint64, pn s
 		rpcs.channelCreationInProgress[pn] = true
 		rpcs.mu.Unlock()
 
-		if ep, ok := sc.ProcEnv().GetCachedEndpoint(pn); ok {
+		// A ~local pn (e.g. from a cosandbox manifest, which is built before
+		// the proc is placed) resolves against the proc's kernel ID, since
+		// that is the key its parent cached under.
+		if ep, ok := procclnt.LookupCachedEndpoint(sc.ProcEnv(), pn); ok {
 			db.DPrintf(db.WASMD, "[%v] delRPC(%v) create channel EP cached pn:%v", sc.ProcEnv().GetPID(), rpcIdx, pn)
 			ch, err = sprpcchan.NewSPChannelEndpoint(sc.FsLib, pn, ep, false)
 			if err != nil {

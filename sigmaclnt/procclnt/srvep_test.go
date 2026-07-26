@@ -19,6 +19,41 @@ import (
 // child themselves, by stamping endpoints into their own ProcEnv the way a
 // parent's Spawn would.
 
+// A ~local pathname — what a cosandbox manifest names, since it is built
+// before the proc is placed — resolves to the entry the parent cached for the
+// kernel the proc landed on. Needs no kernel.
+func TestLookupCachedEndpointLocal(t *testing.T) {
+	const kid = "kernel-1"
+	pe := proc.NewProcEnvUnset(false)
+	pe.KernelID = kid
+	ep := sp.NewEndpoint(sp.INTERNAL_EP, sp.Taddrs{sp.NewTaddr(sp.Tip("10.0.0.1"), sp.Tport(1111))})
+	pe.SetCachedEndpoint(filepath.Join(sp.UX, kid), ep)
+
+	for _, pn := range []string{filepath.Join(sp.UX, kid), filepath.Join(sp.UX, sp.LOCAL)} {
+		got, ok := procclnt.LookupCachedEndpoint(pe, pn)
+		if assert.True(t, ok, "no cached EP for %v", pn) {
+			assert.Equal(t, ep.String(), got.String(), "wrong EP for %v", pn)
+		}
+	}
+
+	// Another kernel's server, a service we cached nothing for, ~any (which
+	// isn't ~local), and a name that merely starts with ~local: all misses.
+	for _, pn := range []string{
+		filepath.Join(sp.UX, "kernel-2"),
+		filepath.Join(sp.S3, kid),
+		filepath.Join(sp.UX, sp.ANY),
+		filepath.Join(sp.UX, sp.LOCAL+"dir"),
+	} {
+		_, ok := procclnt.LookupCachedEndpoint(pe, pn)
+		assert.False(t, ok, "unexpected cached EP for %v", pn)
+	}
+
+	// With no kernel ID there is no local server to resolve to.
+	pe.KernelID = sp.NOT_SET
+	_, ok := procclnt.LookupCachedEndpoint(pe, filepath.Join(sp.UX, sp.LOCAL))
+	assert.False(t, ok, "resolved ~local without a kernel ID")
+}
+
 func uxSrvs(ts *test.Tstate) []string {
 	sts, err := ts.GetDir(sp.UX)
 	assert.Nil(ts.T, err, "GetDir %v: %v", sp.UX, err)

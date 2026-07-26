@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -228,13 +229,53 @@ func (c *SrvEPCache) discover() (map[string]*sp.Tendpoint, error) {
 	return eps, nil
 }
 
+// LookupCachedEndpoint returns the endpoint a parent cached for pn, resolving
+// a ~local component against this proc's kernel ID first. A parent can't know
+// which kernel its child will land on, so it caches endpoints under the
+// concrete <unionpn>/<kernelID>; a caller naming <unionpn>/~local — e.g. a
+// cosandbox manifest, which is built before the proc is placed — means the
+// server on the kernel it ended up on, which is exactly that entry.
+func LookupCachedEndpoint(pe *proc.ProcEnv, pn string) (*sp.Tendpoint, bool) {
+	if ep, ok := pe.GetCachedEndpoint(pn); ok {
+		return ep, true
+	}
+	lpn, ok := substLocal(pe, pn)
+	if !ok {
+		return nil, false
+	}
+	ep, ok := pe.GetCachedEndpoint(lpn)
+	if ok {
+		db.DPrintf(db.PROCCLNT_EPCACHE, "LookupCachedEndpoint %v: resolved to %v, cached ep %v", pn, lpn, ep)
+	}
+	return ep, ok
+}
+
+// substLocal rewrites the first ~local component of pn to this proc's kernel
+// ID. Reports false if pn has no such component, or this proc has no kernel
+// ID. Matches whole components, so a name that merely starts with ~local is
+// left alone.
+func substLocal(pe *proc.ProcEnv, pn string) (string, bool) {
+	kid := pe.GetKernelID()
+	if kid == sp.NOT_SET || kid == "" {
+		return "", false
+	}
+	parts := strings.Split(pn, "/")
+	for i, part := range parts {
+		if part == sp.LOCAL {
+			parts[i] = kid
+			return strings.Join(parts, "/"), true
+		}
+	}
+	return "", false
+}
+
 // MountCachedEndpoint mounts the server whose endpoint the parent cached for
 // pn at pn, so that walks under pn are served by the mount table instead of
 // going through named. Reports whether an endpoint was cached for pn;
 // callers that get false (or an error) can proceed unchanged, they just pay
 // the walk. Idempotent.
 func MountCachedEndpoint(fsl *fslib.FsLib, pn string) (bool, error) {
-	ep, ok := fsl.ProcEnv().GetCachedEndpoint(pn)
+	ep, ok := LookupCachedEndpoint(fsl.ProcEnv(), pn)
 	if !ok {
 		db.DPrintf(db.PROCCLNT_EPCACHE, "MountCachedEndpoint %v: no cached EP", pn)
 		return false, nil

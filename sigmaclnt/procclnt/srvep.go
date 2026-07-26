@@ -104,7 +104,7 @@ func (c *SrvEPCache) CacheEndpoints(p *proc.Proc) error {
 	for pn, ep := range eps {
 		p.SetCachedEndpoint(pn, ep)
 	}
-	db.DPrintf(db.PROCCLNT, "CacheEndpoints %v: %d eps -> %v", c.unionpn, len(eps), p.GetPid())
+	db.DPrintf(db.PROCCLNT_EPCACHE, "CacheEndpoints %v: %d eps -> %v", c.unionpn, len(eps), p.GetPid())
 	return nil
 }
 
@@ -115,14 +115,14 @@ func (c *SrvEPCache) CacheEndpoints(p *proc.Proc) error {
 func (c *SrvEPCache) Refresh() {
 	c.mu.Lock()
 	if c.refreshing {
-		db.DPrintf(db.PROCCLNT, "SrvEPCache.Refresh %v: already in flight, skip", c.unionpn)
+		db.DPrintf(db.PROCCLNT_EPCACHE, "SrvEPCache.Refresh %v: already in flight, skip", c.unionpn)
 		c.mu.Unlock()
 		return
 	}
 	c.refreshing = true
 	c.mu.Unlock()
 
-	db.DPrintf(db.PROCCLNT, "SrvEPCache.Refresh start %v", c)
+	db.DPrintf(db.PROCCLNT_EPCACHE, "SrvEPCache.Refresh start %v", c)
 	go func() {
 		start := time.Now()
 		c.discoverMu.Lock()
@@ -135,21 +135,19 @@ func (c *SrvEPCache) Refresh() {
 		if err != nil {
 			// Keep the endpoints we have; they may still be good, and a
 			// child that finds one stale falls back to walking.
-			db.DPrintf(db.PROCCLNT_ERR, "SrvEPCache.Refresh %v failed after %v, keeping %d eps: %v", c.unionpn, time.Since(start), len(c.eps), err)
+			db.DPrintf(db.PROCCLNT_EPCACHE_ERR, "SrvEPCache.Refresh %v failed after %v, keeping %d eps: %v", c.unionpn, time.Since(start), len(c.eps), err)
 			return
 		}
 		added, removed, changed := diffEPs(c.eps, eps)
-		c.eps = eps
-		c.discovered = true
-		c.gen++
+		c.setLocked(eps)
 		if len(added)+len(removed)+len(changed) == 0 {
-			db.DPrintf(db.PROCCLNT, "SrvEPCache.Refresh %v done in %v: unchanged, %d eps (gen %d)", c.unionpn, time.Since(start), len(eps), c.gen)
+			db.DPrintf(db.PROCCLNT_EPCACHE, "SrvEPCache.Refresh %v done in %v: unchanged, %d eps (gen %d)", c.unionpn, time.Since(start), len(eps), c.gen)
 			return
 		}
 		// The set of servers, or one of their endpoints, changed underneath a
-		// running job: worth seeing without turning on a selector, since it
-		// means procs already spawned may be holding a stale endpoint.
-		db.DPrintf(db.ALWAYS, "SrvEPCache.Refresh %v done in %v (gen %d): %d eps, added %v removed %v changed %v", c.unionpn, time.Since(start), c.gen, len(eps), added, removed, changed)
+		// running job, which means procs already spawned may be holding a
+		// stale endpoint.
+		db.DPrintf(db.PROCCLNT_EPCACHE, "SrvEPCache.Refresh %v done in %v (gen %d): %d eps, added %v removed %v changed %v", c.unionpn, time.Since(start), c.gen, len(eps), added, removed, changed)
 	}()
 }
 
@@ -181,8 +179,14 @@ func (c *SrvEPCache) cached() (map[string]*sp.Tendpoint, bool) {
 func (c *SrvEPCache) publish(eps map[string]*sp.Tendpoint) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.setLocked(eps)
+}
+
+// setLocked installs a freshly discovered set of endpoints. Caller holds mu.
+func (c *SrvEPCache) setLocked(eps map[string]*sp.Tendpoint) {
 	c.eps = eps
 	c.discovered = true
+	c.gen++
 }
 
 // discover reads the union directory and every server's endpoint file,
@@ -193,7 +197,7 @@ func (c *SrvEPCache) discover() (map[string]*sp.Tendpoint, error) {
 	start := time.Now()
 	sts, err := c.fsl.GetDir(c.unionpn)
 	if err != nil {
-		db.DPrintf(db.PROCCLNT_ERR, "SrvEPCache.discover GetDir %v err %v", c.unionpn, err)
+		db.DPrintf(db.PROCCLNT_EPCACHE_ERR, "SrvEPCache.discover GetDir %v err %v", c.unionpn, err)
 		return nil, err
 	}
 	type result struct {
@@ -207,7 +211,7 @@ func (c *SrvEPCache) discover() (map[string]*sp.Tendpoint, error) {
 			pn := filepath.Join(c.unionpn, n)
 			ep, err := c.fsl.ReadEndpoint(pn)
 			if err != nil {
-				db.DPrintf(db.PROCCLNT_ERR, "SrvEPCache.discover ReadEndpoint %v err %v", pn, err)
+				db.DPrintf(db.PROCCLNT_EPCACHE_ERR, "SrvEPCache.discover ReadEndpoint %v err %v", pn, err)
 				ch <- nil
 				return
 			}
@@ -220,7 +224,7 @@ func (c *SrvEPCache) discover() (map[string]*sp.Tendpoint, error) {
 			eps[r.pn] = r.ep
 		}
 	}
-	db.DPrintf(db.PROCCLNT, "SrvEPCache.discover %v: %d/%d eps lat %v srvs %v", c.unionpn, len(eps), len(names), time.Since(start), srvPaths(eps))
+	db.DPrintf(db.PROCCLNT_EPCACHE, "SrvEPCache.discover %v: %d/%d eps lat %v srvs %v", c.unionpn, len(eps), len(names), time.Since(start), srvPaths(eps))
 	return eps, nil
 }
 
@@ -232,7 +236,7 @@ func (c *SrvEPCache) discover() (map[string]*sp.Tendpoint, error) {
 func MountCachedEndpoint(fsl *fslib.FsLib, pn string) (bool, error) {
 	ep, ok := fsl.ProcEnv().GetCachedEndpoint(pn)
 	if !ok {
-		db.DPrintf(db.PROCCLNT, "MountCachedEndpoint %v: no cached EP", pn)
+		db.DPrintf(db.PROCCLNT_EPCACHE, "MountCachedEndpoint %v: no cached EP", pn)
 		return false, nil
 	}
 	if err := mountSrvRoot(fsl, ep, pn); err != nil {
@@ -253,7 +257,7 @@ func MountCachedLocalSrv(fsl *fslib.FsLib, unionpn string) (bool, error) {
 	pn := filepath.Join(unionpn, kid)
 	ep, ok := fsl.ProcEnv().GetCachedEndpoint(pn)
 	if !ok {
-		db.DPrintf(db.PROCCLNT, "MountCachedLocalSrv %v: no cached EP", pn)
+		db.DPrintf(db.PROCCLNT_EPCACHE, "MountCachedLocalSrv %v: no cached EP", pn)
 		return false, nil
 	}
 	if err := mountSrvRoot(fsl, ep, pn); err != nil {
@@ -278,9 +282,9 @@ func mountSrvRoot(fsl *fslib.FsLib, ep *sp.Tendpoint, pn string) error {
 		// Most likely a stale endpoint (the server restarted). MountTree
 		// removes the mount point it failed to attach, so a later walk of pn
 		// finds the server through named as usual.
-		db.DPrintf(db.PROCCLNT_ERR, "mountSrvRoot [%v] %v err %v", ep, pn, err)
+		db.DPrintf(db.PROCCLNT_EPCACHE_ERR, "mountSrvRoot [%v] %v err %v", ep, pn, err)
 		return err
 	}
-	db.DPrintf(db.PROCCLNT, "mountSrvRoot [%v] %v lat %v", ep, pn, time.Since(start))
+	db.DPrintf(db.PROCCLNT_EPCACHE, "mountSrvRoot [%v] %v lat %v", ep, pn, time.Since(start))
 	return nil
 }

@@ -268,7 +268,10 @@ const (
 	SEMCLNT_ERR            = SEMCLNT + ERR
 	PROCCLNT               = "PROCCLNT"
 	PROCCLNT_ERR           = "PROCCLNT" + ERR
-	SPPROXYCLNT            = "SPPROXYCLNT"
+	// Caching of servers' endpoints by a parent, for the procs it spawns
+	PROCCLNT_EPCACHE     = PROCCLNT + "_EPCACHE"
+	PROCCLNT_EPCACHE_ERR = PROCCLNT_EPCACHE + ERR
+	SPPROXYCLNT          = "SPPROXYCLNT"
 )
 
 // Fault-tolerance

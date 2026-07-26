@@ -225,7 +225,7 @@ func CleanupMROutputs(fsl *fslib.FsLib, outputDir, intOutputDir string, swapLoca
 	fsl.RmDir(intOutputDir)
 	oDir := outputDir
 	if swapLocalForAny {
-		oDir = strings.ReplaceAll(oDir, sp.LOCAL, sp.ANY)
+		oDir, _ = sp.SubstLocal(oDir, sp.ANY)
 	}
 	return fsl.RmDir(oDir)
 }
@@ -235,14 +235,14 @@ func JobLocalToAny(j *Job, input, intermediate, output bool) *Job {
 	// ~local with ~any), for the test program
 	job := &Job{}
 	*job = *j
-	if input && strings.Contains(job.Input, sp.LOCAL) {
-		job.Input = strings.ReplaceAll(job.Input, sp.LOCAL, sp.ANY)
+	if input {
+		job.Input, _ = sp.SubstLocal(job.Input, sp.ANY)
 	}
-	if intermediate && strings.Contains(job.Intermediate, sp.LOCAL) {
-		job.Intermediate = strings.ReplaceAll(job.Intermediate, sp.LOCAL, sp.ANY)
+	if intermediate {
+		job.Intermediate, _ = sp.SubstLocal(job.Intermediate, sp.ANY)
 	}
-	if output && strings.Contains(job.Output, sp.LOCAL) {
-		job.Output = strings.ReplaceAll(job.Output, sp.LOCAL, sp.ANY)
+	if output {
+		job.Output, _ = sp.SubstLocal(job.Output, sp.ANY)
 	}
 	return job
 }

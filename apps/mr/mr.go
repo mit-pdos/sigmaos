@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	"strings"
 
 	"github.com/dustin/go-humanize"
 
@@ -157,7 +156,7 @@ func NewBins(fsl *fslib.FsLib, inputDir string, swapLocalForAny bool, maxbinsz, 
 
 	dir := inputDir
 	if swapLocalForAny {
-		dir = strings.ReplaceAll(dir, sp.LOCAL, sp.ANY)
+		dir, _ = sp.SubstLocal(dir, sp.ANY)
 	}
 	sts, err := fsl.GetDir(dir)
 	if err != nil {

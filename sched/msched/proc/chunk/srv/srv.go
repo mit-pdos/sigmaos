@@ -522,7 +522,7 @@ func open(sc *sigmaclnt.SigmaClnt, prog string, paths []string) (int, string, er
 func replaceLocal(paths []string, kernelId string) []string {
 	for i, p := range paths {
 		if strings.HasPrefix(p, sp.UX) {
-			paths[i] = strings.Replace(p, sp.LOCAL, kernelId, 1)
+			paths[i], _ = sp.SubstLocal(p, kernelId)
 		}
 	}
 	return paths

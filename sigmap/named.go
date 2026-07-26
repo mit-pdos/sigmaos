@@ -78,6 +78,26 @@ func IsS3Path(pn string) bool {
 	return strings.HasPrefix(pn, S3)
 }
 
+// SubstLocal returns pn with its LOCAL component replaced by repl, and
+// whether pn had one; if it didn't, pn is returned unchanged. repl is either
+// the name of a concrete server (a kernel ID, for a caller that already knows
+// which server LOCAL names, saving it the union-directory lookup) or ANY (for
+// a caller that wants any server rather than the local one).
+//
+// Only the first LOCAL is substituted: a pathname names one server. Whole
+// components are matched, so a file whose name merely starts with "~local" is
+// left alone.
+func SubstLocal(pn, repl string) (string, bool) {
+	parts := strings.Split(pn, "/")
+	for i, part := range parts {
+		if part == LOCAL {
+			parts[i] = repl
+			return strings.Join(parts, "/"), true
+		}
+	}
+	return pn, false
+}
+
 func S3ClientPath(pn string) (string, bool) {
 	pn0, ok := strings.CutPrefix(pn, S3)
 	if !ok {

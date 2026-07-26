@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -250,23 +249,14 @@ func LookupCachedEndpoint(pe *proc.ProcEnv, pn string) (*sp.Tendpoint, bool) {
 	return ep, ok
 }
 
-// substLocal rewrites the first ~local component of pn to this proc's kernel
-// ID. Reports false if pn has no such component, or this proc has no kernel
-// ID. Matches whole components, so a name that merely starts with ~local is
-// left alone.
+// substLocal rewrites pn's ~local component to this proc's kernel ID. Reports
+// false if pn has no such component, or this proc has no kernel ID.
 func substLocal(pe *proc.ProcEnv, pn string) (string, bool) {
 	kid := pe.GetKernelID()
 	if kid == sp.NOT_SET || kid == "" {
 		return "", false
 	}
-	parts := strings.Split(pn, "/")
-	for i, part := range parts {
-		if part == sp.LOCAL {
-			parts[i] = kid
-			return strings.Join(parts, "/"), true
-		}
-	}
-	return "", false
+	return sp.SubstLocal(pn, kid)
 }
 
 // MountCachedEndpoint mounts the server whose endpoint the parent cached for

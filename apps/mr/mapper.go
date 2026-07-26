@@ -38,7 +38,7 @@ type Mapper struct {
 	job          string
 	nreducetask  int
 	linesz       int
-	input        string
+	bin          Bin
 	intOutput    string
 	wrts         []getput.ShardWriter
 	pwrts        []*perf.PerfWriter
@@ -55,6 +55,15 @@ type Mapper struct {
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string, useGetPut, useCosandbox bool, tailprobesz int) (*Mapper, error) {
+	// Decode the input bin up front: DoMap works from it, and so does the
+	// decision of which servers to mount below.
+	getInputStart := time.Now()
+	var bin Bin
+	if err := json.Unmarshal([]byte(input), &bin); err != nil {
+		db.DPrintf(db.MR, "Mapper: unmarshal %v err %v", input, err)
+		return nil, err
+	}
+	perf.LogSpawnLatency("Mapper.getInput", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), getInputStart)
 	m := &Mapper{
 		SigmaClnt:    sc,
 		mapf:         mapf,
@@ -64,7 +73,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		nreducetask:  nr,
 		linesz:       lsz,
 		rand:         rand.Name(),
-		input:        input,
+		bin:          bin,
 		intOutput:    intOutput,
 		wrts:         make([]getput.ShardWriter, nr),
 		pwrts:        make([]*perf.PerfWriter, nr),
@@ -78,22 +87,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 	for i := 0; i < CONCURRENCY; i++ {
 		m.ckrs[i] = chunkreader.NewChunkReader(lsz, wsz, combinef, p)
 	}
-	// Mount the local UX and S3 servers from the endpoints the coordinator
-	// cached for us, so that neither initOutput's MkDir/Create nor the getput
-	// RPC channels have to find them through named. The coordinator caches a
-	// server's endpoint only for the procs that will use it, so mounting
-	// whatever it cached is exactly right: an unused service simply isn't
-	// there to mount. Inline rather than in a goroutine: initOutput needs the
-	// UX mount, and the mount replaces work initOutput would otherwise do.
-	// Best-effort — on failure we walk the namespace as before.
-	for _, unionpn := range []string{sp.UX, sp.S3} {
-		start := time.Now()
-		if ok, err := procclnt.MountCachedLocalSrv(sc.FsLib, unionpn); err != nil {
-			db.DPrintf(db.MR, "Mapper MountCachedLocalSrv %v err %v", unionpn, err)
-		} else if ok {
-			perf.LogSpawnLatency("Mapper.MountCachedLocalSrv."+unionpn, sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
-		}
-	}
+	m.mountLocalSrvs()
 	if m.useGetPut {
 		m.clnts = getput.NewClnts(sc.FsLib)
 	}
@@ -102,6 +96,53 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		m.ch <- m.initOutput()
 	}()
 	return m, nil
+}
+
+// Mount the local instance of each service this mapper will actually touch,
+// from the endpoint the coordinator cached for it, so that neither
+// initOutput's MkDir/Create nor the getput RPC channels have to find the
+// server through named. Inline rather than in a goroutine: initOutput needs
+// the mount, and the mount replaces work initOutput would otherwise do.
+// Best-effort — a service we can't mount here is found by walking, as before.
+func (m *Mapper) mountLocalSrvs() {
+	for _, unionpn := range m.srvsUsed() {
+		start := time.Now()
+		if ok, err := procclnt.MountCachedLocalSrv(m.FsLib, unionpn); err != nil {
+			db.DPrintf(db.MR, "Mapper MountCachedLocalSrv %v err %v", unionpn, err)
+		} else if ok {
+			perf.LogSpawnLatency("Mapper.MountCachedLocalSrv."+unionpn, m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), start)
+		}
+	}
+}
+
+// srvsUsed reports the union directories of the services this mapper reaches
+// through a server it could mount: the one holding its intermediate output,
+// and the one(s) holding its input splits. A mapper whose input and output are
+// both in UX has no reason to mount an S3 server, and vice versa.
+func (m *Mapper) srvsUsed() []string {
+	srvs := make([]string, 0, 2)
+	if m.usesSrv(sp.UX) {
+		srvs = append(srvs, sp.UX)
+	}
+	// S3 is only reached through a mountable server (the local S3 proxy) on
+	// the getput path. Otherwise sp.S3ClientPath rewrites name/s3/~local to
+	// the s3clnt path client, which talks to S3 directly.
+	if m.useGetPut && m.usesSrv(sp.S3) {
+		srvs = append(srvs, sp.S3)
+	}
+	return srvs
+}
+
+func (m *Mapper) usesSrv(unionpn string) bool {
+	if strings.HasPrefix(m.intOutput, unionpn) {
+		return true
+	}
+	for _, s := range m.bin {
+		if strings.HasPrefix(s.File, unionpn) {
+			return true
+		}
+	}
+	return false
 }
 
 func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
@@ -358,17 +399,10 @@ func (m *Mapper) doSplit(s *mr.Split, idx int) (sp.Tlength, error) {
 }
 
 func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
-	db.DPrintf(db.MR, "doMap %v", m.input)
-	getInputStart := time.Now()
-	var bin Bin
-	if err := json.Unmarshal([]byte(m.input), &bin); err != nil {
-		db.DPrintf(db.MR, "Mapper: unmarshal err %v\n", err)
-		return 0, 0, nil, err
-	}
-	perf.LogSpawnLatency("Mapper.getInput", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), getInputStart)
+	db.DPrintf(db.MR, "doMap %v", m.bin)
 	ni := sp.Tlength(0)
 	getSplitStart := time.Now()
-	for i, s := range bin {
+	for i, s := range m.bin {
 		n, err := m.doSplit(&s, i)
 		if err != nil {
 			db.DPrintf(db.MR, "doSplit %v err %v\n", s, err)

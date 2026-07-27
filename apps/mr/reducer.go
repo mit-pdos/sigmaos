@@ -330,6 +330,9 @@ func (r *Reducer) DoReduce() *proc.Status {
 
 func RunReducer(reducef mr.ReduceT, args []string) {
 	pe := proc.GetProcEnv()
+	// Split the reducer's CPU into setup (sigmaclnt, reading its task, opening
+	// its output) and the reduce itself, to compare with the mapper's split.
+	cpu := perf.NewCPUPhases(pe.GetPID(), pe.GetSpawnTime())
 	p, err := perf.NewPerf(pe, perf.MRREDUCER)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
@@ -354,6 +357,8 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	crash.Failer(sc.FsLib, crash.MRREDUCE_PARTITION, func(e crash.Tevent) {
 		crash.PartitionPath(sc.FsLib, r.input[0].File)
 	})
+	cpu.Mark("Reducer.setup")
 	status := r.DoReduce()
+	cpu.Mark("Reducer.doReduce")
 	r.ClntExit(status)
 }

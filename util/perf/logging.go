@@ -15,6 +15,75 @@ var (
 	TIME_NOT_SET time.Time = time.Unix(0, 0)
 )
 
+// CPUNow returns the CPU time (user + system, across all this process's
+// threads) consumed so far. Note that execve preserves these counters, so for
+// a proc started by the uproc-trampoline the origin is the trampoline's fork,
+// not main; take deltas rather than absolute values.
+func CPUNow() time.Duration {
+	var ru syscall.Rusage
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
+		return 0
+	}
+	return time.Duration(ru.Utime.Nano()) + time.Duration(ru.Stime.Nano())
+}
+
+// CPUPhases partitions a proc's CPU time across the phases of its work, so
+// that "where does this proc's CPU go" can be answered rather than guessed.
+//
+// Deliberately a chain of checkpoints rather than a set of nested timers:
+// getrusage reports the whole process, so overlapping timers would
+// double-count the CPU of concurrent goroutines. Consecutive Mark calls
+// instead carve CPU into non-overlapping windows that sum to the proc's total,
+// which makes the attribution checkable:
+//
+//	Setup.RuntimeInit.CPU + sum(<phase>.CPU) ~= Proc.exit.CPU
+//
+// The flip side is that a window is labeled by what the marking goroutine was
+// doing, and CPU burned by *other* goroutines during that window lands in it
+// too (e.g. the mapper's initOutput goroutine, which runs concurrently with
+// its first splits). Read a window as "CPU spent while the proc was in this
+// phase", not "CPU spent by this phase's code".
+type CPUPhases struct {
+	pid       sp.Tpid
+	spawnTime time.Time
+	lastCPU   time.Duration
+	lastWall  time.Time
+}
+
+func NewCPUPhases(pid sp.Tpid, spawnTime time.Time) *CPUPhases {
+	return &CPUPhases{
+		pid:       pid,
+		spawnTime: spawnTime,
+		lastCPU:   CPUNow(),
+		lastWall:  time.Now(),
+	}
+}
+
+// Mark closes the current window and opens the next one, logging (and
+// returning) the CPU and wall time of the window that just ended. The CPU
+// delta is logged as an op duration under "<name>.CPU", so it shows up
+// alongside the wall-clock spawn-latency measurements in the same stats table.
+//
+// Safe to call on a nil *CPUPhases, so code paths that don't set one up (e.g.
+// tests driving a Mapper directly) need no guards.
+func (p *CPUPhases) Mark(name string) (cpu time.Duration, wall time.Duration) {
+	if p == nil {
+		return 0, 0
+	}
+	// The deltas are always computed, so the returned values are meaningful
+	// whether or not logging is on: getrusage costs ~1us, against ~4.6us for
+	// each log line it feeds, which is what the check below skips.
+	nowCPU, nowWall := CPUNow(), time.Now()
+	cpu, wall = nowCPU-p.lastCPU, nowWall.Sub(p.lastWall)
+	p.lastCPU, p.lastWall = nowCPU, nowWall
+	if !db.WillBePrinted(db.SPAWN_LAT) {
+		return cpu, wall
+	}
+	LogSpawnLatency(name+".CPU", p.pid, p.spawnTime, nowWall.Add(-cpu))
+	db.DPrintf(db.SPAWN_LAT, "[%s] %s.phase cpu:%v wall:%v", p.pid, name, cpu, wall)
+	return cpu, wall
+}
+
 func LogRuntimeInitLatency(pid sp.Tpid, spawnTime time.Time) {
 	execTimeStr := os.Getenv("SIGMA_EXEC_TIME")
 	// If not set, bail out

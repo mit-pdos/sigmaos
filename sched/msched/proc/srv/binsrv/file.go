@@ -75,14 +75,16 @@ func (f *binfsFile) Release(ctx context.Context) syscall.Errno {
 	// from its own page cache), npresent/presentMs is the per-read
 	// chunksrv.IsPresent scan, and nfetch should be 0 after the first proc
 	// for this binary on this node.
-	st := f.dl.Stats()
-	// dl.p is set from ProcSrv.LookupProc, which can in principle hand back
-	// nil; don't let logging take procd down.
-	pid := sp.Tpid(sp.NOT_SET)
-	if f.dl.p != nil {
-		pid = f.dl.p.GetPid()
+	if db.WillBePrinted(db.SPAWN_LAT) {
+		st := f.dl.Stats()
+		// dl.p is set from ProcSrv.LookupProc, which can in principle hand
+		// back nil; don't let logging take procd down.
+		pid := sp.Tpid(sp.NOT_SET)
+		if f.dl.p != nil {
+			pid = f.dl.p.GetPid()
+		}
+		db.DPrintf(db.SPAWN_LAT, "[%s] BinFs.exec %q nread:%d nbyte:%d npresent:%d presentMs:%v nfetch:%d fetchMs:%v", pid, f.pn, st.nread, st.nbyte, st.npresent, st.presentMs, st.nfetch, st.fetchMs)
 	}
-	db.DPrintf(db.SPAWN_LAT, "[%s] BinFs.exec %q nread:%d nbyte:%d npresent:%d presentMs:%v nfetch:%d fetchMs:%v", pid, f.pn, st.nread, st.nbyte, st.npresent, st.presentMs, st.nfetch, st.fetchMs)
 	if f.fd != -1 {
 		err := syscall.Close(f.fd)
 		f.fd = -1

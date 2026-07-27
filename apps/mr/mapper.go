@@ -52,6 +52,8 @@ type Mapper struct {
 	useCosandbox bool
 	tailProbeSz  int
 	clnts        *getput.Clnts
+	// Attributes this proc's CPU to its phases; see perf.CPUPhases.
+	cpu *perf.CPUPhases
 }
 
 func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string, useGetPut, useCosandbox bool, tailprobesz int) (*Mapper, error) {
@@ -414,16 +416,23 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 		ni += n
 	}
 	perf.LogSpawnLatency("Mapper.doSplit", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), getSplitStart)
+	// Reading input, mapping it, and combining — plus whatever the initOutput
+	// goroutine does while the first splits run.
+	m.cpu.Mark("Mapper.doSplit")
 	closeWrtStart := time.Now()
 	nout, err := m.CloseWrt()
 	if err != nil {
 		return 0, 0, nil, err
 	}
 	perf.LogSpawnLatency("Mapper.closeWrt", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), closeWrtStart)
+	// Joins initOutput (so any of it that hadn't run yet lands here) and closes
+	// the output writers, flushing the shards.
+	m.cpu.Mark("Mapper.closeWrt")
 	obin, err := m.outputBin()
 	if err != nil {
 		return 0, 0, nil, err
 	}
+	m.cpu.Mark("Mapper.outputBin")
 	return ni, nout, obin, nil
 }
 
@@ -440,6 +449,12 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	perf.LogSpawnLatency("Mapper.Exec", pe.GetPID(), pe.GetSpawnTime(), execTime)
 	db.DPrintf(db.ALWAYS, "[%v] Proc exec latency: %v", proc.GetSigmaDebugPid(), time.Since(execTime))
 
+	// Partition this proc's CPU across its phases, so that the ~20% of it that
+	// goes into getting to main (Setup.RuntimeInit.CPU) can be read against
+	// where the rest goes. The windows are consecutive, so together with
+	// Setup.RuntimeInit.CPU they should account for Proc.exit.CPU.
+	cpu := perf.NewCPUPhases(pe.GetPID(), pe.GetSpawnTime())
+
 	init := time.Now()
 	p, err := perf.NewPerf(pe, perf.MRMAPPER)
 	if err != nil {
@@ -451,10 +466,18 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
+	m.cpu = cpu
+	// Everything before the mapper's own work: NewSigmaClnt (which mounts
+	// named and msched), the local UX/S3 mounts, Started, and the start of the
+	// initOutput goroutine.
+	m.cpu.Mark("Mapper.newMapper")
 	db.DPrintf(db.MR, "Mapper [%v] init time: %v", args[2], time.Since(init))
 	start := time.Now()
 	nin, nout, outbin, err := m.DoMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), tput.Mbyte(nin+nout), time.Since(start).Milliseconds(), tput.TputStr(nin+nout, time.Since(start).Milliseconds()))
+	// Whatever is left between DoMap returning and ClntExit (which reports
+	// Proc.exit.CPU, i.e. the total).
+	m.cpu.Mark("Mapper.postDoMap")
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK",
 			Result{true, m.ProcEnv().GetPID().String(), nin, nout, outbin, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))

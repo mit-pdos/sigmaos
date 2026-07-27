@@ -407,7 +407,7 @@ func TestMapperReducer(t *testing.T) {
 
 		binData, err := json.Marshal(bin.Data)
 		assert.Nil(t, err, "json %v", err)
-		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, job.Wordsz, string(binData), job.Intermediate, false, false, 0)
+		m, err := mr.NewMapper(sc, mapper, reducer, ts.jobRoot, ts.job, p, job.Nreduce, job.Linesz, job.Wordsz, string(binData), job.Intermediate, false, false, 0, nil)
 		assert.Nil(t, err, "NewMapper %v", err)
 		db.DPrintf(db.TEST, "Newmapper %v", time.Since(start))
 		start = time.Now()

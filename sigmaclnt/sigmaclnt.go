@@ -158,6 +158,7 @@ func (sc *SigmaClnt) NewProcClnt() error {
 
 func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	perf.LogProcExitRusage(sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime())
+	sc.logNamespaceUse()
 	sc.ProcAPI.Exited(status)
 	db.DPrintf(db.SIGMACLNT, "Exited done")
 	if sc.LeaseClnt != nil {
@@ -166,6 +167,26 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 	db.DPrintf(db.SIGMACLNT, "EndLeases done")
 	defer db.DPrintf(db.SIGMACLNT, "ClntExit done")
 	return sc.FsLib.Close()
+}
+
+// logNamespaceUse reports, as a proc exits, what it actually did to the
+// namespace — so that setup done eagerly can be checked against setup actually
+// used. The interesting counters: Nsession and NnetclntOK are the attaches and
+// connections this proc made, NmntNamedOK whether it mounted named, and
+// NwalkPath/NwalkUnion/NwalkOne whether it ever walked anywhere. A mapper whose
+// paths are all served by endpoints its parent cached should show walks but no
+// use of named, which would make mounting named at startup pure cost. See
+// claude-slop/SLOW_MAPPER_EXEC.md.
+func (sc *SigmaClnt) logNamespaceUse() {
+	if !db.WillBePrinted(db.SPAWN_LAT) {
+		return
+	}
+	st, err := sc.FsLib.FileAPI.Stats()
+	if err != nil {
+		db.DPrintf(db.SPAWN_LAT, "[%s] Proc.exit.pathstats err %v", sc.ProcEnv().GetPID(), err)
+		return
+	}
+	db.DPrintf(db.SPAWN_LAT, "[%s] Proc.exit.pathstats %v", sc.ProcEnv().GetPID(), st.Path)
 }
 
 func (sc *SigmaClnt) ClntExitOK() {

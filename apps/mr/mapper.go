@@ -56,7 +56,9 @@ type Mapper struct {
 	cpu *perf.CPUPhases
 }
 
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string, useGetPut, useCosandbox bool, tailprobesz int) (*Mapper, error) {
+// cpu, if non-nil, is the proc's CPU-phase chain (see perf.CPUPhases); the
+// mapper marks its setup steps on it. Callers that don't care (tests) pass nil.
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string, useGetPut, useCosandbox bool, tailprobesz int, cpu *perf.CPUPhases) (*Mapper, error) {
 	// Decode the input bin up front: DoMap works from it, and so does the
 	// decision of which servers to mount below.
 	getInputStart := time.Now()
@@ -85,17 +87,31 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		useGetPut:    useGetPut,
 		useCosandbox: useCosandbox,
 		tailProbeSz:  tailprobesz,
+		cpu:          cpu,
 	}
 	for i := 0; i < CONCURRENCY; i++ {
 		m.ckrs[i] = chunkreader.NewChunkReader(lsz, wsz, combinef, p)
 	}
 	m.mountLocalSrvs()
+	// Decoding the input bin, building the chunk readers, and mounting the
+	// local UX/S3 servers from the coordinator's cached endpoints.
+	m.cpu.Mark("Mapper.mountLocalSrvs")
 	if m.useGetPut {
 		m.clnts = getput.NewClnts(sc.FsLib)
 	}
+	// Constructing the S3 path client (an AWS SDK client: config, credential
+	// and endpoint resolution, HTTP setup) — done unconditionally, even for a
+	// job whose input and output are both in UX.
 	m.MountS3PathClnt()
+	m.cpu.Mark("Mapper.MountS3PathClnt")
 	go func() {
-		m.ch <- m.initOutput()
+		// initOutput runs concurrently with the phases below, so its CPU is
+		// reported on its own rather than as a window in the chain (where it
+		// would double-count).
+		startCPU := perf.CPUNow()
+		err := m.initOutput()
+		perf.LogCPUSince("Mapper.initOutput", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), startCPU)
+		m.ch <- err
 	}()
 	return m, nil
 }
@@ -147,7 +163,7 @@ func (m *Mapper) usesSrv(unionpn string) bool {
 	return false
 }
 
-func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*Mapper, error) {
+func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf, cpu *perf.CPUPhases) (*Mapper, error) {
 	if len(args) != 10 {
 		return nil, fmt.Errorf("NewMapper: wrong number of arguments: got %d, want 10 (stale mr-m binary?): %v", len(args), args)
 	}
@@ -179,7 +195,10 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 	if err != nil {
 		return nil, err
 	}
-	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4], useGetPut, useCosandbox, tailprobesz)
+	// Building the SigmaClnt: parsing the ProcEnv, and mounting named and
+	// msched (in parallel) from the endpoints procd cached for us.
+	cpu.Mark("Mapper.NewSigmaClnt")
+	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4], useGetPut, useCosandbox, tailprobesz, cpu)
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}
@@ -187,6 +206,8 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf) (*
 	if err := m.Started(); err != nil {
 		return nil, fmt.Errorf("NewMapper couldn't start %v", args)
 	}
+	// Notifying msched that we started.
+	cpu.Mark("Mapper.Started")
 
 	crash.FailersDefault(m.FsLib, []crash.Tselector{crash.MRMAP_CRASH, crash.MRMAP_PARTITION})
 	return m, nil
@@ -462,15 +483,12 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	}
 	defer p.Done()
 	db.DPrintf(db.BENCH, "Mapper [%v] time since spawn: %v", args[2], time.Since(pe.GetSpawnTime()))
-	m, err := newMapper(mapf, combinef, args, p)
+	m, err := newMapper(mapf, combinef, args, p, cpu)
 	if err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
-	m.cpu = cpu
-	// Everything before the mapper's own work: NewSigmaClnt (which mounts
-	// named and msched), the local UX/S3 mounts, Started, and the start of the
-	// initOutput goroutine.
-	m.cpu.Mark("Mapper.newMapper")
+	// Whatever setup is left after Started: installing the crash failers.
+	m.cpu.Mark("Mapper.setupTail")
 	db.DPrintf(db.MR, "Mapper [%v] init time: %v", args[2], time.Since(init))
 	start := time.Now()
 	nin, nout, outbin, err := m.DoMap()

@@ -168,6 +168,21 @@ func LogProcExitRusage(pid sp.Tpid, spawnTime time.Time) {
 	db.DPrintf(db.SPAWN_LAT, "[%s] Proc.exit.rusage cpu:%v utime:%v stime:%v maxrssKB:%d minflt:%d majflt:%d nvcsw:%d nivcsw:%d", pid, utime+stime, utime, stime, ru.Maxrss, ru.Minflt, ru.Majflt, ru.Nvcsw, ru.Nivcsw)
 }
 
+// LogCPUSince logs the CPU consumed since startCPU (from CPUNow) as
+// "<name>.CPU".
+//
+// Unlike CPUPhases.Mark this partitions nothing: use it for work that runs
+// concurrently with the phases, whose CPU is *also* counted in whichever
+// window it overlapped. Reported separately precisely because it can't be
+// added to the chain without double-counting.
+func LogCPUSince(name string, pid sp.Tpid, spawnTime time.Time, startCPU time.Duration) {
+	if !db.WillBePrinted(db.SPAWN_LAT) {
+		return
+	}
+	cpu := CPUNow() - startCPU
+	LogSpawnLatency(name+".CPU", pid, spawnTime, time.Now().Add(-cpu))
+}
+
 // Some convenience functions for logging performance-related data
 func LogSpawnLatency(format string, pid sp.Tpid, spawnTime time.Time, opStart time.Time, v ...interface{}) {
 	// Bail out early if not logging

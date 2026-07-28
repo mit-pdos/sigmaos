@@ -118,7 +118,7 @@ type Job struct {
 	TailProbeSz int `json:"tailprobesz,omitempty"`
 	// If > 0, GOMAXPROCS for mapper procs. Unset (0) leaves the Go default,
 	// which is the machine's core count regardless of how many procs share
-	// the machine — see claude-slop/SLOW_MAPPER_EXEC.md.
+	// the machine.
 	MapperGOMAXPROCS int `json:"mapper_gomaxprocs,omitempty"`
 }
 
@@ -265,9 +265,8 @@ func copyS3InputToUxSrv(fsl *fslib.FsLib, s3Input string, inputs []*sp.Tstat, ux
 // which costs two namespace round trips per mapper to learn that the directory
 // already exists — every mapper after the first on a node. With fine-grained
 // mappers that is a real fraction of a mapper's CPU (measured at ~5 ms of the
-// ~34 ms a mapper spends, of which only ~7 ms is the mapping itself; see
-// claude-slop/SLOW_MAPPER_EXEC.md). Doing it once per server per job instead
-// makes it ~free.
+// ~34 ms a mapper spends, of which only ~7 ms is the mapping itself). Doing it
+// once per server per job instead makes it ~free.
 //
 // Idempotent, so concurrent coordinators (or a re-run job) are fine.
 func CreateIntOutDirsUx(fsl *fslib.FsLib, job, intOutput string) error {

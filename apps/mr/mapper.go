@@ -220,8 +220,7 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 	// report its shard names and exit while initOutput is still creating
 	// the shard files: the proc's exit detaches its sessions, killing the
 	// in-flight creates, and a reducer later fails to read the promised
-	// (never-created) shards and exits with RESTART. See
-	// claude-slop/MR_REDUCER_UX_BUG.md.
+	// (never-created) shards and exits with RESTART.
 	if !m.init {
 		m.init = true
 		if err := <-m.ch; err != nil {

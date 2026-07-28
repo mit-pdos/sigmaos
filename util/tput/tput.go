@@ -4,7 +4,7 @@
 // them) so that procs can format a throughput without linking the test
 // harness: sigmaos/test pulls in sigmaos/kernel -> dcontainer -> the Docker
 // client, which costs every proc that links it ~1.5ms of package init and a
-// lot of text. See claude-slop/SLOW_MAPPER_EXEC.md.
+// lot of text.
 package tput
 
 import (

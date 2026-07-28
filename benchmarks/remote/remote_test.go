@@ -981,7 +981,7 @@ func TestBEMRMultiplexing(t *testing.T) {
 		useGetPut          bool          = false
 		useCosandboxes     bool          = false
 		//		benchConfig        string        = "mr-grep-wiki1G-granular-bench.json"
-		benchConfig string = "mr-grep-wiki128M-granular-bench.json"
+		benchConfig string = "mr-grep-wiki128M-uxinput-granular-bench.json"
 	)
 	// Mem request per worker is what bounds concurrent mappers per node
 	// (msched admits on memory), so it is the knob for the packing sweep:

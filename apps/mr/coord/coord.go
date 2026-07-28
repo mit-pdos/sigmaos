@@ -6,7 +6,7 @@
 // binaries don't link what only the coordinator needs — the fttask server
 // (etcd + gRPC), the WASM runtime (cgo libwasmer), and the test harness (the
 // Docker client). Package init of those costs every proc that links them
-// >10ms; see claude-slop/SLOW_MAPPER_EXEC.md.
+// >10ms.
 package coord
 
 import (

@@ -175,8 +175,7 @@ func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
 // connections this proc made, NmntNamedOK whether it mounted named, and
 // NwalkPath/NwalkUnion/NwalkOne whether it ever walked anywhere. A mapper whose
 // paths are all served by endpoints its parent cached should show walks but no
-// use of named, which would make mounting named at startup pure cost. See
-// claude-slop/SLOW_MAPPER_EXEC.md.
+// use of named, which would make mounting named at startup pure cost.
 func (sc *SigmaClnt) logNamespaceUse() {
 	if !db.WillBePrinted(db.SPAWN_LAT) {
 		return

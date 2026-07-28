@@ -216,7 +216,7 @@ func TestSeqWc(t *testing.T) {
 //
 // This test failed before the split-boundary fixes (double-counted words at
 // split boundaries, lost words and fragments at chunk-quota boundaries); it
-// now guards against regressions. See claude-slop/MR_SPLIT_BUG.md.
+// now guards against regressions.
 func TestSplitBoundaryCorrectness(t *testing.T) {
 	const INPUT = "../../input/" + "pg-dorian_gray.txt"
 

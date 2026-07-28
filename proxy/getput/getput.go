@@ -1,8 +1,8 @@
 // Package getput provides a reader/writer layered above the UX and S3 proxy
 // Get/Put RPC APIs, interface-compatible with the fslib streaming
-// reader/writer the MR mapper uses, so the two can be swapped transparently
-// (see claude-slop/MR_MAPPER_COSANDBOX.md). Reads may be served from the
-// delegated-RPC store when a cosandbox prefetched them.
+// reader/writer the MR mapper uses, so the two can be swapped transparently.
+// Reads may be served from the delegated-RPC store when a cosandbox prefetched
+// them.
 package getput
 
 import (

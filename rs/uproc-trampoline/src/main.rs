@@ -190,6 +190,15 @@ fn main() {
     std::process::exit(1);
 }
 
+// Jail the proc in the node's shared jail directory. Procd creates it once
+// (scontainer.EnsureJail) with the directories and the read-only mounts every
+// proc needs, because they are views of the container's own /lib, /usr, /etc,
+// ... and so are identical for every proc; building them per proc cost ~16
+// mkdirs and ~10 mounts. What is left here is what cannot be shared: /proc,
+// since each proc has its own PID namespace, and the mounts which depend on
+// this proc's environment. Each proc has its own mount namespace (CLONE_NEWNS
+// in StartSigmaContainer), so these mounts and the pivot_root below are
+// private to it.
 fn jail_proc(
     spawn_time: SystemTime,
     debug_pid: &str,
@@ -201,109 +210,26 @@ fn jail_proc(
     use sys_mount::{Mount, MountFlags, UnmountFlags, unmount};
 
     let old_root_mnt = "oldroot";
-    const DIRS: &'static [&'static str] = &[
-        "",
-        "oldroot",
-        "lib",
-        "lib64",
-        "usr",
-        "etc",
-        "proc",
-        "bin",
-        "bin/user",
-        "mnt",
-        "dev",
-        "dev/shm",
-        "tmp",
-        "tmp/sigmaos-perf",
-        "home/sigmaos/python",
-        "run",
-    ];
 
-    let newroot = "/home/sigmaos/jail/";
-    let newroot_pn: String = newroot.to_owned() + pid + "/";
-
-    // Create directories to use as mount points, as well as the new
-    // root directory itself
-    for d in DIRS.iter() {
-        let path: String = newroot_pn.to_owned();
-        fs::create_dir_all(path + d)?;
-    }
-    print_elapsed_time(
-        debug_pid,
-        "trampoline.fs_jail_proc create_dir_all",
-        spawn_time,
-        now,
-        false,
-    );
-    now = SystemTime::now();
+    // Must match scontainer.JailPath.
+    let newroot_pn = "/home/sigmaos/jail/uproc/";
 
     if VERBOSE {
-        log::info!("mount newroot {}", newroot_pn);
+        log::info!("jail {} in {}", pid, newroot_pn);
     }
-    // Mount new file system as a mount point so we can pivot_root to
-    // it later
-    Mount::builder()
-        .fstype("")
-        .flags(MountFlags::BIND | MountFlags::REC)
-        .mount(newroot_pn.clone(), newroot_pn.clone())?;
 
     // Chdir to new root
-    env::set_current_dir(newroot_pn.clone())?;
-
-    // E.g., execve /lib/ld-musl-x86_64.so.1
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/lib", "lib")?;
-
-    // E.g., openat "/lib64/ld-musl-x86_64.so.1" (links to /lib/)
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/lib64", "lib64")?;
-
-    // E.g., /usr/lib for shared libraries (e.g., /usr/lib/libseccomp.so.2)
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/usr", "usr")?;
-
-    // E.g., Open "/etc/localtime"
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/etc", "etc")?;
+    env::set_current_dir(newroot_pn)?;
 
     // E.g., openat "/proc/meminfo", "/proc/self/exe", but further
-    // restricted by apparmor sigmoas-uproc profile.
+    // restricted by apparmor sigmoas-uproc profile. Mounted per proc rather
+    // than shared: this proc has its own PID namespace, and procd's proc
+    // instance would show it the outer namespace's processes.
     Mount::builder().fstype("proc").mount("proc", "proc")?;
 
-    // the binary passed to exec below has the path /mnt/binfs/<binary>
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND)
-        .mount("/dev/shm", "dev/shm")?;
-
-    // the binary passed to exec below has the path /mnt/binfs/<binary>
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/mnt/", "mnt")?;
-
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/mnt/binfs/", "mnt/binfs")?;
-
-    // For /tmp/sigmaos-perf?
-    Mount::builder()
-        .fstype("none")
-        .flags(MountFlags::BIND | MountFlags::RDONLY)
-        .mount("/tmp/", "tmp")?;
-
     // Only mount /tmp/sigmaos-perf directory if SIGMAPERF is set (meaning we are
-    // benchmarking and want to extract the results)
+    // benchmarking and want to extract the results), so it stays per proc. Note
+    // that it is writable, unlike the /tmp it is mounted over.
     if env::var("SIGMAPERF").is_ok() {
         // E.g., write pprof files to /tmp/sigmaos-perf
         Mount::builder()
@@ -318,7 +244,11 @@ fn jail_proc(
     // Python procs need the sigmaos Python library, the extracted SeBS bundle,
     // and the systemd-resolved directory so that /etc/resolv.conf (which is
     // typically a symlink to /run/systemd/resolve/stub-resolv.conf) can be
-    // followed inside the jail for DNS resolution via getaddrinfo().
+    // followed inside the jail for DNS resolution via getaddrinfo(). These stay
+    // per proc: bin/user in particular has to be bound after procd has mounted
+    // the realm's binaries over /home/sigmaos/bin/user, which happens when it
+    // is assigned to a realm rather than when it creates the jail. The
+    // dev/urandom and dev/null mount points are files, which procd creates.
     if env::var("SIGMA_PYTHON_PROC").is_ok() {
         Mount::builder()
             .fstype("none")
@@ -332,13 +262,11 @@ fn jail_proc(
             .fstype("none")
             .flags(MountFlags::BIND | MountFlags::RDONLY)
             .mount("/run", "run")?;
-        fs::File::create(newroot_pn.clone() + "dev/urandom")?;
         Mount::builder()
             .fstype("none")
             .flags(MountFlags::BIND | MountFlags::RDONLY)
             .mount("/dev/urandom", "dev/urandom")?;
 
-        fs::File::create(newroot_pn.clone() + "dev/null")?;
         Mount::builder()
             .fstype("none")
             .flags(MountFlags::BIND | MountFlags::RDONLY)
@@ -381,16 +309,9 @@ fn jail_proc(
         now,
         false,
     );
-    now = SystemTime::now();
 
-    fs::remove_dir(old_root_mnt)?;
-    print_elapsed_time(
-        &debug_pid,
-        "trampoline.fs_jail_proc rmdir",
-        spawn_time,
-        now,
-        false,
-    );
+    // Leave the oldroot mount point in place: every proc pivot_roots through
+    // it, so it belongs to the shared jail, not to this proc.
 
     Ok(())
 }

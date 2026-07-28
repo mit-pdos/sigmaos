@@ -11,9 +11,8 @@ import (
 
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	"sigmaos/scontainer"
 	"sigmaos/sched/msched/proc/srv/binsrv"
-	sp "sigmaos/sigmap"
+	"sigmaos/scontainer"
 	"sigmaos/util/linux/mem"
 	"sigmaos/util/perf"
 )
@@ -42,6 +41,12 @@ func (pc *pyCmd) Wait() error {
 // the same PID/UTS/mount namespace isolation as a sigma container. The
 // trampoline execs /usr/bin/python3 with scriptPath as its first argument.
 func StartPythonContainer(uproc *proc.Proc, dialproxy bool) (*pyCmd, error) {
+	// The trampoline pivot_roots into the jail shared by every proc on this
+	// node; make sure it exists.
+	if err := scontainer.EnsureJail(); err != nil {
+		db.DPrintf(db.CONTAINER, "Error EnsureJail: %v", err)
+		return nil, err
+	}
 	scriptPath := filepath.Join(binsrv.BINFSMNT, uproc.GetVersionedProgram())
 
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
@@ -97,7 +102,6 @@ func StartPythonContainer(uproc *proc.Proc, dialproxy bool) (*pyCmd, error) {
 	s := time.Now()
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "StartPythonContainer err %v: %v", cmd, err)
-		scontainer.CleanupUProc(uproc.GetPid())
 		return nil, err
 	}
 	perf.LogSpawnLatency("StartPythonContainer cmd.Start", uproc.GetPid(), uproc.GetSpawnTime(), s)
@@ -108,9 +112,4 @@ func StartPythonContainer(uproc *proc.Proc, dialproxy bool) (*pyCmd, error) {
 // used when the script is staged in PYTHON_BIN_DIR rather than served via BINFS.
 func PythonBinPath(program string) string {
 	return filepath.Join(PYTHON_BIN_DIR, program)
-}
-
-// CleanupPythonProc removes the jail directory created by uproc-trampoline.
-func CleanupPythonProc(pid sp.Tpid) {
-	scontainer.CleanupUProc(pid)
 }

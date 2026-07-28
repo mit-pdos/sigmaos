@@ -5,7 +5,6 @@ package scontainer
 import (
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -14,7 +13,6 @@ import (
 	db "sigmaos/debug"
 	"sigmaos/proc"
 	"sigmaos/sched/msched/proc/srv/binsrv"
-	sp "sigmaos/sigmap"
 	"sigmaos/util/linux/mem"
 	"sigmaos/util/perf"
 )
@@ -38,6 +36,12 @@ func (upc *uprocCmd) GetPSS() (proc.Tmem, error) {
 // Contain user procs using uproc-trampoline trampoline
 func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	db.DPrintf(db.CONTAINER, "RunUProc scontainer dialproxy %v %v env %v\n", dialproxy, uproc, os.Environ())
+	// The trampoline pivot_roots into the jail shared by every proc on this
+	// node; make sure it exists.
+	if err := EnsureJail(); err != nil {
+		db.DPrintf(db.CONTAINER, "Error EnsureJail: %v", err)
+		return nil, err
+	}
 	var cmd *exec.Cmd
 	straceProcs := proc.GetLabels(uproc.GetProcEnv().GetStrace())
 	valgrindProcs := proc.GetLabels(uproc.GetProcEnv().GetValgrind())
@@ -84,19 +88,8 @@ func StartSigmaContainer(uproc *proc.Proc, dialproxy bool) (*uprocCmd, error) {
 	s := time.Now()
 	if err := cmd.Start(); err != nil {
 		db.DPrintf(db.CONTAINER, "Error start %v %v", cmd, err)
-		CleanupUProc(uproc.GetPid())
 		return nil, err
 	}
 	perf.LogSpawnLatency("StartSigmaContainer cmd.Start", uproc.GetPid(), uproc.GetSpawnTime(), s)
 	return &uprocCmd{cmd: cmd}, nil
-}
-
-func CleanupUProc(pid sp.Tpid) {
-	if err := os.RemoveAll(jailPath(pid)); err != nil {
-		db.DPrintf(db.ALWAYS, "Error cleanupJail: %v", err)
-	}
-}
-
-func jailPath(pid sp.Tpid) string {
-	return filepath.Join(sp.SIGMAHOME, "jail", pid.String())
 }

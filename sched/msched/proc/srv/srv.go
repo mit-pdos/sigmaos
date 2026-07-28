@@ -615,11 +615,8 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	}
 	nRunning = ps.nRunning.Add(-1)
 	db.DPrintf(db.PROCD, "[%v] nRunning after: %v", uproc.GetProgram(), nRunning)
-	if uproc.GetProcContainerType() == proc.ProcContainerType_PROC_CTR_PYTHON {
-		pycontainer.CleanupPythonProc(uproc.GetPid())
-	} else {
-		scontainer.CleanupUProc(uproc.GetPid())
-	}
+	// Nothing to clean up per proc: every proc pivot_roots into the jail
+	// scontainer creates once for this node.
 	ps.procs.Delete(pid)
 	if uproc.GetProcEnv().UseSPProxy {
 		if err := ps.spc.InformProcDone(uproc); err != nil {

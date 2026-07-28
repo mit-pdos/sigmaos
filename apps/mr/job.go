@@ -257,26 +257,75 @@ func copyS3InputToUxSrv(fsl *fslib.FsLib, s3Input string, inputs []*sp.Tstat, ux
 	return nil
 }
 
-func CreateMapperIntOutDirUx(fsl *fslib.FsLib, job, intOutput string) error {
-	if strings.Contains(intOutput, "/ux/") {
-		if _, err := fsl.Stat(intOutput); err != nil {
-			if err := fsl.MkDir(intOutput, 0777); err != nil {
-				if !serr.IsErrorExists(err) {
-					return err
-				}
-			}
+// CreateIntOutDirsUx creates the job's intermediate output directory on every
+// UX server, once, before any mapper runs. Called from job preparation
+// (coord.PrepareJob), alongside the equivalent for S3 intermediate output.
+//
+// Mappers used to each create it themselves (CreateMapperIntOutDirUx below),
+// which costs two namespace round trips per mapper to learn that the directory
+// already exists — every mapper after the first on a node. With fine-grained
+// mappers that is a real fraction of a mapper's CPU (measured at ~5 ms of the
+// ~34 ms a mapper spends, of which only ~7 ms is the mapping itself; see
+// claude-slop/SLOW_MAPPER_EXEC.md). Doing it once per server per job instead
+// makes it ~free.
+//
+// Idempotent, so concurrent coordinators (or a re-run job) are fine.
+func CreateIntOutDirsUx(fsl *fslib.FsLib, job, intOutput string) error {
+	if !strings.Contains(intOutput, "/ux/") {
+		// S3 intermediate output: PrepareJob creates those directories once.
+		return nil
+	}
+	// A ~local intermediate path means "each mapper's own UX server", so the
+	// directory has to exist on all of them. Any other path names one server.
+	if !sp.HasLocal(intOutput) {
+		return mkDirsIntOut(fsl, job, intOutput)
+	}
+	sts, err := fsl.GetDir(sp.UX)
+	if err != nil {
+		db.DPrintf(db.ERROR, "CreateIntOutDirsUx GetDir %v err %v", sp.UX, err)
+		return err
+	}
+	srvs := sp.Names(sts)
+	db.DPrintf(db.MR, "CreateIntOutDirsUx %v on %d UX srvs", intOutput, len(srvs))
+	errc := make(chan error, len(srvs))
+	for _, srv := range srvs {
+		go func(srv string) {
+			pn, _ := sp.SubstLocal(intOutput, srv)
+			errc <- mkDirsIntOut(fsl, job, pn)
+		}(srv)
+	}
+	var err1 error
+	for range srvs {
+		if err := <-errc; err != nil {
+			err1 = err
 		}
-		intOutDir := MapIntermediateDir(job, intOutput)
-		if _, err := fsl.Stat(intOutDir); err != nil {
-			if err := fsl.MkDir(intOutDir, 0777); err != nil {
-				if serr.IsErrorExists(err) {
-					return nil
-				}
-				return err
-			}
+	}
+	return err1
+}
+
+// mkDirsIntOut creates intOutput and intOutput/<job>, tolerating both already
+// existing. MkDir-and-ignore-exists rather than Stat-then-MkDir: one round trip
+// instead of two, and it races correctly against another creator.
+func mkDirsIntOut(fsl *fslib.FsLib, job, intOutput string) error {
+	for _, pn := range []string{intOutput, MapIntermediateDir(job, intOutput)} {
+		if err := fsl.MkDir(pn, 0777); err != nil && !serr.IsErrorExists(err) {
+			db.DPrintf(db.ERROR, "MkDir %v err %v", pn, err)
+			return err
 		}
 	}
 	return nil
+}
+
+// CreateMapperIntOutDirUx creates the intermediate output directory a mapper
+// writes its shards to. Job preparation normally creates it on every UX server
+// before the mappers run (CreateIntOutDirsUx), so this is only the fallback for
+// a server that wasn't covered — one that wasn't up or known at preparation
+// time (cold start), or that restarted since (UX crash tests).
+func CreateMapperIntOutDirUx(fsl *fslib.FsLib, job, intOutput string) error {
+	if !strings.Contains(intOutput, "/ux/") {
+		return nil
+	}
+	return mkDirsIntOut(fsl, job, intOutput)
 }
 
 // XXX run as a proc?

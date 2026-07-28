@@ -87,6 +87,13 @@ func IsS3Path(pn string) bool {
 // Only the first LOCAL is substituted: a pathname names one server. Whole
 // components are matched, so a file whose name merely starts with "~local" is
 // left alone.
+// HasLocal reports whether pn has a LOCAL component, i.e. whether it names
+// "the server on this kernel" rather than one specific server.
+func HasLocal(pn string) bool {
+	_, ok := SubstLocal(pn, LOCAL)
+	return ok
+}
+
 func SubstLocal(pn, repl string) (string, bool) {
 	parts := strings.Split(pn, "/")
 	for i, part := range parts {

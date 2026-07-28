@@ -100,8 +100,11 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *mr.Job)
 		return 0, err
 	}
 
-	// If intermediate output directory lives in S3, make it only
-	// once.  Mappers make intermediate and out dirs in their local ux
+	// Create the intermediate output directory before any mapper runs. In S3
+	// that is one directory; in UX it is one per server, since each mapper
+	// writes its shards to its own. Doing it here keeps mappers from each
+	// checking whether it exists, which costs two namespace round trips per
+	// mapper — significant with fine-grained mappers.
 	if strings.Contains(job.Intermediate, "/s3/") {
 		intOutDir := mr.MapIntermediateDir(jobName, job.Intermediate)
 		if err := fsl.MkDir(job.Intermediate, 0777); err != nil {
@@ -110,6 +113,12 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *mr.Job)
 		if err := fsl.MkDir(intOutDir, 0777); err != nil {
 			return 0, err
 		}
+	}
+	// Best-effort for UX: on a cold start the UX servers may not be up or known
+	// yet, and one may restart during a crash test, so a mapper still creates
+	// the directory itself if its server wasn't covered.
+	if err := mr.CreateIntOutDirsUx(fsl, jobName, job.Intermediate); err != nil {
+		db.DPrintf(db.ALWAYS, "CreateIntOutDirsUx %v err %v; mappers will create it themselves", job.Intermediate, err)
 	}
 
 	if _, err := fsl.PutFile(mr.JobIntOutLink(jobRoot, jobName), 0777, sp.OWRITE, []byte(job.Intermediate)); err != nil {

@@ -266,18 +266,32 @@ func (m *Mapper) initOutput() error {
 		perf.LogSpawnLatency("Mapper.initOutput", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), start)
 	}(start)
 
+	// Job preparation creates the intermediate output directory on every UX
+	// server before any mapper runs (PrepareJob -> CreateIntOutDirsUx), so go
+	// straight to creating the shards: checking for the directory here would
+	// cost two namespace round trips per mapper to learn it already exists.
+	if err := m.initWrts(); err == nil {
+		return nil
+	}
+	// Fall back to creating it: this UX server may not have been covered (e.g.
+	// it joined after the job started), or the shard create failed for an
+	// unrelated reason, in which case the retry fails the same way.
 	if err := CreateMapperIntOutDirUx(m.FsLib, m.job, m.intOutput); err != nil {
 		return err
 	}
 	perf.LogSpawnLatency("Mapper.CreateMapperIntOutDirUx", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), start)
+	return m.initWrts()
+}
 
+// initWrts creates this mapper's output shard, one per reducer. On failure it
+// closes whatever it managed to create, so it is safe to call again.
+func (m *Mapper) initWrts() error {
 	outDirPath := MapIntermediateDir(m.job, m.intOutput)
-
-	// Create the output files
 	for r := 0; r < m.nreducetask; r++ {
 		// create temp output shard for reducer r
 		oname := mshardfile(outDirPath, r) + m.rand
 		if err := m.initWrt(r, oname); err != nil {
+			db.DPrintf(db.MR, "initWrt %v err %v", oname, err)
 			m.closewrts()
 			return err
 		}
@@ -285,14 +299,19 @@ func (m *Mapper) initOutput() error {
 	return nil
 }
 
+// closewrts closes the shard writers created so far and forgets them, so that
+// it is safe to call twice — initWrts closes a partial set before its caller
+// retries, and CloseWrt closes the final set.
 func (m *Mapper) closewrts() (sp.Tlength, error) {
 	n := sp.Tlength(0)
 	for r := 0; r < m.nreducetask; r++ {
 		if m.wrts[r] != nil {
-			if err := m.wrts[r].Close(); err != nil {
+			wrt := m.wrts[r]
+			m.wrts[r] = nil
+			if err := wrt.Close(); err != nil {
 				return 0, err
 			} else {
-				n += m.wrts[r].Nbytes()
+				n += wrt.Nbytes()
 			}
 		}
 	}

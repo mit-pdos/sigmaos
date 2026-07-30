@@ -325,7 +325,15 @@ func (r *Reducer) DoReduce() *proc.Status {
 		break
 	}
 	return proc.NewStatusInfo(proc.StatusOK, "OK",
-		Result{false, r.ProcEnv().GetPID().String(), rtot.n, nbyte, Bin{}, rtot.d.Milliseconds(), 0, r.ProcEnv().GetKernelID()})
+		Result{
+			IsM:      false,
+			Task:     r.ProcEnv().GetPID().String(),
+			In:       rtot.n,
+			Out:      nbyte,
+			OutBin:   Bin{},
+			MsInner:  rtot.d.Milliseconds(),
+			KernelID: r.ProcEnv().GetKernelID(),
+		})
 }
 
 func RunReducer(reducef mr.ReduceT, args []string) {

@@ -3,11 +3,13 @@ package mr
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	// "runtime/debug"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -54,6 +56,59 @@ type Mapper struct {
 	clnts        *getput.Clnts
 	// Attributes this proc's CPU to its phases; see perf.CPUPhases.
 	cpu *perf.CPUPhases
+	// Time spent fetching input; see getStats.
+	gets getStats
+}
+
+// getStats accumulates the wall time a mapper spends fetching its input, so
+// that it can be read against the mapper's total runtime (Result.MsInner)
+// independently of how the input is fetched. What counts as one get differs by
+// path, and so does how the sum relates to wall time:
+//
+//   - getput, cosandbox: one delegated get per split, which retrieves the
+//     window the cosandbox prefetched (blocking until it materializes).
+//   - getput, direct: one ranged get RPC per split to the local UX/S3 proxy,
+//     plus any lazy tail extension past the probe.
+//
+// Both of the above are issued serially, once per split, from doSplit, so the
+// sum is comparable to elapsed time. On the fslib path, by contrast, a get is
+// one chunk read, and CONCURRENCY chunk readers run in parallel per split — so
+// the sum counts concurrent reads separately and can exceed the mapper's wall
+// time. Compare across paths with that in mind.
+type getStats struct {
+	ns atomic.Int64
+	n  atomic.Int64
+}
+
+func (gs *getStats) record(start time.Time) {
+	gs.ns.Add(int64(time.Since(start)))
+	gs.n.Add(1)
+}
+
+func (gs *getStats) dur() time.Duration {
+	return time.Duration(gs.ns.Load())
+}
+
+func (gs *getStats) count() int64 {
+	return gs.n.Load()
+}
+
+// timedSplitReader times each of the wrapped reader's chunk fetches. It only
+// adds work on the fslib path, where GetChunkReader issues the read; a
+// GetPutReader has already fetched its whole window by the time it is wrapped
+// (that fetch is timed in doSplit) and serves it from memory.
+type timedSplitReader struct {
+	getput.SplitReader
+	gets *getStats
+}
+
+func (r *timedSplitReader) GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Toffset, bool, error) {
+	start := time.Now()
+	rdr, off, final, err := r.SplitReader.GetChunkReader(sz, offinc)
+	if err == nil {
+		r.gets.record(start)
+	}
+	return rdr, off, final, err
 }
 
 // cpu, if non-nil, is the proc's CPU-phase chain (see perf.CPUPhases); the
@@ -386,7 +441,14 @@ func (m *Mapper) doSplit(s *mr.Split, idx int) (sp.Tlength, error) {
 		// (mr.SplitReadWindow); the tail past the probe is fetched lazily
 		// with direct (non-delegated) RPCs.
 		off, body, probe := mr.SplitReadWindow(s, m.linesz, m.tailProbeSz)
+		// This constructor performs the split's get — the delegated one when a
+		// cosandbox prefetched it, a ranged RPC otherwise — plus any lazy tail
+		// extension, so it is the whole fetch cost of the split.
+		getStart := time.Now()
 		pfr, err = getput.NewGetPutReader(m.clnts, s.File, off, body, sp.Tlength(m.linesz), probe, m.useCosandbox, uint64(idx))
+		if err == nil {
+			m.gets.record(getStart)
+		}
 	} else {
 		if pn, ok := sp.S3ClientPath(s.File); ok {
 			s.File = pn
@@ -411,6 +473,11 @@ func (m *Mapper) doSplit(s *mr.Split, idx int) (sp.Tlength, error) {
 
 	db.DPrintf(db.MR, "Mapper openS3Reader time: %v", time.Since(start))
 	defer pfr.Close()
+	// On the fslib path the reads happen as the chunk readers pull chunks, so
+	// time them there rather than at open.
+	if !m.useGetPut {
+		pfr = &timedSplitReader{SplitReader: pfr, gets: &m.gets}
+	}
 
 	type result struct {
 		n   sp.Tlength
@@ -455,6 +522,7 @@ func (m *Mapper) DoMap() (sp.Tlength, sp.Tlength, Bin, error) {
 		ni += n
 	}
 	perf.LogSpawnLatency("Mapper.doSplit", m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), getSplitStart)
+	db.DPrintf(db.MR, "Mapper gets: n %v tot %v", m.gets.count(), m.gets.dur())
 	// Reading input, mapping it, and combining — plus whatever the initOutput
 	// goroutine does while the first splits run.
 	m.cpu.Mark("Mapper.doSplit")
@@ -516,7 +584,17 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	m.cpu.Mark("Mapper.postDoMap")
 	if err == nil {
 		m.ClntExit(proc.NewStatusInfo(proc.StatusOK, "OK",
-			Result{true, m.ProcEnv().GetPID().String(), nin, nout, outbin, time.Since(start).Milliseconds(), 0, m.ProcEnv().GetKernelID()}))
+			Result{
+				IsM:      true,
+				Task:     m.ProcEnv().GetPID().String(),
+				In:       nin,
+				Out:      nout,
+				OutBin:   outbin,
+				MsInner:  time.Since(start).Milliseconds(),
+				MsGet:    m.gets.dur().Milliseconds(),
+				NGet:     m.gets.count(),
+				KernelID: m.ProcEnv().GetKernelID(),
+			}))
 	} else {
 		m.ClntExit(proc.NewStatusErr(err.Error(), nil))
 	}

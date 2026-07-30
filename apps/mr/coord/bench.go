@@ -67,10 +67,13 @@ func (st *RuntimeStats) String() string {
 // Runtime statistics for a job's mappers and reducers. Inner runtimes are
 // measured within the mapper/reducer procs themselves, and only include task
 // execution time. Outer runtimes are measured at the coordinator, and also
-// include proc spawn/queueing delays.
+// include proc spawn/queueing delays. Get times are the part of the inner
+// runtime a mapper spent fetching its input (see mr.Result.MsGet); on the
+// fslib path they can exceed it, since chunk reads run concurrently.
 type JobRuntimeStats struct {
 	MapInner    *RuntimeStats
 	MapOuter    *RuntimeStats
+	MapGet      *RuntimeStats
 	ReduceInner *RuntimeStats
 	ReduceOuter *RuntimeStats
 }
@@ -78,12 +81,14 @@ type JobRuntimeStats struct {
 func NewJobRuntimeStats(results []*mr.Result) *JobRuntimeStats {
 	mInner := []int64{}
 	mOuter := []int64{}
+	mGet := []int64{}
 	rInner := []int64{}
 	rOuter := []int64{}
 	for _, r := range results {
 		if r.IsM {
 			mInner = append(mInner, r.MsInner)
 			mOuter = append(mOuter, r.MsOuter)
+			mGet = append(mGet, r.MsGet)
 		} else {
 			rInner = append(rInner, r.MsInner)
 			rOuter = append(rOuter, r.MsOuter)
@@ -92,13 +97,14 @@ func NewJobRuntimeStats(results []*mr.Result) *JobRuntimeStats {
 	return &JobRuntimeStats{
 		MapInner:    newRuntimeStats(mInner),
 		MapOuter:    newRuntimeStats(mOuter),
+		MapGet:      newRuntimeStats(mGet),
 		ReduceInner: newRuntimeStats(rInner),
 		ReduceOuter: newRuntimeStats(rOuter),
 	}
 }
 
 func (jst *JobRuntimeStats) String() string {
-	return fmt.Sprintf("mappers  inner: %v\nmappers  outer: %v\nreducers inner: %v\nreducers outer: %v", jst.MapInner, jst.MapOuter, jst.ReduceInner, jst.ReduceOuter)
+	return fmt.Sprintf("mappers  inner: %v\nmappers  outer: %v\nmappers  gets:  %v\nreducers inner: %v\nreducers outer: %v", jst.MapInner, jst.MapOuter, jst.MapGet, jst.ReduceInner, jst.ReduceOuter)
 }
 
 // Read the per-task results the coordinator logged for a job.
@@ -151,7 +157,11 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 		return tput.Tput(results[i].In+results[i].Out, results[i].MsInner) > tput.Tput(results[j].In+results[j].Out, results[j].MsInner)
 	})
 	for _, r := range results {
-		fmt.Printf("[%s, kid:%v]:\n\tin %v out %v tot %v inner %vms outer %vms (%s)\n", r.Task, r.KernelID, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), tput.Mbyte(r.In+r.Out), r.MsInner, r.MsOuter, tput.TputStr(r.In+r.Out, r.MsInner))
+		gets := ""
+		if r.IsM {
+			gets = fmt.Sprintf(" gets %vms (n %v)", r.MsGet, r.NGet)
+		}
+		fmt.Printf("[%s, kid:%v]:\n\tin %v out %v tot %v inner %vms outer %vms%s (%s)\n", r.Task, r.KernelID, humanize.Bytes(uint64(r.In)), humanize.Bytes(uint64(r.Out)), tput.Mbyte(r.In+r.Out), r.MsInner, r.MsOuter, gets, tput.TputStr(r.In+r.Out, r.MsInner))
 	}
 	fmt.Printf("==== totIn %s (%d) totOut %s tmpOut %s tmpIn %s\n",
 		humanize.Bytes(uint64(totIn)), totIn,

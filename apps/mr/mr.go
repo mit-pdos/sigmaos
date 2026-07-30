@@ -133,14 +133,21 @@ type PhaseDurations struct {
 
 // Result of mapper or reducer
 type Result struct {
-	IsM      bool       `json:"IsM"`
-	Task     string     `json:"Task"`
-	In       sp.Tlength `json:"In"`
-	Out      sp.Tlength `json:"Out"`
-	OutBin   Bin        `json:"OutBin"`
-	MsInner  int64      `json:"MsInner"`
-	MsOuter  int64      `json:"MsOuter"`
-	KernelID string     `json:"KernelID"`
+	IsM     bool       `json:"IsM"`
+	Task    string     `json:"Task"`
+	In      sp.Tlength `json:"In"`
+	Out     sp.Tlength `json:"Out"`
+	OutBin  Bin        `json:"OutBin"`
+	MsInner int64      `json:"MsInner"`
+	MsOuter int64      `json:"MsOuter"`
+	// Wall time the task spent fetching its input, and the number of fetches,
+	// as measured by the task itself. For a mapper this is its gets — the same
+	// number whether they are direct RPCs to the local UX/S3 proxy, streamed
+	// reads on the fslib path, or delegated gets of what a cosandbox
+	// prefetched. See Mapper.getStats for what "a get" means per path.
+	MsGet    int64  `json:"MsGet"`
+	NGet     int64  `json:"NGet"`
+	KernelID string `json:"KernelID"`
 }
 
 // Decode a Result from generically-unmarshaled JSON (e.g., a proc exit

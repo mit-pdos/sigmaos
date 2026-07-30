@@ -156,6 +156,7 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *mr.Job, n
 			strconv.FormatBool(job.UseCosandboxes),
 			strconv.Itoa(job.TailProbeSz),
 			strconv.Itoa(job.MapperGOMAXPROCS),
+			strconv.Itoa(job.Binsz),
 		}, 1000, jobName)
 	return cfg.StartGrpMgr(sc)
 }

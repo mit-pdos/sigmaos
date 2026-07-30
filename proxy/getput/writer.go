@@ -11,6 +11,10 @@ import (
 // the whole object and issue a single PutObject on Close, since S3 has no
 // positional write (the S3 srv PutObject handler notes where
 // multipart-upload support would slot in).
+//
+// Every put is a direct RPC. Delegation is deliberately input-only: a
+// cosandbox prefetches a mapper's splits (see GetPutReader), but output never
+// goes out through OutgoingDelegatedRPC.
 type GetPutWriter struct {
 	clnts   clntAPI
 	tgt     *Target

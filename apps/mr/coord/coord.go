@@ -38,6 +38,10 @@ import (
 const (
 	NCOORD               = 1
 	MALICIOUS_MAPPER_BIN = "mr-m-malicious"
+
+	// Floor on the shared-memory segment sized by mapperShmemMB, so that a job
+	// with tiny splits still leaves the allocator room for reply framing.
+	MIN_SHMEM_MB proc.Tmem = 2
 )
 
 // mr_test puts pathnames of input files (split into bins) in
@@ -83,6 +87,7 @@ type Coord struct {
 	useGetPut        bool
 	useCosandbox     bool
 	tailProbeSz      int
+	binsz            int
 	mrBootWASM       []byte
 	uxEPs            *procclnt.SrvEPCache
 	s3EPs            *procclnt.SrvEPCache
@@ -110,8 +115,8 @@ func (s *AStat) String() string {
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 16 {
-		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 16 (stale mr-coord binary?): %v", len(args), args)
+	if len(args) != 17 {
+		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 17 (stale mr-coord binary?): %v", len(args), args)
 	}
 	c := &Coord{}
 	c.jobRoot = args[1]
@@ -194,6 +199,10 @@ func NewCoord(args []string) (*Coord, error) {
 	c.mapperGOMAXPROCS, err = strconv.Atoi(args[15])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: mapperGOMAXPROCS %v isn't int", args[15])
+	}
+	c.binsz, err = strconv.Atoi(args[16])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: binsz %v isn't int", args[16])
 	}
 
 	if c.useCosandbox {
@@ -308,6 +317,11 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		if err != nil {
 			return nil, err
 		}
+		// Retrieve the cosandbox's prefetched splits through shared memory
+		// rather than copying them back over the spproxy socket.
+		shmemMB := mapperShmemMB(c.binsz)
+		p.SetShmemMB(shmemMB)
+		db.DPrintf(db.MR_COORD, "mapperProc %v cosandbox shmem %vMB", p.GetPid(), shmemMB)
 		p.SetCoSandbox(c.mrBootWASM, input)
 		p.SetRunCoSandbox(true)
 		// Deliberately no SetRunAfterCoSandbox(true): DelegatedRPC blocks

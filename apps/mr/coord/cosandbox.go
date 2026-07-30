@@ -6,10 +6,28 @@ import (
 
 	"sigmaos/apps/mr"
 	mrapi "sigmaos/apps/mr/mr"
+	"sigmaos/proc"
 	"sigmaos/proxy/getput"
 	wasmer "sigmaos/proxy/wasm/rpc/wasmer"
 	sp "sigmaos/sigmap"
 )
+
+// mapperShmemMB sizes the shared-memory segment spproxy sets up for a
+// cosandbox mapper at twice the job's bin size, rounded up to whole MB.
+// spproxy reads each prefetched read window into the segment and the mapper's
+// delegated get maps it there instead of copying it back over the spproxy
+// socket, so the segment has to hold all of a mapper's windows at once (the
+// boot script issues one get per split). mr.NewBins closes a bin once adding
+// another split would reach binsz, so binsz bounds a bin's data; the factor of
+// two covers the per-split tail probes, the marshaled reply framing, and the
+// allocator's slack.
+func mapperShmemMB(binsz int) proc.Tmem {
+	mb := proc.Tmem((2*uint64(binsz) + uint64(sp.MBYTE) - 1) / uint64(sp.MBYTE))
+	if mb < MIN_SHMEM_MB {
+		return MIN_SHMEM_MB
+	}
+	return mb
+}
 
 // mapperBootInput builds the boot input for the mr_mapper_boot cosandbox
 // (see rs/wasm/mr_mapper_boot): a u32-LE split count followed by

@@ -105,34 +105,66 @@ func (cfg *HotelBenchConfig) Marshal() (string, error) {
 	return string(b), nil
 }
 
+// MRDataPathCfg selects how a job's tasks move their data. The mapper and
+// reducer knobs are independent, so either side can be measured on its own.
+type MRDataPathCfg struct {
+	// Mappers read input/write intermediate output through the UX/S3 proxy
+	// Get/Put client API rather than the fslib streaming reader/writer.
+	MapGetPut bool
+	// A cosandbox pre-fetches each mapper's input splits (requires MapGetPut).
+	MapCosandboxes bool
+	// Reducers read the intermediate shards and write their output through the
+	// Get/Put API.
+	ReduceGetPut bool
+	// A cosandbox pre-fetches every shard a reducer reads (requires
+	// ReduceGetPut).
+	ReduceCosandboxes bool
+}
+
+func (c MRDataPathCfg) String() string {
+	return fmt.Sprintf("{mapGetPut:%v mapCosandboxes:%v reduceGetPut:%v reduceCosandboxes:%v}",
+		c.MapGetPut, c.MapCosandboxes, c.ReduceGetPut, c.ReduceCosandboxes)
+}
+
 type MRBenchConfig struct {
-	App            string    `json:"app"`             // Name of the MR job description json file
-	MemReq         proc.Tmem `json:"mem_req"`         // Amount of memory (in MB) required by each mapper/reducer
-	UseGetPut      bool      `json:"use_getput"`      // Mappers use the UX/S3 proxy Get/Put client API
-	UseCosandboxes bool      `json:"use_cosandboxes"` // Cosandboxes pre-fetch mapper input splits (requires UseGetPut)
-	JobCfg         *mr.Job   `json:"job_cfg"`         // MR job description
+	App    string    `json:"app"`     // Name of the MR job description json file
+	MemReq proc.Tmem `json:"mem_req"` // Amount of memory (in MB) required by each mapper/reducer
+	// Mapper knobs (kept under their original names so existing results stay
+	// comparable); the reducer ones follow.
+	UseGetPut            bool    `json:"use_getput"`             // Mappers use the UX/S3 proxy Get/Put client API
+	UseCosandboxes       bool    `json:"use_cosandboxes"`        // Cosandboxes pre-fetch mapper input splits (requires UseGetPut)
+	UseGetPutReduce      bool    `json:"use_getput_reduce"`      // Reducers use the Get/Put client API
+	UseCosandboxesReduce bool    `json:"use_cosandboxes_reduce"` // Cosandboxes pre-fetch reducer input shards (requires UseGetPutReduce)
+	JobCfg               *mr.Job `json:"job_cfg"`                // MR job description
 }
 
 // NewMRBenchConfig creates an MR benchmark config, reading the MR job
-// description named app from jobDir on the local file system. useGetPut and
-// useCosandboxes override the corresponding job-description fields, so one
-// job description serves all variants.
-func NewMRBenchConfig(jobDir, app string, memReq proc.Tmem, useGetPut, useCosandboxes bool) (*MRBenchConfig, error) {
+// description named app from jobDir on the local file system. data overrides
+// the corresponding job-description fields, so one job description serves all
+// variants.
+func NewMRBenchConfig(jobDir, app string, memReq proc.Tmem, data MRDataPathCfg) (*MRBenchConfig, error) {
 	jobCfg, err := mr.ReadJobConfig(filepath.Join(jobDir, app))
 	if err != nil {
 		return nil, err
 	}
-	if useCosandboxes && !useGetPut {
-		return nil, fmt.Errorf("MRBenchConfig %v: useCosandboxes requires useGetPut", app)
+	if data.MapCosandboxes && !data.MapGetPut {
+		return nil, fmt.Errorf("MRBenchConfig %v: MapCosandboxes requires MapGetPut", app)
 	}
-	jobCfg.UseGetPut = useGetPut
-	jobCfg.UseCosandboxes = useCosandboxes
+	if data.ReduceCosandboxes && !data.ReduceGetPut {
+		return nil, fmt.Errorf("MRBenchConfig %v: ReduceCosandboxes requires ReduceGetPut", app)
+	}
+	jobCfg.UseGetPut = data.MapGetPut
+	jobCfg.UseCosandboxes = data.MapCosandboxes
+	jobCfg.UseGetPutReduce = data.ReduceGetPut
+	jobCfg.UseCosandboxesReduce = data.ReduceCosandboxes
 	return &MRBenchConfig{
-		App:            app,
-		MemReq:         memReq,
-		UseGetPut:      useGetPut,
-		UseCosandboxes: useCosandboxes,
-		JobCfg:         jobCfg,
+		App:                  app,
+		MemReq:               memReq,
+		UseGetPut:            data.MapGetPut,
+		UseCosandboxes:       data.MapCosandboxes,
+		UseGetPutReduce:      data.ReduceGetPut,
+		UseCosandboxesReduce: data.ReduceCosandboxes,
+		JobCfg:               jobCfg,
 	}, nil
 }
 

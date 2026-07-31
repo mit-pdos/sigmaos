@@ -108,11 +108,26 @@ type Job struct {
 	S3Input string `json:"s3input,omitempty"`
 	// Mappers read input/write intermediate output through the UX/S3 proxy
 	// Get/Put client API (proxy/getput) instead of the fslib streaming
-	// reader/writer.
+	// reader/writer. Mappers only: see UseGetPutReduce for reducers.
 	UseGetPut bool `json:"use_getput,omitempty"`
 	// A cosandbox pre-fetches each mapper's input splits before the mapper
-	// starts (requires UseGetPut).
+	// starts (requires UseGetPut). Mappers only: see UseCosandboxesReduce.
 	UseCosandboxes bool `json:"use_cosandboxes,omitempty"`
+	// The reducer equivalents, independent of the mapper knobs above so that
+	// either side can be measured on its own: reducers read the intermediate
+	// shards and write their output through the getput API, and a cosandbox
+	// pre-fetches every shard a reducer reads (requires UseGetPutReduce).
+	UseGetPutReduce      bool `json:"use_getput_reduce,omitempty"`
+	UseCosandboxesReduce bool `json:"use_cosandboxes_reduce,omitempty"`
+	// Size (in MB) of the shared-memory segment spproxy sets up for a
+	// cosandbox reducer, through which it hands over the shards it prefetched.
+	// Every shard is resident at once, so this has to cover the whole
+	// intermediate output one reducer reads (all of the mappers' output divided
+	// by Nreduce) plus the reply framing around it — and it is requested
+	// memory, so oversizing it costs real capacity. If 0, the coordinator
+	// estimates it from what the mappers actually wrote, which it knows by the
+	// time reducers are spawned.
+	ReduceShmemMB int `json:"reduce_shmem_mb,omitempty"`
 	// Initial size of the tail probe read past each split's end on the
 	// getput path (0 = mr.DEFAULT_TAIL_PROBE_SZ; capped at Linesz).
 	TailProbeSz int `json:"tailprobesz,omitempty"`
@@ -154,6 +169,9 @@ func ReadJobConfig(app string) (*Job, error) {
 	}
 	if job.UseCosandboxes && !job.UseGetPut {
 		return nil, fmt.Errorf("Err job %v: use_cosandboxes requires use_getput", app)
+	}
+	if job.UseCosandboxesReduce && !job.UseGetPutReduce {
+		return nil, fmt.Errorf("Err job %v: use_cosandboxes_reduce requires use_getput_reduce", app)
 	}
 	return job, nil
 }

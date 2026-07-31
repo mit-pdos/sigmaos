@@ -19,9 +19,9 @@ import (
 	fttask "sigmaos/ft/task"
 	fttask_clnt "sigmaos/ft/task/clnt"
 	"sigmaos/proc"
+	"sigmaos/proxy/getput"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
-	"sigmaos/sigmaclnt/fslib"
 	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
@@ -44,8 +44,15 @@ type Reducer struct {
 	nmaptask     int
 	tmp          string
 	pwrt         *perf.PerfWriter
-	wrt          *fslib.FileWriter
+	wrt          getput.ShardWriter
 	perf         *perf.Perf
+	useGetPut    bool
+	useCosandbox bool
+	clnts        *getput.Clnts
+	// Attributes this proc's CPU to its phases; see perf.CPUPhases.
+	cpu *perf.CPUPhases
+	// Time spent fetching this reducer's input shards; see getStats.
+	gets getStats
 
 	// UX servers we have already mounted from the endpoints the coordinator
 	// cached for us, keyed by server pathname. readFile may run concurrently.
@@ -53,7 +60,20 @@ type Reducer struct {
 	uxMnted map[string]bool
 }
 
-func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *perf.Perf) (*Reducer, error) {
+// cpu, if non-nil, is the proc's CPU-phase chain (see perf.CPUPhases); the
+// reducer marks its setup steps on it. Callers that don't care (tests) pass nil.
+func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *perf.Perf, cpu *perf.CPUPhases) (*Reducer, error) {
+	if len(args) != 7 {
+		return nil, fmt.Errorf("NewReducer: wrong number of arguments: got %d, want 7 (stale mr-r binary?): %v", len(args), args)
+	}
+	useGetPut, err := strconv.ParseBool(args[5])
+	if err != nil {
+		return nil, fmt.Errorf("Reducer: useGetPut %v isn't bool", args[5])
+	}
+	useCosandbox, err := strconv.ParseBool(args[6])
+	if err != nil {
+		return nil, fmt.Errorf("Reducer: useCosandbox %v isn't bool", args[6])
+	}
 	r := &Reducer{
 		outlink:      args[2],
 		outputTarget: args[3],
@@ -61,6 +81,9 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 		SigmaClnt:    sc,
 		perf:         p,
 		uxMnted:      make(map[string]bool),
+		useGetPut:    useGetPut,
+		useCosandbox: useCosandbox,
+		cpu:          cpu,
 	}
 	id, err := strconv.Atoi(args[0])
 	if err != nil {
@@ -79,6 +102,10 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 		return nil, fmt.Errorf("Reducer: ReadTasks %v len %d != 1", id, len(data))
 	}
 	db.DPrintf(db.MR_COORD, "Reducer: ReadTasks %v %v in %v", id, len(data), time.Since(start))
+	perf.LogSpawnLatency("Reducer.ReadTasks", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), start)
+	// Reading this reducer's task: the bin of mapper output shards it reads,
+	// which with many mappers is a multi-MiB (compressed) fttask RPC.
+	r.cpu.Mark("Reducer.ReadTasks")
 	r.input = data[0].Data.Input
 	r.tmp = r.outputTarget + rand.Name()
 
@@ -94,18 +121,49 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 		return nil, fmt.Errorf("Reducer: input missing %v", r)
 	}
 
-	if sp.IsS3Path(r.input[0].File) {
+	if r.useGetPut {
+		r.clnts = getput.NewClnts(sc.FsLib)
+	} else if sp.IsS3Path(r.input[0].File) {
+		// On the getput path S3 is reached through the local proxy instead, so
+		// the S3 path client isn't needed.
 		r.MountS3PathClnt()
 	}
+	r.cpu.Mark("Reducer.mountS3")
 
+	if err := r.initOutput(); err != nil {
+		return nil, err
+	}
+	// Creating the output file (or, on the getput path, just its writer).
+	r.cpu.Mark("Reducer.initOutput")
+	return r, nil
+}
+
+// initOutput opens this reducer's output writer.
+func (r *Reducer) initOutput() error {
+	start := time.Now()
+	defer func() {
+		perf.LogSpawnLatency("Reducer.initOutput", r.ProcEnv().GetPID(), r.ProcEnv().GetSpawnTime(), start)
+	}()
+	if r.useGetPut {
+		// Nothing is created until the first write: a UX target is created by
+		// the offset-0 chunk, an S3 object by the PutObject on Close.
+		wrt, err := getput.NewGetPutWriter(r.clnts, r.tmp)
+		if err != nil {
+			db.DPrintf(db.MR, "Reducer NewGetPutWriter %v err %v", r.tmp, err)
+			return err
+		}
+		r.wrt = wrt
+		r.pwrt = perf.NewPerfWriter(wrt, r.perf)
+		return nil
+	}
 	w, err := r.CreateBufWriter(r.tmp, 0777)
 	if err != nil {
 		db.DFatalf("Error CreateBufWriter [%v] %v", r.tmp, err)
-		return nil, err
+		return err
 	}
 	r.wrt = w
-	r.pwrt = perf.NewPerfWriter(r.wrt, r.perf)
-	return r, nil
+	r.pwrt = perf.NewPerfWriter(w, r.perf)
+	return nil
 }
 
 func ReadKVs(rdr io.Reader, kvm *kvmap.KVMap, reducef mr.ReduceT) error {
@@ -184,21 +242,45 @@ func (r *Reducer) mountUxSrv(pn string) {
 	}
 }
 
-func (r *Reducer) readFile(rr *readResult) {
-	pn, ok := sp.S3ClientPath(rr.f)
-	if ok {
-		rr.f = pn
+// openInput opens the idx'th shard of this reducer's input. idx doubles as the
+// delegated-RPC index when a cosandbox prefetched the shards: the
+// coordinator's manifest issues one whole-file get per shard, in bin order.
+func (r *Reducer) openInput(f string, idx int) (getput.FileReader, error) {
+	if r.useGetPut {
+		return getput.NewGetPutFileReader(r.clnts, f, r.useCosandbox, uint64(idx))
 	}
-	r.mountUxSrv(rr.f)
-	rdr, err := r.OpenBufReader(rr.f)
+	return r.OpenBufReader(f)
+}
+
+func (r *Reducer) readFile(rr *readResult, idx int) {
+	if !r.useGetPut {
+		// The getput path reaches S3 through the local proxy, so it keeps the
+		// sigma pathname; only the fslib path rewrites it to the s3clnt form.
+		if pn, ok := sp.S3ClientPath(rr.f); ok {
+			rr.f = pn
+		}
+		r.mountUxSrv(rr.f)
+	}
+	getStart := time.Now()
+	rdr, err := r.openInput(rr.f, idx)
 	if err != nil {
 		db.DPrintf(db.MR, "NewReader %v err %v", rr.f, err)
 		rr.ok = false
 		return
 	}
+	if r.useGetPut {
+		// On the getput path the whole shard is fetched at open — a delegated
+		// get of what the cosandbox prefetched, or one direct RPC.
+		r.gets.record(getStart)
+	}
 	defer rdr.Close()
 	start := time.Now()
 	err = ReadKVs(rdr, rr.kvm, r.reducef)
+	if !r.useGetPut {
+		// On the fslib path the shard streams in as ReadKVs consumes it, so
+		// the read cost is in here rather than at open.
+		r.gets.record(getStart)
+	}
 	db.DPrintf(db.MR, "Reduce readfile %v %dms err %v\n", rr.f, time.Since(start).Milliseconds(), err)
 	if err != nil {
 		db.DPrintf(db.MR, "decodeKV %v err %v\n", rr.f, err)
@@ -226,7 +308,7 @@ func (r *Reducer) readerMgr(req chan string, rep chan readResult, max int) {
 		go func(f string) {
 			kvm := kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP)
 			rr := readResult{f: f, kvm: kvm}
-			r.readFile(&rr)
+			r.readFile(&rr, r.inputIdx(f))
 			rep <- rr
 			mu.Lock()
 			n--
@@ -234,6 +316,18 @@ func (r *Reducer) readerMgr(req chan string, rep chan readResult, max int) {
 			mu.Unlock()
 		}(f)
 	}
+}
+
+// inputIdx recovers a shard's index in the reduce task's bin, which is the
+// rpcIdx its prefetched reply was deposited at. Only the concurrent reader path
+// needs it, having passed the pathname through a channel.
+func (r *Reducer) inputIdx(f string) int {
+	for i := range r.input {
+		if r.input[i].File == f {
+			return i
+		}
+	}
+	return -1
 }
 
 func (r *Reducer) ReadFiles(rtot *readResult) error {
@@ -251,13 +345,22 @@ func (r *Reducer) ReadFiles(rtot *readResult) error {
 	if randOffset < 0 {
 		randOffset *= -1
 	}
+	if r.useCosandbox {
+		// Read in bin order instead: the cosandbox issues its prefetches in
+		// that order, and a delegated get blocks until its shard's reply
+		// materializes, so starting elsewhere would wait on a shard the
+		// cosandbox hasn't reached yet while earlier replies pile up. The
+		// cosandbox, not this proc, is what spreads the load across the UX
+		// servers here.
+		randOffset = 0
+	}
 	for i := 0; i < r.nmaptask; i++ {
 		f := (i + randOffset) % r.nmaptask
 		if MAXCONCURRENCY > 1 {
 			req <- r.input[f].File
 		} else {
 			rr := &readResult{f: r.input[f].File, kvm: rtot.kvm}
-			r.readFile(rr)
+			r.readFile(rr, f)
 			rtot.sum(rr)
 		}
 	}
@@ -287,10 +390,16 @@ func (r *Reducer) DoReduce() *proc.Status {
 		kvm:        kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP),
 		mapsFailed: []string{},
 	}
+	readStart := time.Now()
 	if err := r.ReadFiles(&rtot); err != nil {
 		db.DPrintf(db.ALWAYS, "ReadFiles: err %v", err)
 		return proc.NewStatusErr(fmt.Sprintf("%v: ReadFiles %v err %v\n", r.ProcEnv().GetPID(), r.input, err), nil)
 	}
+	perf.LogSpawnLatency("Reducer.ReadFiles", r.ProcEnv().GetPID(), r.ProcEnv().GetSpawnTime(), readStart)
+	db.DPrintf(db.MR, "Reducer gets: n %v tot %v", r.gets.count(), r.gets.dur())
+	// Reading every mapper's shard for this partition, and combining as they
+	// come in (ReadKVs folds each shard into the KV map).
+	r.cpu.Mark("Reducer.ReadFiles")
 	if len(rtot.mapsFailed) > 0 {
 		return proc.NewStatusErr(RESTART, rtot.mapsFailed)
 	}
@@ -304,16 +413,26 @@ func (r *Reducer) DoReduce() *proc.Status {
 		db.DPrintf(db.ALWAYS, "DoReduce: emit err %v", err)
 		return proc.NewStatusErr("reducef", err)
 	}
+	perf.LogSpawnLatency("Reducer.emit", r.ProcEnv().GetPID(), r.ProcEnv().GetSpawnTime(), start)
+	// Running the reduce function over the combined KV map and writing the
+	// results out.
+	r.cpu.Mark("Reducer.emit")
 
+	closeStart := time.Now()
 	if err := r.wrt.Close(); err != nil {
 		return proc.NewStatusErr(fmt.Sprintf("%v: close %v err %v\n", r.ProcEnv().GetPID(), r.tmp, err), nil)
 	}
 	nbyte := r.wrt.Nbytes()
+	perf.LogSpawnLatency("Reducer.closeWrt", r.ProcEnv().GetPID(), r.ProcEnv().GetSpawnTime(), closeStart)
+	// Flushing the output: on the getput path an S3 target's whole object is
+	// uploaded here.
+	r.cpu.Mark("Reducer.closeWrt")
 
 	// Include time spent writing output.
 	rtot.d += time.Since(start)
 
 	// Create symlink atomically. Retry on version issues
+	linkStart := time.Now()
 	for {
 		if err := r.PutFileAtomic(r.outlink, 0777|sp.DMSYMLINK, []byte(r.tmp)); err != nil {
 			if se, ok := serr.IsErr(err); ok && se.IsErrVersion() {
@@ -324,6 +443,9 @@ func (r *Reducer) DoReduce() *proc.Status {
 		}
 		break
 	}
+	perf.LogSpawnLatency("Reducer.putOutlink", r.ProcEnv().GetPID(), r.ProcEnv().GetSpawnTime(), linkStart)
+	// Publishing the output: the symlink the job's output directory points at.
+	r.cpu.Mark("Reducer.putOutlink")
 	return proc.NewStatusInfo(proc.StatusOK, "OK",
 		Result{
 			IsM:      false,
@@ -332,6 +454,8 @@ func (r *Reducer) DoReduce() *proc.Status {
 			Out:      nbyte,
 			OutBin:   Bin{},
 			MsInner:  rtot.d.Milliseconds(),
+			MsGet:    r.gets.dur().Milliseconds(),
+			NGet:     r.gets.count(),
 			KernelID: r.ProcEnv().GetKernelID(),
 		})
 }
@@ -351,10 +475,15 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	if err != nil {
 		db.DFatalf("NewSigmaClnt err %v\n", err)
 	}
+	// Building the SigmaClnt: parsing the ProcEnv, and mounting named and
+	// msched (in parallel) from the endpoints procd cached for us.
+	cpu.Mark("Reducer.NewSigmaClnt")
 	if err := sc.Started(); err != nil {
 		db.DFatalf("%v: error %v", os.Args[0], err)
 	}
-	r, err := NewReducer(sc, reducef, args, p)
+	// Notifying msched that we started.
+	cpu.Mark("Reducer.Started")
+	r, err := NewReducer(sc, reducef, args, p, cpu)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err reducer: %v", err)
 		r.ClntExit(proc.NewStatusErr("NewReducer err", err))
@@ -365,8 +494,11 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	crash.Failer(sc.FsLib, crash.MRREDUCE_PARTITION, func(e crash.Tevent) {
 		crash.PartitionPath(sc.FsLib, r.input[0].File)
 	})
-	cpu.Mark("Reducer.setup")
+	// Whatever setup is left: installing the crash failers.
+	cpu.Mark("Reducer.setupTail")
 	status := r.DoReduce()
-	cpu.Mark("Reducer.doReduce")
+	// Whatever is left between DoReduce returning and ClntExit (which reports
+	// Proc.exit.CPU, i.e. the total).
+	cpu.Mark("Reducer.postDoReduce")
 	r.ClntExit(status)
 }

@@ -59,3 +59,63 @@ func mapperBootInput(bin mr.Bin, linesz, probesz int) ([]byte, error) {
 	binary.LittleEndian.PutUint32(input, uint32(len(bin)))
 	return append(input, wasmer.EncodeArgs(strs)...), nil
 }
+
+// reducerShmemMB sizes the shared-memory segment spproxy sets up for a
+// cosandbox reducer. Every shard the boot script prefetches is resident in the
+// segment at once, so unlike a mapper — whose prefetch is bounded by one bin —
+// a reducer's segment scales with the whole job's intermediate size, which is
+// why the job description carries it (mr.Job.ReduceShmemMB).
+//
+// cfgMB is that setting. When it is 0, fall back to twice the intermediate
+// output one reducer reads — what the mappers actually wrote, divided by the
+// number of reducers, which the coordinator knows by the time it spawns any
+// reducer. That keeps a job description that doesn't set it working, but the
+// configured value is what to reach for when a job's per-reducer input is known
+// ahead of time: it is requested memory, so both under- and oversizing it cost.
+func reducerShmemMB(cfgMB int, mapOutBytes int64, nreduce int) proc.Tmem {
+	if cfgMB > 0 {
+		return proc.Tmem(cfgMB)
+	}
+	if nreduce < 1 {
+		nreduce = 1
+	}
+	perReducer := uint64(mapOutBytes) / uint64(nreduce)
+	mb := proc.Tmem((2*perReducer + uint64(sp.MBYTE) - 1) / uint64(sp.MBYTE))
+	if mb < MIN_SHMEM_MB {
+		return MIN_SHMEM_MB
+	}
+	return mb
+}
+
+// reducerBootInput builds the boot input for the mr_reducer_boot cosandbox
+// (see rs/wasm/mr_reducer_boot): a u32-LE shard count followed by
+// wasmer.EncodeArgs([typ_i, kid_i, a_i, b_i, ...]). The boot script issues one
+// whole-file get per shard, in bin order, at rpcIdx = shard index — the same
+// index Reducer.readFile uses to retrieve it. Unlike the mapper's manifest each
+// entry carries its own kernel ID, since a reducer's shards are spread across
+// whichever kernels ran the mappers.
+func reducerBootInput(bin mr.Bin) ([]byte, error) {
+	strs := make([]string, 0, 4*len(bin))
+	for i := range bin {
+		tgt, err := getput.ClassifyPath(bin[i].File)
+		if err != nil {
+			return nil, err
+		}
+		// A shard path that doesn't name a kernel (an S3 path still holding
+		// ~local, which Mapper.outputBin leaves alone) is served by the proxy
+		// on the reducer's own kernel, which is what sp.LOCAL resolves to in
+		// the cosandbox.
+		kid := tgt.Kid
+		if kid == "" {
+			kid = sp.LOCAL
+		}
+		if tgt.Kind == getput.TS3 {
+			strs = append(strs, "s3", kid, tgt.Bucket, tgt.Key)
+		} else {
+			strs = append(strs, "ux", kid, tgt.Path, "")
+		}
+	}
+	input := make([]byte, 4, 4+16*len(strs))
+	binary.LittleEndian.PutUint32(input, uint32(len(bin)))
+	return append(input, wasmer.EncodeArgs(strs)...), nil
+}

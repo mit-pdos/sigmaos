@@ -446,7 +446,9 @@ func TestMapperReducer(t *testing.T) {
 		outlink := mr.ReduceOut(ts.jobRoot, ts.job) + rt.Data.Task
 		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Data.Task
 
-		r, err := mr.NewReducer(sc, reducer, []string{strconv.Itoa(int(rt.Id)), string(ts.tasks.Rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(nmap), "true"}, p)
+		// The trailing bools are the reducer's getput/cosandbox knobs: this
+		// test exercises the fslib path, as the NewMapper call above does.
+		r, err := mr.NewReducer(sc, reducer, []string{strconv.Itoa(int(rt.Id)), string(ts.tasks.Rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(nmap), "false", "false"}, p, nil)
 		assert.Nil(t, err)
 		status := r.DoReduce()
 		assert.True(t, status.IsStatusOK(), "status %v", status)

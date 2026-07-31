@@ -90,8 +90,11 @@ type Coord struct {
 	// The reducer knobs, independent of the mapper ones above.
 	useGetPutReduce    bool
 	useCosandboxReduce bool
-	tailProbeSz        int
-	binsz              int
+	// Size of a cosandbox reducer's shared-memory segment, from the job
+	// description; 0 means estimate it from what the mappers wrote.
+	reduceShmemMB int
+	tailProbeSz   int
+	binsz         int
 	// Total bytes the mappers wrote, accumulated as their results come in.
 	// Reducers are only spawned once every mapper is done, so by then this is
 	// the job's whole intermediate size — which is how the reducers' shared
@@ -125,8 +128,8 @@ func (s *AStat) String() string {
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 19 {
-		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 19 (stale mr-coord binary?): %v", len(args), args)
+	if len(args) != 20 {
+		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 20 (stale mr-coord binary?): %v", len(args), args)
 	}
 	c := &Coord{}
 	c.jobRoot = args[1]
@@ -221,6 +224,10 @@ func NewCoord(args []string) (*Coord, error) {
 	c.useCosandboxReduce, err = strconv.ParseBool(args[18])
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: useCosandboxReduce %v isn't bool", args[18])
+	}
+	c.reduceShmemMB, err = strconv.Atoi(args[19])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: reduceShmemMB %v isn't int", args[19])
 	}
 
 	if c.useCosandbox {
@@ -384,9 +391,9 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		}
 		// Retrieve the cosandbox's prefetched shards through shared memory
 		// rather than copying them back over the spproxy socket.
-		shmemMB := reducerShmemMB(c.mapOutBytes.Load(), c.nreducetask)
+		shmemMB := reducerShmemMB(c.reduceShmemMB, c.mapOutBytes.Load(), c.nreducetask)
 		p.SetShmemMB(shmemMB)
-		db.DPrintf(db.MR_COORD, "reducerProc %v cosandbox shmem %vMB nshard %v", p.GetPid(), shmemMB, len(data.Input))
+		db.DPrintf(db.MR_COORD, "reducerProc %v cosandbox shmem %vMB (cfg %vMB mapOut %v nreduce %v) nshard %v", p.GetPid(), shmemMB, c.reduceShmemMB, c.mapOutBytes.Load(), c.nreducetask, len(data.Input))
 		p.SetCoSandbox(c.mrReduceBootWASM, input)
 		p.SetRunCoSandbox(true)
 		// As with mappers, deliberately no SetRunAfterCoSandbox(true):

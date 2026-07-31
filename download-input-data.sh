@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--bucket BUCKET] [--profile PROFILE] DATASET..." 1>&2
+  echo "Usage: $0 [--bucket BUCKET] [--profile PROFILE] [--clear] DATASET..." 1>&2
   echo "" 1>&2
   echo "Stage read-only job input on this host, once, so that jobs can read it" 1>&2
   echo "straight from their local UX server. start-kernel.sh bind-mounts the" 1>&2
@@ -12,10 +12,16 @@ usage() {
   echo "Each DATASET is an S3 prefix under BUCKET (e.g. wiki-2G), synced to" 1>&2
   echo "/tmp/sigmaos-input-data/DATASET. Already-downloaded files are skipped," 1>&2
   echo "so re-running is cheap." 1>&2
+  echo "" 1>&2
+  echo "  --clear   DELETE every other dataset in the staging directory first," 1>&2
+  echo "            leaving only the ones named here. Use it to reclaim the disk" 1>&2
+  echo "            a dataset you are done with is holding; a later run has to" 1>&2
+  echo "            download it again from scratch." 1>&2
 }
 
 BUCKET="9ps3"
 PROFILE="sigmaos"
+CLEAR=""
 DATASETS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -28,6 +34,10 @@ while [[ $# -gt 0 ]]; do
     shift
     PROFILE=$1
     shift
+    ;;
+  --clear)
+    shift
+    CLEAR="true"
     ;;
   --help)
     usage
@@ -57,6 +67,28 @@ mkdir -p "$INPUT_DATA_DIR"
 # UX runs as a different user inside the container than the one staging the
 # data here, and only ever reads it.
 chmod -R a+rX "$INPUT_DATA_DIR"
+
+# Drop the datasets that aren't wanted, before downloading the ones that are, so
+# that the disk they were holding is available for the new ones. Deliberately
+# scoped to the direct children of the staging directory: nothing outside it,
+# and no recursive search for stray files.
+if [ -n "$CLEAR" ]; then
+  for path in "$INPUT_DATA_DIR"/*; do
+    [ -e "$path" ] || continue
+    entry=$(basename "$path")
+    keep=""
+    for dataset in "${DATASETS[@]}"; do
+      if [ "$entry" = "${dataset%/}" ]; then
+        keep="true"
+        break
+      fi
+    done
+    if [ -z "$keep" ]; then
+      echo "Clearing $path ($(du -sh "$path" | cut -f1))"
+      rm -rf "$path"
+    fi
+  done
+fi
 
 for dataset in "${DATASETS[@]}"; do
   # Tolerate a trailing slash, so that a dataset name can be pasted from a job

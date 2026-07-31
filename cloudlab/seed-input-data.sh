@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 [--n N] [--serial] [--bucket BUCKET] [--branch BRANCH] DATASET..." 1>&2
+  echo "Usage: $0 [--n N] [--serial] [--bucket BUCKET] [--branch BRANCH] [--clear] DATASET..." 1>&2
   echo "" 1>&2
   echo "Seed each machine's host staging directory with the named datasets, so" 1>&2
   echo "that jobs can read them straight from their local UX server rather than" 1>&2
@@ -18,6 +18,9 @@ usage() {
   echo "  --serial    seed one machine at a time (default: all in parallel)" 1>&2
   echo "  --bucket    S3 bucket holding the datasets (default: 9ps3)" 1>&2
   echo "  --branch    check this branch out on each machine before seeding" 1>&2
+  echo "  --clear     DELETE every other dataset in each machine's staging dir," 1>&2
+  echo "              leaving only the ones named here (see --clear in" 1>&2
+  echo "              ../download-input-data.sh)" 1>&2
   echo "" 1>&2
   echo "Each machine's repo is pulled first, so that it has the downloader this" 1>&2
   echo "script runs (and any change to it); the pull output is left in /tmp/git.out" 1>&2
@@ -28,6 +31,7 @@ N_VM=""
 PARALLEL="true"
 BUCKET="9ps3"
 BRANCH=""
+CLEAR=""
 DATASETS=()
 while [[ $# -gt 0 ]]; do
   key="$1"
@@ -59,6 +63,10 @@ while [[ $# -gt 0 ]]; do
     shift
     BRANCH=$1
     shift
+    ;;
+  --clear)
+    shift
+    CLEAR="--clear"
     ;;
   -help | --help)
     usage
@@ -135,7 +143,7 @@ for vm in $vms; do
     ssh -i $DIR/keys/cloudlab-sigmaos $LOGIN@$vm <<ENDSSH
       ssh-agent bash -c 'ssh-add ~/.ssh/aws-sigmaos; (cd sigmaos; git pull > /tmp/git.out 2>&1 ; $CHECKOUT git pull >> /tmp/git.out 2>&1 )'
       cd sigmaos
-      ./download-input-data.sh --bucket $BUCKET ${DATASETS[@]}
+      ./download-input-data.sh --bucket $BUCKET $CLEAR ${DATASETS[@]}
 ENDSSH
     echo \$? > $STATUS_DIR/$i"
   if [ -z "$PARALLEL" ]; then

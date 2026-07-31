@@ -237,6 +237,7 @@ func NewCoord(args []string) (*Coord, error) {
 		if err != nil {
 			return nil, fmt.Errorf("NewCoord: ReadCoSandbox mr_mapper_boot err %v", err)
 		}
+		db.DPrintf(db.ALWAYS, "Mapper cosandbox size: %v", len(c.mrBootWASM))
 	}
 	if c.useCosandboxReduce {
 		// The reducer's boot script is a separate one: its gets are whole-file
@@ -245,6 +246,7 @@ func NewCoord(args []string) (*Coord, error) {
 		if err != nil {
 			return nil, fmt.Errorf("NewCoord: ReadCoSandbox mr_reducer_boot err %v", err)
 		}
+		db.DPrintf(db.ALWAYS, "Reducer cosandbox size: %v", len(c.mrReduceBootWASM))
 	}
 
 	// Learn the endpoints of the servers this job's procs will use, once

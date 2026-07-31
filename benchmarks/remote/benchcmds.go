@@ -221,7 +221,6 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, prewarmR
 			// cost of a fine-grained task is read against its actual work. Off
 			// by default because it instruments the setup path it measures, so
 			// it is asked for here rather than everywhere.
-			//			perfSelectors string = "\"" + string(perf.CPU_PHASE_BREAKDOWN) + ";\""
 			perfSelectors string = "\"TEST_TPT;BENCH_TPT;MRMAPPER_TPT;\""
 		)
 		prewarm := ""

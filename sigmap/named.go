@@ -51,7 +51,7 @@ const (
 	IMG    = NAMED + IMGREL + "/"
 
 	FTTASKREL = "fttask"
-	FTTASK = NAMED + FTTASKREL + "/"
+	FTTASK    = NAMED + FTTASKREL + "/"
 
 	MEMBLOCK = "name/memblock"
 
@@ -139,7 +139,22 @@ const (
 	SIGMASOCKET_CTRL       = "/tmp/spproxyd/spproxyd-ctrl.sock"
 	SIGMA_DIALPROXY_SOCKET = "/tmp/spproxyd/spproxyd-dialproxy.sock"
 	WASMD_SOCKET           = "/tmp/wasmd/wasmd.sock"
+
+	// Read-only input data, staged on each host once by
+	// download-input-data.sh and bind-mounted into the kernel container by
+	// start-kernel.sh, where UX serves it (UX's root is SIGMAHOME). A job
+	// reads it at name/ux/~local/<INPUT_DATA_REL>/<dataset>/ without any
+	// copying through the namespace first.
+	INPUT_DATA_HOST_DIR = "/tmp/sigmaos-input-data"
+	INPUT_DATA_REL      = "input-data"
+	INPUT_DATA_DIR      = SIGMAHOME + "/" + INPUT_DATA_REL
 )
+
+// UxInputDataPath returns the pathname at which a job reads the named
+// pre-staged dataset from its local UX server.
+func UxInputDataPath(dataset string) string {
+	return UX + LOCAL + "/" + INPUT_DATA_REL + "/" + dataset
+}
 
 // spproxyd kernel
 const (

@@ -137,6 +137,24 @@ type Job struct {
 	MapperGOMAXPROCS int `json:"mapper_gomaxprocs,omitempty"`
 }
 
+// InputDataset reports the dataset this job reads from the pre-staged,
+// read-only input directory each host provides to its UX server (see
+// sp.UxInputDataPath and download-input-data.sh), and whether the job reads
+// from there at all. A caller starting a cluster uses it to stage exactly what
+// the job will read, rather than naming the dataset twice.
+func (j *Job) InputDataset() (string, bool) {
+	pre := sp.UX + sp.LOCAL + "/" + sp.INPUT_DATA_REL + "/"
+	rest, ok := strings.CutPrefix(j.Input, pre)
+	if !ok {
+		return "", false
+	}
+	ds := strings.Trim(rest, "/")
+	if ds == "" {
+		return "", false
+	}
+	return ds, true
+}
+
 // Wait until the job is done
 func WaitJobDone(fsl *fslib.FsLib, jobRoot, job string) error {
 	sc := semaphore.NewSemaphore(fsl, JobSem(jobRoot, job))

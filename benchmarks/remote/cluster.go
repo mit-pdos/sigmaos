@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	db "sigmaos/debug"
 	sp "sigmaos/sigmap"
@@ -19,9 +20,14 @@ type ClusterConfig struct {
 	NumProcqOnlyNodes int    `json:"num_besched_only_nodes"`
 	TurboBoost        bool   `json:"turbo_boost"`
 	UseGVisor         bool   `json:"use_gvisor"`
+	// S3 prefixes to stage on every node's host before starting its kernel, so
+	// that a job can read them from its local UX server (see
+	// download-input-data.sh and sp.UxInputDataPath). Staging is incremental,
+	// so listing a dataset that is already present costs one LIST per node.
+	InputData []string `json:"input_data"`
 }
 
-func NewClusterConfig(bcfg *BenchConfig, lcfg *LocalFSConfig, numNodes int, numCoresPerNode uint, numFullNodes int, numProcqOnlyNodes int, turboBoost bool, useGVisor bool) (*ClusterConfig, error) {
+func NewClusterConfig(bcfg *BenchConfig, lcfg *LocalFSConfig, numNodes int, numCoresPerNode uint, numFullNodes int, numProcqOnlyNodes int, turboBoost bool, useGVisor bool, inputData []string) (*ClusterConfig, error) {
 	ccfg := &ClusterConfig{
 		bcfg:              bcfg,
 		lcfg:              lcfg,
@@ -32,6 +38,7 @@ func NewClusterConfig(bcfg *BenchConfig, lcfg *LocalFSConfig, numNodes int, numC
 		NumProcqOnlyNodes: numProcqOnlyNodes,
 		TurboBoost:        turboBoost,
 		UseGVisor:         useGVisor,
+		InputData:         inputData,
 	}
 	slIP, err := ccfg.getLeaderNodeIP()
 	if err != nil {
@@ -68,6 +75,10 @@ func (ccfg *ClusterConfig) StartSigmaOSCluster() error {
 	}
 	args = append(args, "--numfullnode", strconv.Itoa(ccfg.NumFullNodes))
 	args = append(args, "--numbeschednode", strconv.Itoa(ccfg.NumProcqOnlyNodes))
+	if len(ccfg.InputData) > 0 {
+		// One argument: the start script word-splits it to stage each dataset.
+		args = append(args, "--input-data", strings.Join(ccfg.InputData, " "))
+	}
 	err := ccfg.lcfg.RunScriptRedirectOutputFile("./start-sigmaos.sh", CLUSTER_INIT_LOG, args...)
 	if err != nil {
 		return fmt.Errorf("err StopSigmaOSCluster: %v", err)

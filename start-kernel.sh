@@ -153,6 +153,11 @@ DATA_DIR="${TMP_BASE}/sigmaos-data"
 PERF_DIR="${TMP_BASE}/sigmaos-perf"
 KERNEL_DIR="${TMP_BASE}/sigmaos"
 SPPROXY_DIR="${TMP_BASE}/spproxyd"
+# Read-only job input staged on this host by download-input-data.sh. Not under
+# TMP_BASE (i.e. not per-SIGMAUSER): the data is read-only and identical for
+# every user, so one copy per host serves all of them. Must match
+# sp.INPUT_DATA_HOST_DIR.
+INPUT_DATA_DIR="/tmp/sigmaos-input-data"
 
 mkdir -p $SPPROXY_DIR
 mkdir -p $HOST_BIN_CACHE
@@ -161,6 +166,9 @@ mkdir -p $DATA_DIR
 mkdir -p $PERF_DIR
 chmod a+w $PERF_DIR
 mkdir -p $KERNEL_DIR
+# Created even when empty, so that the mount below always has a source and UX
+# reports an empty input-data directory rather than the kernel failing to start.
+mkdir -p $INPUT_DATA_DIR
 
 # Pull latest docker images, if not running a local build.
 if [ "$TAG" != "local-build" ]; then
@@ -192,7 +200,8 @@ MOUNTS="--mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
   --mount type=bind,src=$DATA_DIR,dst=/home/sigmaos/data \
   --mount type=bind,src=$HOST_BIN_CACHE/${KERNELID},dst=/home/sigmaos/bin/user/realms \
   --mount type=bind,src=$PERF_DIR,dst=/tmp/sigmaos-perf \
-  --mount type=bind,src=$HOMEDIR/.aws,dst=/home/sigmaos/.aws"
+  --mount type=bind,src=$HOMEDIR/.aws,dst=/home/sigmaos/.aws \
+  --mount type=bind,src=$INPUT_DATA_DIR,dst=/home/sigmaos/input-data,readonly"
 # If running in local configuration, mount bin directory.
 if [ "$TAG" == "local-build" ]; then
   MOUNTS="$MOUNTS\

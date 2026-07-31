@@ -70,3 +70,14 @@ func TestSubstLocal(t *testing.T) {
 		assert.Equal(t, in, pn, "%v", in)
 	}
 }
+
+// The pre-staged input path has to agree with what start-kernel.sh mounts and
+// download-input-data.sh writes, since those are shell and can't share these
+// constants.
+func TestUxInputDataPath(t *testing.T) {
+	assert.Equal(t, "/tmp/sigmaos-input-data", sp.INPUT_DATA_HOST_DIR, "host staging dir (start-kernel.sh, download-input-data.sh)")
+	assert.Equal(t, "/home/sigmaos/input-data", sp.INPUT_DATA_DIR, "in-container mount point (start-kernel.sh)")
+	assert.Equal(t, "name/ux/~local/input-data/wiki-2G", sp.UxInputDataPath("wiki-2G"))
+	// The mount point must be under UX's root, or UX won't serve it.
+	assert.True(t, strings.HasPrefix(sp.INPUT_DATA_DIR, sp.SIGMAHOME+"/"), "input data must live under UX's root")
+}

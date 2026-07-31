@@ -306,16 +306,32 @@ func TestMR(t *testing.T) {
 		numNodes        int
 		numCoresPerNode uint
 		memReq          proc.Tmem
-		useGetPut       bool
-		useCosandboxes  bool
+	}
+	// How a mapper moves its data. Cosandboxes prefetch through the get/put
+	// API, so the three entries below are the valid combinations of the two
+	// knobs; the suffix names the run's results directory. The reducer has its
+	// own pair of knobs, deliberately left off here so that a difference between
+	// these runs is attributable to the mapper alone.
+	type MRDataPathExperiment struct {
+		nameSuffix     string
+		useGetPut      bool
+		useCosandboxes bool
 	}
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			{"mr-grep-wiki2G-bench-s3.json", 10, 4, 7000, false, false},
-			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000, false, false},
-			{"mr-wc-wiki2G-bench.json", 10, 4, 7000, false, false},
-			{"mr-wc-wiki2G-bench-s3.json", 10, 4, 7000, false, false},
+			{"mr-grep-wiki2G-bench-s3.json", 10, 4, 7000},
+			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000},
+			{"mr-wc-wiki2G-bench.json", 10, 4, 7000},
+			{"mr-wc-wiki2G-bench-s3.json", 10, 4, 7000},
+		}
+		mrDataPaths []MRDataPathExperiment = []MRDataPathExperiment{
+			// fslib streaming reader/writer
+			{"", false, false},
+			// UX/S3 proxy get/put RPCs
+			{"-getput", true, false},
+			// get/put, with a cosandbox prefetching each mapper's splits
+			{"-cosandbox", true, true},
 		}
 		perfs         []bool = []bool{false}
 		prewarmRealms []bool = []bool{true}
@@ -336,29 +352,35 @@ func TestMR(t *testing.T) {
 	for _, perf := range perfs {
 		for _, mrEP := range mrApps {
 			for _, prewarmRealm := range prewarmRealms {
-				benchName := filepath.Join(benchNameBase, mrEP.benchName)
-				if prewarmRealm {
-					benchName += "-warm"
-				} else {
-					benchName += "-cold"
+				for _, dp := range mrDataPaths {
+					benchName := filepath.Join(benchNameBase, mrEP.benchName)
+					if prewarmRealm {
+						benchName += "-warm"
+					} else {
+						benchName += "-cold"
+					}
+					if perf {
+						benchName += "-perf"
+					}
+					benchName += dp.nameSuffix
+					data := benchmarks.MRDataPathCfg{
+						MapGetPut:      dp.useGetPut,
+						MapCosandboxes: dp.useCosandboxes,
+					}
+					mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.memReq, data)
+					if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
+						return
+					}
+					// Stage the job's dataset on every node's host up front if it
+					// reads pre-staged input; see the same call in
+					// TestBEMRMultiplexing.
+					if ds, ok := mrCfg.JobCfg.InputDataset(); ok {
+						ts.SetInputData([]string{ds})
+					}
+					db.DPrintf(db.ALWAYS, "MR config: benchName %v memReq %v data %v", benchName, mrEP.memReq, data)
+					numFullNodes := mrEP.numNodes - numProcqOnlyNodes
+					ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrCfg, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 				}
-				if perf {
-					benchName += "-perf"
-				}
-				if mrEP.useCosandboxes {
-					benchName += "-cosandbox"
-				} else if mrEP.useGetPut {
-					benchName += "-getput"
-				}
-				mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.memReq, benchmarks.MRDataPathCfg{
-					MapGetPut:      mrEP.useGetPut,
-					MapCosandboxes: mrEP.useCosandboxes,
-				})
-				if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
-					return
-				}
-				numFullNodes := mrEP.numNodes - numProcqOnlyNodes
-				ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrCfg, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 			}
 		}
 	}
@@ -1045,8 +1067,8 @@ func TestBEMRMultiplexing(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM          int  = 12
-		numNodes          int  = 10
+		driverVM          int  = 36
+		numNodes          int  = 32
 		numCoresPerNode   uint = 4
 		numProcqOnlyNodes int  = 2
 		numFullNodes      int  = numNodes - numProcqOnlyNodes
@@ -1055,10 +1077,10 @@ func TestBEMRMultiplexing(t *testing.T) {
 	)
 	// Bench params
 	const (
-		sleepBetweenRealms time.Duration = 5 * time.Second
-		nRealms            int           = 1
+		sleepBetweenRealms time.Duration = 10 * time.Second
+		nRealms            int           = 4
 		prewarmRealm       bool          = true
-		useGetPut          bool          = true
+		useGetPut          bool          = false
 		// The reducer data path is a separate pair of knobs from the mapper's;
 		// the sweep below is over the mapper's, so set these explicitly rather
 		// than letting the sweep imply them.
@@ -1074,7 +1096,7 @@ func TestBEMRMultiplexing(t *testing.T) {
 	)
 	// Run the benchmark with mappers reading and writing directly, and then
 	// through cosandboxes.
-	cosandboxCfgs := []bool{false, true}
+	cosandboxCfgs := []bool{false} //, true}
 	// Mem request per worker is what bounds concurrent mappers per node
 	// (msched admits on memory), so it is the knob for the packing sweep:
 	// --mr_mem_req 8000 ~1/node, 3000 ~5/node, 1500 ~10/node, 1200 ~13/node.
@@ -1109,6 +1131,14 @@ func TestBEMRMultiplexing(t *testing.T) {
 		}
 		mrCfg.JobCfg.MapperGOMAXPROCS = mrGOMAXPROCSArg
 		mrCfg.JobCfg.ReduceShmemMB = reduceShmemMB
+		// If the job reads pre-staged input from UX, have every node stage that
+		// dataset on its host before its kernel starts, rather than copying it
+		// from S3 through the namespace once the cluster is up. Taken from the
+		// job description so the staged dataset is by construction the one the
+		// job reads.
+		if ds, ok := mrCfg.JobCfg.InputDataset(); ok {
+			ts.SetInputData([]string{ds})
+		}
 		db.DPrintf(db.ALWAYS, "MR multiplexing config: benchName %v memPerWorker %v mapperGOMAXPROCS %v reduceShmemMB %v data %v", benchName, memPerWorker, mrGOMAXPROCSArg, reduceShmemMB, data)
 		// Each run stops any previously running cluster and starts a fresh one.
 		ts.RunStandardBenchmark(benchName, driverVM, GetBEMRMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, prewarmRealm, mrCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)

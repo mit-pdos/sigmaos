@@ -128,6 +128,12 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *mr.Job)
 
 	bins, err := mr.NewBins(fsl, job.Input, true, sp.Tlength(job.Binsz), sp.Tlength(job.Splitsz))
 	if err != nil || len(bins) == 0 {
+		if strings.Contains(job.Input, sp.INPUT_DATA_REL) {
+			// The job reads pre-staged input, which start-kernel.sh bind-mounts
+			// into each kernel container from the host. An empty or missing
+			// directory almost always means the dataset was never staged.
+			db.DPrintf(db.ALWAYS, "No input at %v (%d bins, err %v): stage the dataset on every node first (./download-input-data.sh <dataset>, or --input-data on the cluster start script)", job.Input, len(bins), err)
+		}
 		return len(bins), err
 	}
 	mtasks := make([]*fttask_clnt.Task[mr.Bin], len(bins))

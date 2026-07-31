@@ -1,7 +1,12 @@
 #!/bin/bash
 
 usage() {
-  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--nodialproxy] [--turbo] [--numfullnode N] [--numbeschednode N] [--reload-gvisor-ctr]" 1>&2
+  echo "Usage: $0 --vpc VPC [--branch BRANCH] [--reserveMcpu rmcpu] [--pull TAG] [--n N_VM] [--ncores NCORES] [--nodialproxy] [--turbo] [--numfullnode N] [--numbeschednode N] [--reload-gvisor-ctr] [--input-data \"DATASET...\"]" 1>&2
+  echo "" 1>&2
+  echo "  --input-data  Space-separated S3 prefixes to stage on every node before" 1>&2
+  echo "                starting its kernel, so that jobs can read them from their" 1>&2
+  echo "                local UX server (see download-input-data.sh). Staging is" 1>&2
+  echo "                incremental, so passing the same datasets again is cheap." 1>&2
 }
 
 VPC=""
@@ -18,6 +23,7 @@ TOKEN=""
 TURBO=""
 RMCPU="0"
 BRANCH="master"
+INPUT_DATA=""
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -79,6 +85,11 @@ while [[ $# -gt 0 ]]; do
     shift
     RMCPU="$1"
   	shift
+    ;;
+  --input-data)
+    shift
+    INPUT_DATA="$1"
+    shift
     ;;
   -help)
     usage
@@ -213,6 +224,14 @@ for vm in $vms; do
 #  fi
 
   cd sigmaos
+  # Stage this node's read-only job input before starting its kernel, which
+  # bind-mounts the staging directory into the container for UX to serve. Doing
+  # it here rather than copying from S3 through the namespace at job time is
+  # what keeps a large cluster's setup from being dominated by the copy: the
+  # download is incremental, so it is paid once per node per dataset.
+  if [ -n "${INPUT_DATA}" ]; then
+    ./download-input-data.sh ${INPUT_DATA}
+  fi
   sudo ./load-apparmor.sh
   if [ "${RELOAD_GVISOR}" = "true" ]; then
     docker pull arielszekely/sigmauser:$TAG

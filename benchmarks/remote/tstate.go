@@ -18,6 +18,19 @@ type Tstate struct {
 	t    *testing.T
 	BCfg *BenchConfig   `json:"config"`
 	LCfg *LocalFSConfig `json:"local_fs_cfg"`
+	// Datasets to stage on every node before starting a cluster; see
+	// SetInputData.
+	InputData []string `json:"input_data"`
+}
+
+// SetInputData names the S3 prefixes every node should have staged on its host
+// before its kernel starts, so that a job reads them from its local UX server
+// (sp.UxInputDataPath) instead of the benchmark first copying them there
+// through the namespace. Applies to every cluster this Tstate starts
+// afterwards; staging is incremental, so a dataset already on a node is nearly
+// free to request again.
+func (ts *Tstate) SetInputData(datasets []string) {
+	ts.InputData = datasets
 }
 
 func NewTstate(t *testing.T) (*Tstate, error) {
@@ -165,7 +178,7 @@ func (ts *Tstate) PrepareToRunBenchmark(benchName string) (bool, error) {
 
 // Start a SigmaOS cluster
 func (ts *Tstate) StartSigmaOSCluster(numNodes int, numCoresPerNode uint, numFullNodes int, numProcqOnlyNodes int, turboBoost bool, useGVisor bool) (*ClusterConfig, error) {
-	ccfg, err := NewClusterConfig(ts.BCfg, ts.LCfg, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+	ccfg, err := NewClusterConfig(ts.BCfg, ts.LCfg, numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor, ts.InputData)
 	if err != nil {
 		return nil, err
 	}

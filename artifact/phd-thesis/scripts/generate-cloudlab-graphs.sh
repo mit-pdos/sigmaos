@@ -45,5 +45,5 @@ SYS_NAME_CAMEL="${SYS_NAME_CAMEL:-CoSandbox}"
 #echo "Done generating Figure 12..."
 
 echo "Generating MR+MR multiplexing graph..."
-$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000 --out $GRAPH_OUT_DIR/be_mr_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 128 --prefix "mr-" --xmax 70000
+$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000 --out $GRAPH_OUT_DIR/be_mr_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 96 --prefix "mr-" --xmax 70000
 echo "Done generating MR+MR multiplexing graph..."

@@ -153,7 +153,23 @@ if [ $NUM_BESCHED_NODE -gt 0 ]; then
 fi
 
 vm_ncores=$(ssh -i key-$VPC.pem ubuntu@$MAIN nproc)
+
+# Nodes 1..SEQ_UNTIL are started one at a time, in order; the rest start in
+# parallel. The leader has to be first: it brings up the db, the swarm overlay
+# network, etcd and the named every other node joins, and it is the source of
+# the swarm join token the followers use. The besched-only nodes follow it, in
+# order. Everything after that only joins what already exists, so there is no
+# ordering among them.
+SEQ_UNTIL=$(($NUM_BESCHED_NODE + 1))
+
+# Exit status per node, so that a failure doesn't disappear into the interleaved
+# output of the parallel starts.
+STATUS_DIR=$(mktemp -d)
+trap "rm -rf $STATUS_DIR" EXIT
+
 i=0
+VM_NAMES=()
+VM_DNS=()
 for vm in $vms; do
   i=$(($i+1))
   FOLLOWER_NODE="$FULL_NODE"
@@ -180,12 +196,22 @@ for vm in $vms; do
   if [ $i -eq 1 ]; then
     echo "starting SigmaOS on $vm nodetype leader $LEADER_NODE"
   else
-    echo "starting SigmaOS on $vm nodetype follower $FOLLOWER_NODE"
+    if [ $i -le $SEQ_UNTIL ]; then
+      echo "starting SigmaOS on $vm nodetype follower $FOLLOWER_NODE"
+    else
+      echo "starting SigmaOS on $vm nodetype follower $FOLLOWER_NODE (in parallel)"
+    fi
   fi
   # No additional benchmarking setup needed for AWS.
   # Get hostname.
   VM_NAME=$(echo "$vms_full" | grep $vm | cut -d " " -f 2)
   KERNELID="${KERNELID_PREFIX}sigma-$VM_NAME-$(echo $RANDOM | md5sum | head -c 3)"
+  VM_NAMES[$i]=$VM_NAME
+  VM_DNS[$i]=$vm
+  # Always a background subshell, so that the ordered nodes and the parallel
+  # ones run the same code; the ordered ones are simply waited for right away.
+  # The subshell captures this iteration's vm/KERNELID/FOLLOWER_NODE.
+  (
   ssh -i key-$VPC.pem ubuntu@$vm /bin/bash <<ENDSSH
   mkdir -p /tmp/sigmaos
   export SIGMAPERF="$SIGMAPERF"
@@ -265,7 +291,37 @@ for vm in $vms; do
     docker cp ~/8.jpg ${KERNELID}:/home/sigmaos/8.jpg
   fi
 ENDSSH
-  if [ "${vm}" = "${MAIN}" ]; then
+  echo $? > $STATUS_DIR/$i
+  ) &
+  pid=$!
+  if [ $i -le $SEQ_UNTIL ]; then
+    # An ordered node: wait for it before starting the next one. A failure here
+    # means the rest of the cluster has nothing to join, so bail out rather than
+    # starting nodes that cannot work.
+    wait $pid
+    if [ "$(cat $STATUS_DIR/$i 2>/dev/null)" != "0" ]; then
+      echo "!!!!!!!!!! FAILED to start $VM_NAME ($vm) !!!!!!!!!!" 1>&2
+      exit 1
+    fi
+    if [ "${vm}" = "${MAIN}" ]; then
+      # The followers join the swarm with this token, so it has to be read after
+      # the leader is up and before any follower starts.
       TOKEN=$(ssh -i key-$VPC.pem ubuntu@$vm docker swarm join-token worker | grep docker)
-  fi   
+    fi
+  fi
 done
+# Wait for the nodes started in parallel.
+wait
+
+nfail=0
+for j in $(seq 1 $i); do
+  if [ "$(cat $STATUS_DIR/$j 2>/dev/null)" != "0" ]; then
+    echo "!!!!!!!!!! FAILED to start ${VM_NAMES[$j]} (${VM_DNS[$j]}) !!!!!!!!!!" 1>&2
+    nfail=$(($nfail+1))
+  fi
+done
+if [ $nfail -ne 0 ]; then
+  echo "!!!!!!!!!! FAILED to start $nfail/$i node(s) !!!!!!!!!!" 1>&2
+  exit 1
+fi
+echo "Started $i node(s)"

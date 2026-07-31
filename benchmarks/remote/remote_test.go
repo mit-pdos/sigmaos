@@ -350,7 +350,10 @@ func TestMR(t *testing.T) {
 				} else if mrEP.useGetPut {
 					benchName += "-getput"
 				}
-				mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.memReq, mrEP.useGetPut, mrEP.useCosandboxes)
+				mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.memReq, benchmarks.MRDataPathCfg{
+					MapGetPut:      mrEP.useGetPut,
+					MapCosandboxes: mrEP.useCosandboxes,
+				})
 				if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 					return
 				}
@@ -960,8 +963,8 @@ func TestBEImgResizeRPCMultiplexing(t *testing.T) {
 
 // Test multiplexing Best Effort MR jobs.
 func TestBEMRMultiplexing(t *testing.T) {
-	var (
-		benchName string = "be_mr_multiplexing"
+	const (
+		benchNameBase string = "be_mr_multiplexing"
 	)
 	// Cluster configuration parameters
 	const (
@@ -978,21 +981,27 @@ func TestBEMRMultiplexing(t *testing.T) {
 		sleepBetweenRealms time.Duration = 5 * time.Second
 		nRealms            int           = 1
 		prewarmRealm       bool          = true
-		useGetPut          bool          = false
-		useCosandboxes     bool          = false
+		useGetPut          bool          = true
+		// The reducer data path is a separate pair of knobs from the mapper's;
+		// the sweep below is over the mapper's, so set these explicitly rather
+		// than letting the sweep imply them.
+		useGetPutReduce      bool = false
+		useCosandboxesReduce bool = false
+		// Shared memory per cosandbox reducer, which has to hold every shard
+		// the cosandbox prefetches for it: all of the mappers' output divided by
+		// nreduce. 0 lets the coordinator size it from what the mappers actually
+		// wrote. Only used when useCosandboxesReduce is set.
+		reduceShmemMB int = 0
 		//		benchConfig        string        = "mr-grep-wiki1G-granular-bench.json"
-		benchConfig string = "mr-grep-wiki128M-uxinput-granular-bench.json"
+		benchConfig string = "mr-grep-uxinput-granular-bench.json"
 	)
+	// Run the benchmark with mappers reading and writing directly, and then
+	// through cosandboxes.
+	cosandboxCfgs := []bool{false, true}
 	// Mem request per worker is what bounds concurrent mappers per node
 	// (msched admits on memory), so it is the knob for the packing sweep:
 	// --mr_mem_req 8000 ~1/node, 3000 ~5/node, 1500 ~10/node, 1200 ~13/node.
 	memPerWorker := proc.Tmem(mrMemReqArg)
-	// Each configuration gets its own results directory, so a sweep doesn't
-	// overwrite itself.
-	benchName = fmt.Sprintf("%s_mem%d", benchName, mrMemReqArg)
-	if mrGOMAXPROCSArg > 0 {
-		benchName = fmt.Sprintf("%s_gomaxprocs%d", benchName, mrGOMAXPROCSArg)
-	}
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
@@ -1001,13 +1010,32 @@ func TestBEMRMultiplexing(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker, useGetPut, useCosandboxes)
-	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
-		return
+	for _, useCosandboxes := range cosandboxCfgs {
+		// Each configuration gets its own results directory, so a sweep doesn't
+		// overwrite itself.
+		benchName := fmt.Sprintf("%s_mem%d", benchNameBase, mrMemReqArg)
+		if mrGOMAXPROCSArg > 0 {
+			benchName = fmt.Sprintf("%s_gomaxprocs%d", benchName, mrGOMAXPROCSArg)
+		}
+		if useCosandboxes {
+			benchName = benchName + "_cosandboxes"
+		}
+		data := benchmarks.MRDataPathCfg{
+			MapGetPut:         useGetPut,
+			MapCosandboxes:    useCosandboxes,
+			ReduceGetPut:      useGetPutReduce,
+			ReduceCosandboxes: useCosandboxesReduce,
+		}
+		mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker, data)
+		if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
+			return
+		}
+		mrCfg.JobCfg.MapperGOMAXPROCS = mrGOMAXPROCSArg
+		mrCfg.JobCfg.ReduceShmemMB = reduceShmemMB
+		db.DPrintf(db.ALWAYS, "MR multiplexing config: benchName %v memPerWorker %v mapperGOMAXPROCS %v reduceShmemMB %v data %v", benchName, memPerWorker, mrGOMAXPROCSArg, reduceShmemMB, data)
+		// Each run stops any previously running cluster and starts a fresh one.
+		ts.RunStandardBenchmark(benchName, driverVM, GetBEMRMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, prewarmRealm, mrCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 	}
-	mrCfg.JobCfg.MapperGOMAXPROCS = mrGOMAXPROCSArg
-	db.DPrintf(db.ALWAYS, "MR multiplexing config: benchName %v memPerWorker %v mapperGOMAXPROCS %v", benchName, memPerWorker, mrGOMAXPROCSArg)
-	ts.RunStandardBenchmark(benchName, driverVM, GetBEMRMultiplexingCmdConstructor(nRealms, sleepBetweenRealms, prewarmRealm, mrCfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 }
 
 func TestLCBEHotelImgResizeMultiplexing(t *testing.T) {
@@ -1315,7 +1343,7 @@ func TestLCBEHotelMRMultiplexing(t *testing.T) {
 		},
 		CosSimBenchCfg: nil,
 	}
-	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000), false, false)
+	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000), benchmarks.MRDataPathCfg{})
 	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 		return
 	}

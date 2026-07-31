@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"sigmaos/apps/mr"
@@ -62,33 +63,42 @@ const (
 
 type Coord struct {
 	*sigmaclnt.SigmaClnt
-	mftid            task.FtTaskSvcId
-	rftid            task.FtTaskSvcId
-	mftclnt          ftclnt.FtTaskClnt[mr.Bin, mr.Bin]
-	rftclnt          ftclnt.FtTaskClnt[mr.TreduceTask, mr.Bin]
-	mcoord           *fttaskmgr.FtTaskCoord[[]byte, []byte]
-	rcoord           *fttaskmgr.FtTaskCoord[[]byte, []byte]
-	jobRoot          string
-	job              string
-	nmaptask         int
-	nreducetask      int
-	maliciousMapper  uint64
-	linesz           string
-	lineszInt        int
-	wordsz           string
-	mapperbin        string
-	reducerbin       string
-	leaderclnt       *leaderclnt.LeaderClnt
-	outdir           string
-	intOutdir        string
-	memPerTask       proc.Tmem
-	stat             AStat
-	perf             *perf.Perf
-	useGetPut        bool
-	useCosandbox     bool
-	tailProbeSz      int
-	binsz            int
+	mftid           task.FtTaskSvcId
+	rftid           task.FtTaskSvcId
+	mftclnt         ftclnt.FtTaskClnt[mr.Bin, mr.Bin]
+	rftclnt         ftclnt.FtTaskClnt[mr.TreduceTask, mr.Bin]
+	mcoord          *fttaskmgr.FtTaskCoord[[]byte, []byte]
+	rcoord          *fttaskmgr.FtTaskCoord[[]byte, []byte]
+	jobRoot         string
+	job             string
+	nmaptask        int
+	nreducetask     int
+	maliciousMapper uint64
+	linesz          string
+	lineszInt       int
+	wordsz          string
+	mapperbin       string
+	reducerbin      string
+	leaderclnt      *leaderclnt.LeaderClnt
+	outdir          string
+	intOutdir       string
+	memPerTask      proc.Tmem
+	stat            AStat
+	perf            *perf.Perf
+	useGetPut       bool
+	useCosandbox    bool
+	// The reducer knobs, independent of the mapper ones above.
+	useGetPutReduce    bool
+	useCosandboxReduce bool
+	tailProbeSz        int
+	binsz              int
+	// Total bytes the mappers wrote, accumulated as their results come in.
+	// Reducers are only spawned once every mapper is done, so by then this is
+	// the job's whole intermediate size — which is how the reducers' shared
+	// memory is sized.
+	mapOutBytes      atomic.Int64
 	mrBootWASM       []byte
+	mrReduceBootWASM []byte
 	uxEPs            *procclnt.SrvEPCache
 	s3EPs            *procclnt.SrvEPCache
 	intOutS3         bool
@@ -115,8 +125,8 @@ func (s *AStat) String() string {
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 17 {
-		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 17 (stale mr-coord binary?): %v", len(args), args)
+	if len(args) != 19 {
+		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 19 (stale mr-coord binary?): %v", len(args), args)
 	}
 	c := &Coord{}
 	c.jobRoot = args[1]
@@ -204,6 +214,14 @@ func NewCoord(args []string) (*Coord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("NewCoord: binsz %v isn't int", args[16])
 	}
+	c.useGetPutReduce, err = strconv.ParseBool(args[17])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: useGetPutReduce %v isn't bool", args[17])
+	}
+	c.useCosandboxReduce, err = strconv.ParseBool(args[18])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: useCosandboxReduce %v isn't bool", args[18])
+	}
 
 	if c.useCosandbox {
 		// Read and precompile the mapper boot script once; every mapper
@@ -211,6 +229,14 @@ func NewCoord(args []string) (*Coord, error) {
 		c.mrBootWASM, err = wasmer.ReadCoSandbox(c.SigmaClnt, "mr_mapper_boot")
 		if err != nil {
 			return nil, fmt.Errorf("NewCoord: ReadCoSandbox mr_mapper_boot err %v", err)
+		}
+	}
+	if c.useCosandboxReduce {
+		// The reducer's boot script is a separate one: its gets are whole-file
+		// and each names its own kernel (see rs/wasm/mr_reducer_boot).
+		c.mrReduceBootWASM, err = wasmer.ReadCoSandbox(c.SigmaClnt, "mr_reducer_boot")
+		if err != nil {
+			return nil, fmt.Errorf("NewCoord: ReadCoSandbox mr_reducer_boot err %v", err)
 		}
 	}
 
@@ -221,11 +247,10 @@ func NewCoord(args []string) (*Coord, error) {
 	if strings.HasPrefix(c.intOutdir, sp.UX) {
 		c.uxEPs = c.newSrvEPCache(sp.UX)
 	}
-	// The local S3 proxy is only reached on the getput path. Mappers on the
-	// fslib path don't need its endpoint — sp.S3ClientPath rewrites
-	// name/s3/~local to the s3clnt path client, which talks to S3 directly —
-	// and neither do reducers (see reducerProc).
-	if c.useGetPut {
+	// The local S3 proxy is only reached on the getput path. Tasks on the fslib
+	// path don't need its endpoint — sp.S3ClientPath rewrites name/s3/~local to
+	// the s3clnt path client, which talks to S3 directly.
+	if c.useGetPut || c.useGetPutReduce {
 		c.s3EPs = c.newSrvEPCache(sp.S3)
 	}
 
@@ -346,7 +371,29 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	outlink := mr.ReduceOut(c.jobRoot, c.job) + data.Task
 	outTarget := mr.ReduceOutTarget(c.outdir, c.job) + data.Task
 	c.stat.Nreduce.Add(1)
-	p := c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask)}, c.memPerTask)
+	p := c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.useGetPutReduce), strconv.FormatBool(c.useCosandboxReduce)}, c.memPerTask)
+	if c.useGetPutReduce {
+		// The UX/S3 proxy client RPC channels — and the delegated-RPC path in
+		// particular — are serviced by spproxy.
+		p.GetProcEnv().UseSPProxy = true
+	}
+	if c.useCosandboxReduce {
+		input, err := reducerBootInput(data.Input)
+		if err != nil {
+			return nil, err
+		}
+		// Retrieve the cosandbox's prefetched shards through shared memory
+		// rather than copying them back over the spproxy socket.
+		shmemMB := reducerShmemMB(c.mapOutBytes.Load(), c.nreducetask)
+		p.SetShmemMB(shmemMB)
+		db.DPrintf(db.MR_COORD, "reducerProc %v cosandbox shmem %vMB nshard %v", p.GetPid(), shmemMB, len(data.Input))
+		p.SetCoSandbox(c.mrReduceBootWASM, input)
+		p.SetRunCoSandbox(true)
+		// As with mappers, deliberately no SetRunAfterCoSandbox(true):
+		// DelegatedRPC blocks until each shard's reply materializes, so the
+		// reducer starts immediately and pipelines against in-flight
+		// prefetches.
+	}
 	// Only UX: a reducer reading UX intermediate output walks to a concrete
 	// name/ux/<kid> per mapper (Mapper.outputBin resolved ~local for them),
 	// but S3 intermediate output keeps its ~local (outputBin deliberately
@@ -354,6 +401,12 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	// path client — no endpoint involved. The reducer's own output goes
 	// through ~any, which we deliberately don't mount.
 	c.cacheEPs(p, c.uxEPs)
+	// On the getput path the reducer reaches S3 through the local proxy rather
+	// than the s3clnt path client, both for S3 intermediate shards and for its
+	// own output when that is in S3.
+	if c.useGetPutReduce && (c.intOutS3 || strings.HasPrefix(c.outdir, sp.S3)) {
+		c.cacheEPs(p, c.s3EPs)
+	}
 	return p, nil
 }
 
@@ -736,6 +789,7 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 				db.DFatalf("Appendfile %v err %v", mr.MRstats(c.jobRoot, c.job), err)
 			}
 			if r.IsM {
+				c.mapOutBytes.Add(int64(r.Out))
 				if _, ok := ts[res.Id]; ok {
 					db.DFatalf("task id already finished %v", res.Id)
 				}

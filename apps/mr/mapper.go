@@ -9,7 +9,6 @@ import (
 	// "runtime/debug"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -58,39 +57,6 @@ type Mapper struct {
 	cpu *perf.CPUPhases
 	// Time spent fetching input; see getStats.
 	gets getStats
-}
-
-// getStats accumulates the wall time a mapper spends fetching its input, so
-// that it can be read against the mapper's total runtime (Result.MsInner)
-// independently of how the input is fetched. What counts as one get differs by
-// path, and so does how the sum relates to wall time:
-//
-//   - getput, cosandbox: one delegated get per split, which retrieves the
-//     window the cosandbox prefetched (blocking until it materializes).
-//   - getput, direct: one ranged get RPC per split to the local UX/S3 proxy,
-//     plus any lazy tail extension past the probe.
-//
-// Both of the above are issued serially, once per split, from doSplit, so the
-// sum is comparable to elapsed time. On the fslib path, by contrast, a get is
-// one chunk read, and CONCURRENCY chunk readers run in parallel per split — so
-// the sum counts concurrent reads separately and can exceed the mapper's wall
-// time. Compare across paths with that in mind.
-type getStats struct {
-	ns atomic.Int64
-	n  atomic.Int64
-}
-
-func (gs *getStats) record(start time.Time) {
-	gs.ns.Add(int64(time.Since(start)))
-	gs.n.Add(1)
-}
-
-func (gs *getStats) dur() time.Duration {
-	return time.Duration(gs.ns.Load())
-}
-
-func (gs *getStats) count() int64 {
-	return gs.n.Load()
 }
 
 // timedSplitReader times each of the wrapped reader's chunk fetches. It only

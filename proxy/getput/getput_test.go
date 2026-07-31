@@ -34,6 +34,10 @@ func (f *fakeClnt) getChunk(tgt *Target, off, cnt uint64) ([]byte, error) {
 	if off >= uint64(len(f.data)) {
 		return []byte{}, nil
 	}
+	if cnt == 0 {
+		// Both proxies read to EOF on a zero count.
+		return f.data[off:], nil
+	}
 	end := min(off+cnt, uint64(len(f.data)))
 	return f.data[off:end], nil
 }
@@ -77,17 +81,21 @@ func (f *fakeClnt) reassemble() []byte {
 
 func TestClassifyPath(t *testing.T) {
 	for _, tc := range []struct {
-		pn   string
-		want string
-		err  bool
+		pn      string
+		want    string
+		isLocal bool
+		err     bool
 	}{
-		{"name/s3/~local/9ps3/wiki-2G/f0", "{s3 9ps3 wiki-2G/f0}", false},
-		{"name/s3/~any/bkt/key", "{s3 bkt key}", false},
-		{"s3clnt/bkt/dir/key", "{s3 bkt dir/key}", false},
-		{"name/ux/~local/mr-intermediate/job/shard", "{ux mr-intermediate/job/shard}", false},
-		{"name/ux/kid0/f", "{ux f}", false},
-		{"name/s3/~local/bktonly", "", true},
-		{"name/named/foo", "", true},
+		{"name/s3/~local/9ps3/wiki-2G/f0", "{s3 ~local 9ps3 wiki-2G/f0}", true, false},
+		{"name/s3/~any/bkt/key", "{s3 ~any bkt key}", true, false},
+		{"s3clnt/bkt/dir/key", "{s3  bkt dir/key}", true, false},
+		{"name/ux/~local/mr-intermediate/job/shard", "{ux ~local mr-intermediate/job/shard}", true, false},
+		// A reducer's shard paths name the mapper's kernel, and are the reason
+		// Clnts keys its proxy clients by kernel ID.
+		{"name/ux/kid0/f", "{ux kid0 f}", false, false},
+		{"name/s3/kid0/bkt/key", "{s3 kid0 bkt key}", false, false},
+		{"name/s3/~local/bktonly", "", false, true},
+		{"name/named/foo", "", false, true},
 	} {
 		tgt, err := ClassifyPath(tc.pn)
 		if tc.err {
@@ -98,8 +106,13 @@ func TestClassifyPath(t *testing.T) {
 		}
 		if err != nil {
 			t.Errorf("%q: %v", tc.pn, err)
-		} else if tgt.String() != tc.want {
+			continue
+		}
+		if tgt.String() != tc.want {
 			t.Errorf("%q: got %v want %v", tc.pn, tgt, tc.want)
+		}
+		if tgt.isLocal() != tc.isLocal {
+			t.Errorf("%q: isLocal %t want %t", tc.pn, tgt.isLocal(), tc.isLocal)
 		}
 	}
 }

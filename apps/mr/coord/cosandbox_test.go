@@ -1,0 +1,118 @@
+package coord
+
+import (
+	"encoding/binary"
+	"testing"
+
+	"sigmaos/apps/mr"
+	mrapi "sigmaos/apps/mr/mr"
+	"sigmaos/proc"
+	sp "sigmaos/sigmap"
+)
+
+// decodeArgs reverses wasmer.EncodeArgs: n u32-LE lengths, then the bodies.
+func decodeArgs(t *testing.T, b []byte, nstr int) []string {
+	t.Helper()
+	strs := make([]string, 0, nstr)
+	off := 4 * nstr
+	for i := 0; i < nstr; i++ {
+		l := int(binary.LittleEndian.Uint32(b[4*i : 4*i+4]))
+		strs = append(strs, string(b[off:off+l]))
+		off += l
+	}
+	return strs
+}
+
+// The reducer's manifest must match what rs/wasm/mr_reducer_boot expects: a
+// u32-LE shard count, then 4 strings per shard (typ, kid, a, b), in bin order —
+// bin order is what makes rpcIdx equal the shard index Reducer.readFile asks
+// for.
+func TestReducerBootInput(t *testing.T) {
+	bin := mr.Bin{
+		{File: "name/ux/kid1/mr-intermediate/job/r-0-abc"},
+		{File: "name/ux/kid2/mr-intermediate/job/r-0-def"},
+		{File: "name/s3/~local/9ps3/mr-intermediate/job/r-0-ghi"},
+	}
+	input, err := reducerBootInput(bin)
+	if err != nil {
+		t.Fatalf("reducerBootInput: %v", err)
+	}
+	if n := binary.LittleEndian.Uint32(input[0:4]); int(n) != len(bin) {
+		t.Fatalf("shard count %d want %d", n, len(bin))
+	}
+	strs := decodeArgs(t, input[4:], 4*len(bin))
+	want := []string{
+		"ux", "kid1", "mr-intermediate/job/r-0-abc", "",
+		"ux", "kid2", "mr-intermediate/job/r-0-def", "",
+		// An S3 shard keeps the ~local Mapper.outputBin left in place, which
+		// resolves to the reducer's own kernel in the cosandbox.
+		"s3", "~local", "9ps3", "mr-intermediate/job/r-0-ghi",
+	}
+	if len(strs) != len(want) {
+		t.Fatalf("got %d strings want %d: %v", len(strs), len(want), strs)
+	}
+	for i := range want {
+		if strs[i] != want[i] {
+			t.Errorf("arg %d: got %q want %q", i, strs[i], want[i])
+		}
+	}
+}
+
+func TestReducerShmemMB(t *testing.T) {
+	// 100 MB of intermediate output over 4 reducers: 25 MB each, doubled.
+	if mb := reducerShmemMB(100*int64(sp.MBYTE), 4); mb != proc.Tmem(50) {
+		t.Errorf("reducerShmemMB = %v want 50", mb)
+	}
+	// A tiny (or unknown, e.g. after a coordinator restart) intermediate size
+	// still has to leave the allocator room for reply framing.
+	if mb := reducerShmemMB(0, 1); mb != MIN_SHMEM_MB {
+		t.Errorf("reducerShmemMB(0) = %v want %v", mb, MIN_SHMEM_MB)
+	}
+	// nreduce is a divisor: a bogus value must not panic.
+	if mb := reducerShmemMB(int64(sp.MBYTE), 0); mb != proc.Tmem(2) {
+		t.Errorf("reducerShmemMB(1MB, 0) = %v want 2", mb)
+	}
+}
+
+// The mapper's segment is sized from the job's bin size, which bounds a bin's
+// data (mr.NewBins closes a bin before it would exceed it).
+func TestMapperShmemMB(t *testing.T) {
+	if mb := mapperShmemMB(3 * int(sp.MBYTE)); mb != proc.Tmem(6) {
+		t.Errorf("mapperShmemMB = %v want 6", mb)
+	}
+	if mb := mapperShmemMB(1024); mb != MIN_SHMEM_MB {
+		t.Errorf("mapperShmemMB(1KB) = %v want %v", mb, MIN_SHMEM_MB)
+	}
+}
+
+// The mapper's manifest and its GetPutReader must agree on the read window, or
+// the mapper maps corrupted split boundaries; both go through
+// mrapi.SplitReadWindow, so pin that this is the window the manifest carries.
+func TestMapperBootInputWindow(t *testing.T) {
+	const linesz, probesz = 32768, 4096
+	s := mrapi.Split{File: "name/ux/~local/wiki/f0", Offset: 1024, Length: 2048}
+	input, err := mapperBootInput(mr.Bin{s}, linesz, probesz)
+	if err != nil {
+		t.Fatalf("mapperBootInput: %v", err)
+	}
+	strs := decodeArgs(t, input[4:], 1+5*1)
+	off, body, probe := mrapi.SplitReadWindow(&s, linesz, probesz)
+	if strs[4] != "1023" || strs[4] != itoa(int64(off)) {
+		t.Errorf("off %q want %v (one byte early, to detect a partial first line)", strs[4], off)
+	}
+	if want := itoa(int64(body) + int64(probe)); strs[5] != want {
+		t.Errorf("cnt %q want %q", strs[5], want)
+	}
+}
+
+func itoa(v int64) string {
+	if v == 0 {
+		return "0"
+	}
+	var b []byte
+	for v > 0 {
+		b = append([]byte{byte('0' + v%10)}, b...)
+		v /= 10
+	}
+	return string(b)
+}

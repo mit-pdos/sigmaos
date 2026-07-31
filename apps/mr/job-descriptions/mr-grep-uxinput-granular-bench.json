@@ -3,7 +3,7 @@
   "nreduce": 1,
   "binsz": 1048576,
   "splitsz": 1048576,
-  "input": "name/ux/~local/input-data/wiki-4G/",
+  "input": "name/ux/~local/input-data/wiki-10G/",
   "intermediate": "name/ux/~local/mr-intermediate",
   "output": "name/s3/~local/9ps3/mr-out",
   "linesz": 1048576,

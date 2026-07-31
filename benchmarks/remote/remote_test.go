@@ -1068,7 +1068,7 @@ func TestBEMRMultiplexing(t *testing.T) {
 	// Cluster configuration parameters
 	const (
 		driverVM          int  = 36
-		numNodes          int  = 32
+		numNodes          int  = 34
 		numCoresPerNode   uint = 4
 		numProcqOnlyNodes int  = 2
 		numFullNodes      int  = numNodes - numProcqOnlyNodes
@@ -1077,7 +1077,7 @@ func TestBEMRMultiplexing(t *testing.T) {
 	)
 	// Bench params
 	const (
-		sleepBetweenRealms time.Duration = 10 * time.Second
+		sleepBetweenRealms time.Duration = 5 * time.Second
 		nRealms            int           = 4
 		prewarmRealm       bool          = true
 		useGetPut          bool          = false

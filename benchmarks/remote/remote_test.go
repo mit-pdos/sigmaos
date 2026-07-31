@@ -37,7 +37,7 @@ func init() {
 	flag.BoolVar(&noShutdownArg, "no-shutdown-after-test", false, "Avoid shutting down the cluster after running a benchmark (useful for debugging).")
 	flag.BoolVar(&reloadGVisor, "reload-gvisor", false, "Refresh gvisor container.")
 	flag.BoolVar(&k8sArg, "k8s", false, "Run the k8s version of the experiment.")
-	flag.IntVar(&mrMemReqArg, "mr_mem_req", 1200, "MR benchmarks: mem request (MB) per mapper/reducer, which is what bounds how many run concurrently per node.")
+	flag.IntVar(&mrMemReqArg, "mr_mem_req", 3000, "MR benchmarks: mem request (MB) per mapper/reducer, which is what bounds how many run concurrently per node.")
 	flag.IntVar(&mrGOMAXPROCSArg, "mr_gomaxprocs", 0, "MR benchmarks: GOMAXPROCS for mapper procs (0 = Go default, i.e. the node's core count).")
 	proc.SetSigmaDebugPid("remote-bench")
 }
@@ -378,10 +378,31 @@ func TestCorral(t *testing.T) {
 		turboBoost        bool = true
 		useGVisor         bool = false
 	)
-	// Variable MR benchmark configuration parameters
-	var (
-		corralApps []string = []string{"corral-2G-cold", "corral-2G-warm"}
+	// Corral run configuration. These are the values the corral word_count app
+	// compiles in as its own defaults (corral.SetTuningDefaults in
+	// corral/examples/word_count), restated here so that the configuration a
+	// run uses is visible in one place and a sweep is a matter of editing a
+	// number. Note that grep's defaults differ (mapBinSize 13M,
+	// maxConcurrency 200, reduceBinSize 160M*100), so switching corralApp means
+	// revisiting these.
+	const (
+		corralApp    string = CorralWordCount
+		corralBranch string = "play-perf-asynch"
+		corralBucket string = "9ps3"
+		corralInput  string = "wiki-2G/"
+		corralOutput string = "output"
+		corralLambda bool   = true
+
+		corralSplitSize      int64 = 10 * 1024 * 1024
+		corralMapBinSize     int64 = 130 * 1024 * 1024
+		corralReduceBinSize  int64 = 160 * 1024 * 1024 * 5
+		corralMaxConcurrency int   = 32
+		corralMaxLineLength  int   = 2 * 1024 * 1024
 	)
+	// One entry per run, named for its results directory. The two 2G runs are
+	// the same configuration twice: the first pays to deploy the Lambda, the
+	// second finds it warm.
+	corralExps := []string{"corral-2G-cold", "corral-2G-warm"}
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
@@ -390,9 +411,26 @@ func TestCorral(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	for _, corralApp := range corralApps {
-		benchName := filepath.Join(benchNameBase, corralApp)
-		ts.RunStandardBenchmark(benchName, driverVM, GetCorralCmdConstructor(), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+	for _, exp := range corralExps {
+		cfg, err := NewCorralConfig(
+			corralApp,
+			corralBranch,
+			corralBucket,
+			corralInput,
+			corralOutput,
+			corralLambda,
+			corralSplitSize,
+			corralMapBinSize,
+			corralReduceBinSize,
+			corralMaxConcurrency,
+			corralMaxLineLength,
+		)
+		if !assert.Nil(ts.t, err, "Corral config: %v", err) {
+			return
+		}
+		benchName := filepath.Join(benchNameBase, exp)
+		db.DPrintf(db.ALWAYS, "Corral config: benchName %v cfg %v", benchName, cfg)
+		ts.RunStandardBenchmark(benchName, driverVM, GetCorralCmdConstructor(cfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 	}
 }
 

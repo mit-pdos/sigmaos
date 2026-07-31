@@ -7,7 +7,6 @@ import (
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
-	"sigmaos/util/perf"
 )
 
 // Directory holding the MR job descriptions, relative to this package (job
@@ -223,7 +222,7 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, prewarmR
 			// by default because it instruments the setup path it measures, so
 			// it is asked for here rather than everywhere.
 			//			perfSelectors string = "\"" + string(perf.CPU_PHASE_BREAKDOWN) + ";\""
-			perfSelectors string
+			perfSelectors string = ""
 		)
 		prewarm := ""
 		if prewarmRealm {
@@ -328,19 +327,47 @@ func GetMRCmdConstructor(mrCfg *benchmarks.MRBenchConfig, prewarmRealm, measureT
 	}
 }
 
-// Construct command string to run corral benchmark.
-func GetCorralCmdConstructor() GetBenchCmdFn {
+// Construct command string to run the corral benchmark.
+//
+// - cfg specifies which corral example app to run, its input and output, and
+// the task-granularity tuning to run it with (see CorralConfig).
+//
+// The app's binary is invoked directly rather than through its Makefile's
+// test_* targets, so that the input and the tuning come from here instead of
+// being baked into the app: the Makefile is used only to build. A knob cfg
+// leaves unset isn't passed, so the app's own default applies.
+func GetCorralCmdConstructor(cfg *CorralConfig) GetBenchCmdFn {
 	return func(bcfg *BenchConfig, ccfg *ClusterConfig) string {
-		return "cd ../corral; " +
-			"git pull; " +
-			"git checkout play-perf-asynch; " +
-			"git pull; " +
+		lambda := ""
+		if cfg.Lambda {
+			lambda = "--lambda"
+		}
+		return fmt.Sprintf("cd ../corral; "+
+			"git pull; "+
+			"git checkout %s; "+
+			"git pull; "+
 			// Load AWS key, because Corral expects this to be set as the default profile
-			"export AWS_ACCESS_KEY_ID=$(cat ~/.aws/credentials | grep aws_access_key_id | head -n1 | cut -d ' ' -f3); " +
-			"export AWS_SECRET_ACCESS_KEY=$(cat ~/.aws/credentials | grep aws_secret_access_key | head -n1 | cut -d ' ' -f3); " +
-			"cd examples/word_count; " +
-			"make test_wc_lambda " +
-			"> /tmp/bench.out 2>&1"
+			"export AWS_ACCESS_KEY_ID=$(cat ~/.aws/credentials | grep aws_access_key_id | head -n1 | cut -d ' ' -f3); "+
+			"export AWS_SECRET_ACCESS_KEY=$(cat ~/.aws/credentials | grep aws_secret_access_key | head -n1 | cut -d ' ' -f3); "+
+			"cd examples/%s; "+
+			"make %s; "+
+			// Corral writes its intermediate data alongside its output, so a
+			// previous run's files would otherwise be left for the reduce phase
+			// to pick up — which matters now that a sweep changes how many bins
+			// a job has.
+			"aws s3 rm --profile sigmaos --recursive %s > /dev/null; "+
+			"./bin/%s %s --out %s %s %s "+
+			"> /tmp/bench.out 2>&1",
+			cfg.Branch,
+			cfg.App,
+			cfg.App, // Makefile target: PROG_NAME, which is the app name
+			cfg.outputURL(),
+			cfg.App,
+			lambda,
+			cfg.outputURL(),
+			cfg.tuningFlags(),
+			cfg.inputURL(),
+		)
 	}
 }
 

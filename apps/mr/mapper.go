@@ -129,9 +129,9 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		// initOutput runs concurrently with the phases below, so its CPU is
 		// reported on its own rather than as a window in the chain (where it
 		// would double-count).
-		startCPU := perf.CPUNow()
+		startCPU := perf.CPUStart(sc.ProcEnv())
 		err := m.initOutput()
-		perf.LogCPUSince("Mapper.initOutput", sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime(), startCPU)
+		perf.LogCPUSince("Mapper.initOutput", sc.ProcEnv(), startCPU)
 		m.ch <- err
 	}()
 	return m, nil
@@ -526,7 +526,7 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	// goes into getting to main (Setup.RuntimeInit.CPU) can be read against
 	// where the rest goes. The windows are consecutive, so together with
 	// Setup.RuntimeInit.CPU they should account for Proc.exit.CPU.
-	cpu := perf.NewCPUPhases(pe.GetPID(), pe.GetSpawnTime())
+	cpu := perf.NewCPUPhases(pe)
 
 	init := time.Now()
 	p, err := perf.NewPerf(pe, perf.MRMAPPER)

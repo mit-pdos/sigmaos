@@ -464,7 +464,7 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	pe := proc.GetProcEnv()
 	// Split the reducer's CPU into setup (sigmaclnt, reading its task, opening
 	// its output) and the reduce itself, to compare with the mapper's split.
-	cpu := perf.NewCPUPhases(pe.GetPID(), pe.GetSpawnTime())
+	cpu := perf.NewCPUPhases(pe)
 	p, err := perf.NewPerf(pe, perf.MRREDUCER)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)

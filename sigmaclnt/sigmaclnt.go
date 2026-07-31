@@ -32,7 +32,7 @@ func init() {
 		}
 		pe := proc.GetProcEnv()
 		perf.LogSpawnLatency("sigmaclnt pkg init", pe.GetPID(), pe.GetSpawnTime(), perf.TIME_NOT_SET)
-		perf.LogRuntimeInitLatency(pe.GetPID(), pe.GetSpawnTime())
+		perf.LogRuntimeInitLatency(pe)
 	}
 }
 
@@ -157,7 +157,7 @@ func (sc *SigmaClnt) NewProcClnt() error {
 }
 
 func (sc *SigmaClnt) ClntExit(status *proc.Status) error {
-	perf.LogProcExitRusage(sc.ProcEnv().GetPID(), sc.ProcEnv().GetSpawnTime())
+	perf.LogProcExitRusage(sc.ProcEnv())
 	sc.logNamespaceUse()
 	sc.ProcAPI.Exited(status)
 	db.DPrintf(db.SIGMACLNT, "Exited done")

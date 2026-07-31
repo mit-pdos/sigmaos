@@ -7,6 +7,7 @@ import (
 
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
+	"sigmaos/util/perf"
 )
 
 // Directory holding the MR job descriptions, relative to this package (job
@@ -216,6 +217,13 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, prewarmR
 			// measured — log it so a problem there can't be mistaken for
 			// spawn-latency noise.
 			debugSelectors string = "\"TEST;BENCH;MR_COORD;MR;SPAWN_LAT;PROCCLNT_EPCACHE;PROCCLNT_EPCACHE_ERR;\""
+			// CPU_PHASE_BREAKDOWN: attribute each mapper's and reducer's CPU
+			// across its phases (see perf.CPUPhases), which is how the setup
+			// cost of a fine-grained task is read against its actual work. Off
+			// by default because it instruments the setup path it measures, so
+			// it is asked for here rather than everywhere.
+			//			perfSelectors string = "\"" + string(perf.CPU_PHASE_BREAKDOWN) + ";\""
+			perfSelectors string
 		)
 		prewarm := ""
 		if prewarmRealm {
@@ -233,7 +241,7 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, prewarmR
 		if err != nil {
 			db.DFatalf("Err marshal mr config: %v", err)
 		}
-		return fmt.Sprintf("export SIGMADEBUG=%s; go clean -testcache; "+
+		return fmt.Sprintf("export SIGMADEBUG=%s; export SIGMAPERF=%s; go clean -testcache; "+
 			"aws s3 rm --profile sigmaos --recursive s3://9ps3/mr-intermediate > /dev/null; "+
 			"go test -v sigmaos/benchmarks -timeout 0 --no-shutdown %s %s --etcdIP %s --tag %s "+
 			"--run TestRealmBalanceMRMR "+
@@ -243,6 +251,7 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, prewarmR
 			"--mr_bench_cfg='%s' "+
 			"> /tmp/bench.out 2>&1",
 			debugSelectors,
+			perfSelectors,
 			dialproxy,
 			overlays,
 			ccfg.LeaderNodeIP,

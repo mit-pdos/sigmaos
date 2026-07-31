@@ -24,6 +24,17 @@ const (
 	COST            = "COST"
 )
 
+// Instrumentation which is off by default because it costs something on the
+// path it measures.
+const (
+	// CPU_PHASE_BREAKDOWN turns on per-proc CPU accounting: the CPUPhases
+	// chain, the exec -> main and whole-lifetime rusage reports, and
+	// LogCPUSince. Each mark is a getrusage plus (under db.SPAWN_LAT) two log
+	// lines, on the setup path of every proc — which is exactly the path being
+	// measured, so it is opt-in rather than always on.
+	CPU_PHASE_BREAKDOWN Tselector = "CPU_PHASE_BREAKDOWN"
+)
+
 // kernel procs
 const (
 	NAMED      Tselector = "NAMED"

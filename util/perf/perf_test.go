@@ -9,13 +9,38 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/perf"
 )
 
+// The perf labels are read from the environment once per process, so ask for
+// the CPU breakdown before any test constructs a ProcEnv or a Perf.
+func init() {
+	os.Setenv(proc.SIGMAPERF, string(perf.CPU_PHASE_BREAKDOWN)+";")
+}
+
+// procEnv returns a ProcEnv carrying the environment's perf labels.
+func procEnv() *proc.ProcEnv {
+	pe := proc.NewProcEnvUnset(false)
+	pe.SetPID(sp.Tpid("test-cpuphases"))
+	return pe
+}
+
 func TestCompile(t *testing.T) {
 	assert.NotNil(t, test.User)
+}
+
+// The CPU breakdown is opt-in: with the selector set there is a phase chain,
+// and an unset selector reports false (in which case NewCPUPhases returns nil,
+// making every Mark a no-op — see the nil case in TestCPUPhases).
+func TestHasLabel(t *testing.T) {
+	pe := procEnv()
+	assert.True(t, perf.HasLabel(pe, perf.CPU_PHASE_BREAKDOWN), "CPU_PHASE_BREAKDOWN should be set")
+	assert.False(t, perf.HasLabel(pe, perf.Tselector("NOT_A_SELECTOR")), "unset selector")
+	assert.NotNil(t, perf.NewCPUPhases(pe), "phases with the selector set")
+	assert.Equal(t, perf.CPUStart(pe) > 0, true, "CPUStart reads the clock when enabled")
 }
 
 func TestGetSamples(t *testing.T) {
@@ -63,7 +88,7 @@ func burnCPU(d time.Duration) {
 // for sleeping, and have its windows sum to the total the process consumed.
 func TestCPUPhases(t *testing.T) {
 	cpu0 := perf.CPUNow()
-	ph := perf.NewCPUPhases(sp.Tpid("test-cpuphases"), time.Now())
+	ph := perf.NewCPUPhases(procEnv())
 
 	burnCPU(60 * time.Millisecond)
 	busyCPU, busyWall := ph.Mark("busy")

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	db "sigmaos/debug"
+	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 )
 
@@ -50,10 +51,17 @@ type CPUPhases struct {
 	lastWall  time.Time
 }
 
-func NewCPUPhases(pid sp.Tpid, spawnTime time.Time) *CPUPhases {
+// NewCPUPhases returns a phase chain if the CPU_PHASE_BREAKDOWN perf selector
+// is set for this proc, and nil otherwise — Mark is nil-safe, so a caller holds
+// the result unconditionally and the marks become no-ops when it is off. Off is
+// the default because the chain measures the setup path it also runs on.
+func NewCPUPhases(pe *proc.ProcEnv) *CPUPhases {
+	if !HasLabel(pe, CPU_PHASE_BREAKDOWN) {
+		return nil
+	}
 	return &CPUPhases{
-		pid:       pid,
-		spawnTime: spawnTime,
+		pid:       pe.GetPID(),
+		spawnTime: pe.GetSpawnTime(),
 		lastCPU:   CPUNow(),
 		lastWall:  time.Now(),
 	}
@@ -84,7 +92,8 @@ func (p *CPUPhases) Mark(name string) (cpu time.Duration, wall time.Duration) {
 	return cpu, wall
 }
 
-func LogRuntimeInitLatency(pid sp.Tpid, spawnTime time.Time) {
+func LogRuntimeInitLatency(pe *proc.ProcEnv) {
+	pid, spawnTime := pe.GetPID(), pe.GetSpawnTime()
 	execTimeStr := os.Getenv("SIGMA_EXEC_TIME")
 	// If not set, bail out
 	if execTimeStr == "" {
@@ -96,8 +105,13 @@ func LogRuntimeInitLatency(pid sp.Tpid, spawnTime time.Time) {
 		return
 	}
 	execTime := time.UnixMicro(execTimeMicro)
+	// The wall-clock exec -> main latency is a plain spawn-latency metric, so
+	// it is reported whenever spawn latencies are; only the CPU breakdown of
+	// that window is gated.
 	LogSpawnLatency("Setup.RuntimeInit", pid, spawnTime, execTime)
-	logRuntimeInitRusage(pid, spawnTime)
+	if HasLabel(pe, CPU_PHASE_BREAKDOWN) {
+		logRuntimeInitRusage(pid, spawnTime)
+	}
 }
 
 // logRuntimeInitRusage reports how much of the exec -> main window was work
@@ -151,10 +165,11 @@ func logRuntimeInitRusage(pid sp.Tpid, spawnTime time.Time) {
 // work — the thing that decides how much shrinking the setup path can buy. As
 // with Setup.RuntimeInit.rusage, the counters include the trampoline's share
 // (reported separately as trampCPU there), since execve preserves them.
-func LogProcExitRusage(pid sp.Tpid, spawnTime time.Time) {
-	if !db.WillBePrinted(db.SPAWN_LAT) {
+func LogProcExitRusage(pe *proc.ProcEnv) {
+	if !HasLabel(pe, CPU_PHASE_BREAKDOWN) || !db.WillBePrinted(db.SPAWN_LAT) {
 		return
 	}
+	pid, spawnTime := pe.GetPID(), pe.GetSpawnTime()
 	var ru syscall.Rusage
 	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
 		db.DPrintf(db.SPAWN_LAT, "[%s] Proc.exit.rusage err %v", pid, err)
@@ -169,18 +184,29 @@ func LogProcExitRusage(pid sp.Tpid, spawnTime time.Time) {
 }
 
 // LogCPUSince logs the CPU consumed since startCPU (from CPUNow) as
-// "<name>.CPU".
+// "<name>.CPU". Gated on CPU_PHASE_BREAKDOWN, like the rest of the CPU
+// accounting; pair it with CPUSinceStart so the getrusage at the other end is
+// skipped too.
 //
 // Unlike CPUPhases.Mark this partitions nothing: use it for work that runs
 // concurrently with the phases, whose CPU is *also* counted in whichever
 // window it overlapped. Reported separately precisely because it can't be
 // added to the chain without double-counting.
-func LogCPUSince(name string, pid sp.Tpid, spawnTime time.Time, startCPU time.Duration) {
-	if !db.WillBePrinted(db.SPAWN_LAT) {
+func LogCPUSince(name string, pe *proc.ProcEnv, startCPU time.Duration) {
+	if !HasLabel(pe, CPU_PHASE_BREAKDOWN) || !db.WillBePrinted(db.SPAWN_LAT) {
 		return
 	}
 	cpu := CPUNow() - startCPU
-	LogSpawnLatency(name+".CPU", pid, spawnTime, time.Now().Add(-cpu))
+	LogSpawnLatency(name+".CPU", pe.GetPID(), pe.GetSpawnTime(), time.Now().Add(-cpu))
+}
+
+// CPUStart returns the CPU reading LogCPUSince expects, or 0 when the CPU
+// breakdown is off, so the caller pays no getrusage either way.
+func CPUStart(pe *proc.ProcEnv) time.Duration {
+	if !HasLabel(pe, CPU_PHASE_BREAKDOWN) {
+		return 0
+	}
+	return CPUNow()
 }
 
 // Some convenience functions for logging performance-related data

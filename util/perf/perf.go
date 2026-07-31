@@ -56,15 +56,27 @@ func (t Tload) String() string {
 }
 
 var labels map[Tselector]bool = nil
+var labelsOnce sync.Once
 
 func initLabels(pe *proc.ProcEnv) {
-	if labels == nil {
+	// Once, because HasLabel lets callers reach the labels before any Perf is
+	// constructed, and a proc may do so from more than one goroutine.
+	labelsOnce.Do(func() {
 		labelstr := proc.GetLabels(pe.GetPerf())
 		labels = make(map[Tselector]bool, len(labelstr))
 		for k, v := range labelstr {
 			labels[Tselector(k)] = v
 		}
-	}
+	})
+}
+
+// HasLabel reports whether the SIGMAPERF selector s is set for this proc. Use
+// it to gate instrumentation that costs enough to be worth turning off, rather
+// than checking a debug selector: SIGMADEBUG decides what gets *printed*, this
+// decides what gets *measured*.
+func HasLabel(pe *proc.ProcEnv, s Tselector) bool {
+	initLabels(pe)
+	return labels[s]
 }
 
 var loadfile *os.File

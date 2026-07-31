@@ -378,13 +378,7 @@ func TestCorral(t *testing.T) {
 		turboBoost        bool = true
 		useGVisor         bool = false
 	)
-	// Corral run configuration. These are the values the corral word_count app
-	// compiles in as its own defaults (corral.SetTuningDefaults in
-	// corral/examples/word_count), restated here so that the configuration a
-	// run uses is visible in one place and a sweep is a matter of editing a
-	// number. Note that grep's defaults differ (mapBinSize 13M,
-	// maxConcurrency 200, reduceBinSize 160M*100), so switching corralApp means
-	// revisiting these.
+	// Corral run configuration, app-independent part.
 	const (
 		corralApp    string = CorralWordCount
 		corralBranch string = "play-perf-asynch"
@@ -392,13 +386,58 @@ func TestCorral(t *testing.T) {
 		corralInput  string = "wiki-2G/"
 		corralOutput string = "output"
 		corralLambda bool   = true
-
-		corralSplitSize      int64 = 10 * 1024 * 1024
-		corralMapBinSize     int64 = 130 * 1024 * 1024
-		corralReduceBinSize  int64 = 160 * 1024 * 1024 * 5
-		corralMaxConcurrency int   = 32
-		corralMaxLineLength  int   = 2 * 1024 * 1024
 	)
+	// Task-granularity tuning, one block per corral example app: these are the
+	// values each app compiles in as its own defaults
+	// (corral.SetTuningDefaults in corral/examples/<app>), restated here so
+	// that a run's configuration is visible in one place and a sweep is a
+	// matter of editing a number. The two apps are tuned an order of magnitude
+	// apart on the map bin size and concurrency, so they get separate blocks
+	// rather than one shared set that would silently be wrong for one of them.
+	//
+	// word_count: 130M map bins are 8 mappers with 1G of input, 16 with 2G;
+	// 800M reduce bins are 16 reducers on 10G.
+	const (
+		wcSplitSize      int64 = 10 * 1024 * 1024
+		wcMapBinSize     int64 = 130 * 1024 * 1024
+		wcReduceBinSize  int64 = 160 * 1024 * 1024 * 5
+		wcMaxConcurrency int   = 32
+		wcMaxLineLength  int   = 2 * 1024 * 1024
+	)
+	// grep: 13M map bins, i.e. far more and smaller mappers than word_count,
+	// and a reduce bin large enough that grep's small output lands in one
+	// reducer.
+	const (
+		grepSplitSize      int64 = 10 * 1024 * 1024
+		grepMapBinSize     int64 = 13 * 1024 * 1024
+		grepReduceBinSize  int64 = 160 * 1024 * 1024 * 100
+		grepMaxConcurrency int   = 200
+		grepMaxLineLength  int   = 2 * 1024 * 1024
+	)
+	var (
+		corralSplitSize      int64
+		corralMapBinSize     int64
+		corralReduceBinSize  int64
+		corralMaxConcurrency int
+		corralMaxLineLength  int
+	)
+	switch corralApp {
+	case CorralWordCount:
+		corralSplitSize = wcSplitSize
+		corralMapBinSize = wcMapBinSize
+		corralReduceBinSize = wcReduceBinSize
+		corralMaxConcurrency = wcMaxConcurrency
+		corralMaxLineLength = wcMaxLineLength
+	case CorralGrep:
+		corralSplitSize = grepSplitSize
+		corralMapBinSize = grepMapBinSize
+		corralReduceBinSize = grepReduceBinSize
+		corralMaxConcurrency = grepMaxConcurrency
+		corralMaxLineLength = grepMaxLineLength
+	default:
+		assert.Fail(t, "No tuning block for corral app %v", corralApp)
+		return
+	}
 	// One entry per run, named for its results directory. The two 2G runs are
 	// the same configuration twice: the first pays to deploy the Lambda, the
 	// second finds it warm.

@@ -105,14 +105,9 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *mr.Job)
 	// writes its shards to its own. Doing it here keeps mappers from each
 	// checking whether it exists, which costs two namespace round trips per
 	// mapper — significant with fine-grained mappers.
-	if strings.Contains(job.Intermediate, "/s3/") {
-		intOutDir := mr.MapIntermediateDir(jobName, job.Intermediate)
-		if err := fsl.MkDir(job.Intermediate, 0777); err != nil {
-			return 0, err
-		}
-		if err := fsl.MkDir(intOutDir, 0777); err != nil {
-			return 0, err
-		}
+	if err := mr.CreateIntOutDirsS3(fsl, jobName, job.Intermediate); err != nil {
+		db.DPrintf(db.ALWAYS, "CreateIntOutDirsS3 %v err %v", job.Intermediate, err)
+		return 0, err
 	}
 	// Best-effort for UX: on a cold start the UX servers may not be up or known
 	// yet, and one may restart during a crash test, so a mapper still creates

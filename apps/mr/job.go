@@ -341,6 +341,21 @@ func CreateIntOutDirsUx(fsl *fslib.FsLib, job, intOutput string) error {
 // mkDirsIntOut creates intOutput and intOutput/<job>, tolerating both already
 // existing. MkDir-and-ignore-exists rather than Stat-then-MkDir: one round trip
 // instead of two, and it races correctly against another creator.
+// CreateIntOutDirsS3 creates the job's intermediate output directory in S3,
+// where — unlike UX — it is a single directory shared by every mapper. Called
+// from job preparation (coord.PrepareJob), alongside CreateIntOutDirsUx.
+//
+// Idempotent: an intermediate directory left behind by a previous run of the
+// job is not an error. Getting that wrong aborts job preparation before it
+// publishes the job's intermediate-output link, and the coordinator then dies
+// reading it ("Error GetFile JobIntOutLink: file not found").
+func CreateIntOutDirsS3(fsl *fslib.FsLib, job, intOutput string) error {
+	if !strings.Contains(intOutput, "/s3/") {
+		return nil
+	}
+	return mkDirsIntOut(fsl, job, intOutput)
+}
+
 func mkDirsIntOut(fsl *fslib.FsLib, job, intOutput string) error {
 	for _, pn := range []string{intOutput, MapIntermediateDir(job, intOutput)} {
 		if err := fsl.MkDir(pn, 0777); err != nil && !serr.IsErrorExists(err) {

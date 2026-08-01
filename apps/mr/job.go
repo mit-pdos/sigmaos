@@ -353,7 +353,15 @@ func CreateIntOutDirsS3(fsl *fslib.FsLib, job, intOutput string) error {
 	if !strings.Contains(intOutput, "/s3/") {
 		return nil
 	}
-	return mkDirsIntOut(fsl, job, intOutput)
+	// Create it through ~any rather than ~local. S3 is one global store, so the
+	// directory only needs creating once, and the driver doing so has no reason
+	// to require an S3 server on its own node — the same reason the job's output
+	// directory is created through ~any (JobLocalToAny). The job's intermediate
+	// path itself keeps its ~local, which is what each mapper wants: for S3,
+	// sp.S3ClientPath rewrites ~local to the path client that talks to S3
+	// directly.
+	pn, _ := sp.SubstLocal(intOutput, sp.ANY)
+	return mkDirsIntOut(fsl, job, pn)
 }
 
 func mkDirsIntOut(fsl *fslib.FsLib, job, intOutput string) error {

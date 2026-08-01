@@ -34,16 +34,16 @@ fi
 SYS_NAME="${SYS_NAME:-co-sandbox}"
 SYS_NAME_CAMEL="${SYS_NAME_CAMEL:-CoSandbox}"
 
-## Figure 10
-#echo "Generating MR graph (new)..."
-#$GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py --measurement_dir $RES_OUT_DIR/mr_vs_corral/ --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only.pdf --datasize=10G
-#echo "Done generating MR graph (new)..."
+# Figure 10
+echo "Generating MR graph (new)..."
+$GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py --measurement_dir $RES_OUT_DIR/mr_vs_corral/ --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only.pdf --datasize=10G
+echo "Done generating MR graph (new)..."
 
 ## Figure 12
 #echo "Generating Figure 12..."
 #$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_imgresize_rpc_multiplexing --out $GRAPH_OUT_DIR/be_imgresize_rpc_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 40 --prefix "imgresize-"
 #echo "Done generating Figure 12..."
 
-echo "Generating MR+MR multiplexing graph..."
-$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000 --out $GRAPH_OUT_DIR/be_mr_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 96 --prefix "mr-" --xmax 70000
-echo "Done generating MR+MR multiplexing graph..."
+#echo "Generating MR+MR multiplexing graph..."
+#$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000 --out $GRAPH_OUT_DIR/be_mr_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 96 --prefix "mr-" --xmax 70000
+#echo "Done generating MR+MR multiplexing graph..."

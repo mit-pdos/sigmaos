@@ -35,7 +35,7 @@ if [ $# -gt 0 ]; then
     exit 1
 fi
 
-if [ $EXP != "all" ] && [ $EXP != "mr" ] && [ $EXP != "mr_multi" ]; then
+if [ $EXP != "all" ] && [ $EXP != "mr" ] && [ $EXP != "mr_multi" ] && [ $EXP != "corral" ]; then
   echo "Unkown experiment $EXP"
   usage
   exit 1
@@ -50,6 +50,12 @@ LOG_DIR=/tmp/sigmaos-experiment-logs
 AWS_VPC=vpc-02f7e3816c4cc8e7f
 
 mkdir -p $LOG_DIR
+
+if [ $EXP == "all" ] || [ $EXP == "corral" ]; then
+  echo "Generating Corral data..."
+  go clean -testcache; go test -v -timeout 0 sigmaos/benchmarks/remote --run TestCorral --parallelize --platform aws --vpc $AWS_VPC --build-tag $TAG --no-shutdown-after-test --bench-version $VERSION --branch $BRANCH 2>&1 | tee $LOG_DIR/mr.out
+  echo "Done generating Corral data..."
+fi
 
 if [ $EXP == "all" ] || [ $EXP == "mr" ]; then
   echo "Generating MR data..."

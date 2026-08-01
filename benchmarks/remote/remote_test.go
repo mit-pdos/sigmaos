@@ -405,7 +405,7 @@ func TestCorral(t *testing.T) {
 		corralApp    string = CorralWordCount
 		corralBranch string = "play-perf-asynch"
 		corralBucket string = "9ps3"
-		corralInput  string = "wiki-2G/"
+		corralInput  string = "wiki-10G/"
 		corralOutput string = "output"
 		corralLambda bool   = true
 	)
@@ -460,10 +460,11 @@ func TestCorral(t *testing.T) {
 		assert.Fail(t, "No tuning block for corral app %v", corralApp)
 		return
 	}
-	// One entry per run, named for its results directory. The two 2G runs are
-	// the same configuration twice: the first pays to deploy the Lambda, the
-	// second finds it warm.
-	corralExps := []string{"corral-2G-cold", "corral-2G-warm"}
+	// One entry per run; each names the run's results directory together with the
+	// input it ran on (see CorralConfig.inputLabel), e.g. "corral-10G-cold" for
+	// a wiki-10G input. The two runs are the same configuration twice: the first
+	// pays to deploy the Lambda, the second finds it warm.
+	corralExps := []string{"cold", "warm"}
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
@@ -489,7 +490,7 @@ func TestCorral(t *testing.T) {
 		if !assert.Nil(ts.t, err, "Corral config: %v", err) {
 			return
 		}
-		benchName := filepath.Join(benchNameBase, exp)
+		benchName := filepath.Join(benchNameBase, fmt.Sprintf("corral-%s-%s", cfg.inputLabel(), exp))
 		db.DPrintf(db.ALWAYS, "Corral config: benchName %v cfg %v", benchName, cfg)
 		ts.RunStandardBenchmark(benchName, driverVM, GetCorralCmdConstructor(cfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 	}

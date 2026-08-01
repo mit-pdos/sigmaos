@@ -100,3 +100,28 @@ func TestCorralCmdLocal(t *testing.T) {
 		t.Errorf("unexpected local invocation:\n%s", cmd)
 	}
 }
+
+// The results directory name is derived from the input, so that changing the
+// input can't leave a run filed under the previous input's size.
+func TestCorralInputLabel(t *testing.T) {
+	for _, tc := range []struct {
+		input string
+		want  string
+	}{
+		{"wiki-10G/", "10G"},
+		{"wiki-2G", "2G"},
+		{"wiki-1.8G/", "1.8G"},
+		{"wiki-128M/", "128M"},
+		// No size suffix: the whole dataset name is the label.
+		{"gutenberg/", "gutenberg"},
+		// A nested prefix labels by its last element.
+		{"data/wiki-20G/", "20G"},
+		// A trailing dash has no size after it, so fall back to the name.
+		{"wiki-/", "wiki-"},
+	} {
+		cfg := &CorralConfig{Input: tc.input}
+		if got := cfg.inputLabel(); got != tc.want {
+			t.Errorf("inputLabel(%q) = %q want %q", tc.input, got, tc.want)
+		}
+	}
+}

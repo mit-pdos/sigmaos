@@ -2,6 +2,7 @@ package remote
 
 import (
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -101,6 +102,20 @@ func (cfg *CorralConfig) tuningFlags() string {
 // inputURL is the S3 URL of the job's input.
 func (cfg *CorralConfig) inputURL() string {
 	return fmt.Sprintf("s3://%s/%s", cfg.Bucket, cfg.Input)
+}
+
+// inputLabel names this run's input for a results directory: the size suffix of
+// the dataset when it has one ("wiki-10G/" -> "10G", matching the corral-<size>
+// naming the results have used), and the whole dataset name when it doesn't
+// ("gutenberg/" -> "gutenberg"). Derived from the input rather than written out
+// separately, so that changing the input can't leave a run's results filed
+// under the previous one's size.
+func (cfg *CorralConfig) inputLabel() string {
+	ds := path.Base(strings.Trim(cfg.Input, "/"))
+	if i := strings.LastIndex(ds, "-"); i >= 0 && i < len(ds)-1 {
+		return ds[i+1:]
+	}
+	return ds
 }
 
 // outputURL is the S3 URL the job's output (and its intermediate data) goes to.

@@ -94,6 +94,11 @@ func TestClassifyPath(t *testing.T) {
 		// Clnts keys its proxy clients by kernel ID.
 		{"name/ux/kid0/f", "{ux kid0 f}", false, false},
 		{"name/s3/kid0/bkt/key", "{s3 kid0 bkt key}", false, false},
+		// A pathname built by concatenating a directory that already ends in
+		// "/" with a file name: the doubled slash must not reach the S3 key,
+		// where it would name an absent object (NoSuchKey).
+		{"name/s3/~local/9ps3/wiki-2G//f0", "{s3 ~local 9ps3 wiki-2G/f0}", true, false},
+		{"name/ux/kid0//dir//f", "{ux kid0 dir/f}", false, false},
 		{"name/s3/~local/bktonly", "", false, true},
 		{"name/named/foo", "", false, true},
 	} {

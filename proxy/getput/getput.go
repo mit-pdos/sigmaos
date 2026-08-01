@@ -78,6 +78,11 @@ func (t *Target) isLocal() bool {
 // path is relative to the UX server's root, the same convention the etcd
 // and memcached cosandbox jobs use).
 func ClassifyPath(pn string) (*Target, error) {
+	// Clean first: an S3 key is an opaque string, so a doubled slash from a
+	// pathname built by concatenation ("dir/" + "/" + "f") would name a
+	// different, absent object rather than being ignored as it is on a
+	// filesystem path.
+	pn = filepath.Clean(pn)
 	if rest, ok := strings.CutPrefix(pn, sp.S3); ok {
 		parts := strings.SplitN(rest, "/", 3) // kid, bucket, key
 		if len(parts) < 3 || parts[1] == "" || parts[2] == "" {

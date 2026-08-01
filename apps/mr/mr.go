@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"path/filepath"
 
 	"github.com/dustin/go-humanize"
 
@@ -192,7 +193,11 @@ func NewBins(fsl *fslib.FsLib, inputDir string, swapLocalForAny bool, maxbinsz, 
 				break
 			}
 			split := mr.Split{
-				File:   inputDir + "/" + st.Name,
+				// Join rather than concatenate: a job description's input
+				// commonly ends in "/", and the doubled slash that produces
+				// survives into an S3 key, where it names a different (absent)
+				// object. UX tolerates it, S3 does not.
+				File:   filepath.Join(inputDir, st.Name),
 				Offset: sp.Toffset(i),
 				Length: sp.Tlength(n),
 			}

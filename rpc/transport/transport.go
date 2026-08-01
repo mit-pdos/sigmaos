@@ -84,8 +84,18 @@ func (t *Transport) ReadCall() (demux.CallI, error) {
 		if err != nil {
 			return nil, err
 		}
-		if uint32(iov.Len()) != n {
-			db.DFatalf("mismatch between supplied destination nvec and incoming nvec: %v != %v", iov.Len(), n)
+		// Sanity check: the caller must have supplied at least as many
+		// destinations as the reply has frames, or there is nowhere to put them.
+		if uint32(iov.Len()) < n {
+			db.DFatalf("mismatch between supplied destination nvec and incoming nvec: %v < %v", iov.Len(), n)
+		}
+		// Fewer frames than destinations is normal and must not be fatal: an
+		// error reply carries only the error, without the result message or its
+		// blob. Trim to what actually arrived so the error reaches the caller
+		// instead of being reported here as a frame-count mismatch. (The
+		// session/codec transport does the same.)
+		if uint32(iov.Len()) > n {
+			iov.TruncateFrames(int(n))
 		}
 		// Read frames into the IoVec
 		err = frame.ReadNFramesInto(t.rdr, iov)

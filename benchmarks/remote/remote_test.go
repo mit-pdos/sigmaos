@@ -296,7 +296,7 @@ func TestMR(t *testing.T) {
 	)
 	// Cluster configuration parameters
 	const (
-		driverVM          int  = 12
+		driverVM          int  = 17
 		numProcqOnlyNodes int  = 1
 		turboBoost        bool = true
 		useGVisor         bool = false
@@ -320,10 +320,10 @@ func TestMR(t *testing.T) {
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			{"mr-grep-wiki2G-bench-s3.json", 10, 4, 7000},
-			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000},
-			{"mr-wc-wiki2G-bench.json", 10, 4, 7000},
-			{"mr-wc-wiki2G-bench-s3.json", 10, 4, 7000},
+			//			{"mr-grep-wiki2G-bench-s3.json", 9, 4, 7000},
+			//			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000},
+			{"mr-wc-wiki10G-bench.json", 17, 4, 7000},
+			{"mr-wc-wiki10G-bench-s3.json", 17, 4, 7000},
 		}
 		mrDataPaths []MRDataPathExperiment = []MRDataPathExperiment{
 			// fslib streaming reader/writer

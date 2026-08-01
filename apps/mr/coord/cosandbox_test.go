@@ -61,33 +61,43 @@ func TestReducerBootInput(t *testing.T) {
 func TestReducerShmemMB(t *testing.T) {
 	// The job description's setting wins outright — including when it is
 	// smaller than what the mappers wrote, since it is the operator's call.
-	if mb := reducerShmemMB(64, 100*int64(sp.MBYTE), 1); mb != proc.Tmem(64) {
+	if mb := reducerShmemMB(64, 10, 100*int64(sp.MBYTE), 1); mb != proc.Tmem(64) {
 		t.Errorf("reducerShmemMB(cfg 64) = %v want 64", mb)
 	}
-	// Unset: 100 MB of intermediate output over 4 reducers is 25 MB each,
-	// doubled.
-	if mb := reducerShmemMB(0, 100*int64(sp.MBYTE), 4); mb != proc.Tmem(50) {
-		t.Errorf("reducerShmemMB = %v want 50", mb)
+	// Unset: 100 MB of intermediate output over 4 reducers is 25 MB each, plus
+	// framing, plus the margin — sized to the requirement, not a multiple of it.
+	// 25MB of shards + 10 replies of framing rounds up to 26MB.
+	if mb := reducerShmemMB(0, 10, 100*int64(sp.MBYTE), 4); mb != 26+SHMEM_MARGIN_MB {
+		t.Errorf("reducerShmemMB = %v want %v", mb, 26+SHMEM_MARGIN_MB)
 	}
 	// Unset with a tiny (or unknown, e.g. after a coordinator restart)
 	// intermediate size still has to leave the allocator room for reply framing.
-	if mb := reducerShmemMB(0, 0, 1); mb != MIN_SHMEM_MB {
-		t.Errorf("reducerShmemMB(0) = %v want %v", mb, MIN_SHMEM_MB)
+	if mb := reducerShmemMB(0, 0, 0, 1); mb != SHMEM_MARGIN_MB {
+		t.Errorf("reducerShmemMB(0) = %v want %v", mb, SHMEM_MARGIN_MB)
 	}
 	// nreduce is a divisor: a bogus value must not panic.
-	if mb := reducerShmemMB(0, int64(sp.MBYTE), 0); mb != proc.Tmem(2) {
-		t.Errorf("reducerShmemMB(1MB, 0) = %v want 2", mb)
+	if mb := reducerShmemMB(0, 1, int64(sp.MBYTE), 0); mb != 2+SHMEM_MARGIN_MB {
+		t.Errorf("reducerShmemMB(1MB, 0) = %v want %v", mb, 2+SHMEM_MARGIN_MB)
 	}
 }
 
 // The mapper's segment is sized from the job's bin size, which bounds a bin's
 // data (mr.NewBins closes a bin before it would exceed it).
 func TestMapperShmemMB(t *testing.T) {
-	if mb := mapperShmemMB(3 * int(sp.MBYTE)); mb != proc.Tmem(6) {
-		t.Errorf("mapperShmemMB = %v want 6", mb)
+	// 3MB of bin data in 3 splits: the data, plus a tail probe and reply
+	// framing per split, plus the margin. Emphatically not a multiple of binsz:
+	// the segment is reserved from the node's /dev/shm and every concurrently
+	// running mapper on the node holds one.
+	if mb := mapperShmemMB(3*int(sp.MBYTE), 3, 1024*1024, 4096); mb != 4+SHMEM_MARGIN_MB {
+		t.Errorf("mapperShmemMB = %v want %v", mb, 4+SHMEM_MARGIN_MB)
 	}
-	if mb := mapperShmemMB(1024); mb != MIN_SHMEM_MB {
-		t.Errorf("mapperShmemMB(1KB) = %v want %v", mb, MIN_SHMEM_MB)
+	if mb := mapperShmemMB(1024, 1, 1024*1024, 4096); mb != 1+SHMEM_MARGIN_MB {
+		t.Errorf("mapperShmemMB(1KB) = %v want %v", mb, 1+SHMEM_MARGIN_MB)
+	}
+	// The real benchmark shape: a 130MiB bin of 12 splits used to ask for
+	// 260MB, of which ~120MB was ever touched.
+	if mb := mapperShmemMB(136314880, 12, 2097152, 0); mb > 140 {
+		t.Errorf("mapperShmemMB(130MiB bin) = %vMB, want it sized to the ~130MiB requirement", mb)
 	}
 }
 

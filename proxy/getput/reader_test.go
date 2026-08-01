@@ -121,10 +121,11 @@ func TestReaderBoundaryCorrectness(t *testing.T) {
 	}
 }
 
-// TestReaderSingleWindow checks the single-final-window contract and that
-// tail extension reads happen only when the probe misses the straddling
-// line's newline.
-func TestReaderSingleWindow(t *testing.T) {
+// TestReaderFinalChunkTail checks the final chunk's tail behaviour: it is
+// fetched lazily (the constructor does no I/O on the direct path), and it
+// extends past the split end only when the probe misses the straddling line's
+// newline.
+func TestReaderFinalChunkTail(t *testing.T) {
 	data := []byte("aaaa bbbb\ncccc dddd eeee ffff\ngggg\n")
 	// Split ends mid-second-line; probe of 4 bytes misses its newline
 	s := &mr.Split{File: "name/ux/~local/in", Offset: 0, Length: 14}
@@ -134,29 +135,126 @@ func TestReaderSingleWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f.ngets < 2 {
-		t.Errorf("expected tail extension gets, got %d total gets", f.ngets)
+	// The direct path fetches per chunk, so opening the reader costs nothing:
+	// this is what lets the mapper's chunk readers overlap fetch with mapping.
+	if f.ngets != 0 {
+		t.Errorf("constructor did %d gets, want 0 (chunks are fetched lazily)", f.ngets)
 	}
 	rdr, o, final, err := r.GetChunkReader(64, 60)
 	if err != nil || !final || o != 0 {
-		t.Fatalf("first window: o %v final %v err %v", o, final, err)
+		t.Fatalf("first chunk: o %v final %v err %v", o, final, err)
+	}
+	if f.ngets < 2 {
+		t.Errorf("expected tail extension gets, got %d total gets", f.ngets)
 	}
 	b, _ := io.ReadAll(rdr)
-	// The buffer must reach through the straddling line's newline (byte 29)
+	// The chunk must reach through the straddling line's newline (byte 29)
 	if len(b) < 30 || b[29] != '\n' {
-		t.Errorf("window too short to finish straddling line: %d bytes %q", len(b), b)
+		t.Errorf("chunk too short to finish straddling line: %d bytes %q", len(b), b)
 	}
 	if _, _, _, err := r.GetChunkReader(64, 60); err != io.EOF {
-		t.Errorf("second window: want io.EOF, got %v", err)
+		t.Errorf("second chunk: want io.EOF, got %v", err)
 	}
 
 	// A probe that covers the newline must need exactly one get
 	f2 := newFakeClnt(data)
 	_, body2, probe2 := mr.SplitReadWindow(s, 1024, 64)
-	if _, err := newGetPutReader(f2, s.File, 0, body2, 1024, probe2, false, 0); err != nil {
+	r2, err := newGetPutReader(f2, s.File, 0, body2, 1024, probe2, false, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := r2.GetChunkReader(64, 60); err != nil {
 		t.Fatal(err)
 	}
 	if f2.ngets != 1 {
 		t.Errorf("probe covers newline: want 1 get, got %d", f2.ngets)
+	}
+}
+
+// TestReaderTilesWindow is the point of the direct path: a split's window is
+// tiled into sz/offinc chunks, each fetched on its own, so that the mapper's
+// concurrent chunk readers overlap fetching with mapping and put several ranged
+// gets in flight per split. Serving the whole window as one chunk instead left
+// four of the five chunk readers idle (claude-slop/GET_PUT_SLOW.md).
+func TestReaderTilesWindow(t *testing.T) {
+	const (
+		sz     = 64 // what the mapper passes: cap(ckr.buf) = linesz + wordsz
+		offinc = 60 // ... minus the word overlap
+		body   = 600
+	)
+	data := bytes.Repeat([]byte("word xyz\n"), 200) // 1800 bytes, newline every 9
+	s := &mr.Split{File: "name/ux/~local/in", Offset: 0, Length: body}
+	f := newFakeClnt(data)
+	off, bd, probe := mr.SplitReadWindow(s, 1024, 16)
+	r, err := newGetPutReader(f, s.File, off, bd, 1024, probe, false, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	offs := []sp.Toffset{}
+	nfinal := 0
+	for {
+		rdr, o, final, err := r.GetChunkReader(sz, offinc)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := io.ReadAll(rdr)
+		if len(b) == 0 {
+			t.Errorf("chunk at %v is empty", o)
+		}
+		offs = append(offs, o)
+		if final {
+			nfinal++
+		}
+		if len(offs) > 100 {
+			t.Fatal("chunk cursor is not advancing")
+		}
+	}
+	// ceil(600/60) = 10 chunks, offsets 0, 60, 120, ...
+	if len(offs) != 10 {
+		t.Errorf("got %d chunks %v, want 10", len(offs), offs)
+	}
+	for i, o := range offs {
+		if o != sp.Toffset(i*offinc) {
+			t.Errorf("chunk %d at offset %v, want %v", i, o, i*offinc)
+		}
+	}
+	if nfinal != 1 {
+		t.Errorf("%d final chunks, want exactly 1", nfinal)
+	}
+	// One get per chunk, so the fetches can overlap; the old whole-window
+	// reader did exactly one for the entire split.
+	if f.ngets < len(offs) {
+		t.Errorf("%d gets for %d chunks: chunks are not fetched individually", f.ngets, len(offs))
+	}
+}
+
+// The delegated (cosandbox) path keeps the whole-window contract: the store
+// holds exactly one reply per rpcIdx, so there is nothing to tile.
+func TestReaderDelegatedWholeWindow(t *testing.T) {
+	data := bytes.Repeat([]byte("word xyz\n"), 200)
+	s := &mr.Split{File: "name/ux/~local/in", Offset: 0, Length: 600}
+	f := newFakeClnt(data)
+	off, body, probe := mr.SplitReadWindow(s, 1024, 16)
+	f.delegated[0] = data[off : uint64(off)+uint64(body)+uint64(probe)]
+	r, err := newGetPutReader(f, s.File, off, body, 1024, probe, true, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rdr, o, final, err := r.GetChunkReader(64, 60)
+	if err != nil || !final || o != off {
+		t.Fatalf("delegated chunk: o %v final %v err %v", o, final, err)
+	}
+	b, _ := io.ReadAll(rdr)
+	if len(b) < int(body) {
+		t.Errorf("delegated chunk %d bytes, want >= %v (the whole window)", len(b), body)
+	}
+	if _, _, _, err := r.GetChunkReader(64, 60); err != io.EOF {
+		t.Errorf("second chunk: want io.EOF, got %v", err)
+	}
+	if f.ndeleg[0] != 1 {
+		t.Errorf("rpcIdx 0 fetched %d times, want exactly 1", f.ndeleg[0])
 	}
 }

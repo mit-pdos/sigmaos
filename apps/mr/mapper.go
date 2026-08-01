@@ -407,14 +407,7 @@ func (m *Mapper) doSplit(s *mr.Split, idx int) (sp.Tlength, error) {
 		// (mr.SplitReadWindow); the tail past the probe is fetched lazily
 		// with direct (non-delegated) RPCs.
 		off, body, probe := mr.SplitReadWindow(s, m.linesz, m.tailProbeSz)
-		// This constructor performs the split's get — the delegated one when a
-		// cosandbox prefetched it, a ranged RPC otherwise — plus any lazy tail
-		// extension, so it is the whole fetch cost of the split.
-		getStart := time.Now()
 		pfr, err = getput.NewGetPutReader(m.clnts, s.File, off, body, sp.Tlength(m.linesz), probe, m.useCosandbox, uint64(idx))
-		if err == nil {
-			m.gets.record(getStart)
-		}
 	} else {
 		if pn, ok := sp.S3ClientPath(s.File); ok {
 			s.File = pn
@@ -438,12 +431,14 @@ func (m *Mapper) doSplit(s *mr.Split, idx int) (sp.Tlength, error) {
 	}
 
 	db.DPrintf(db.MR, "Mapper openS3Reader time: %v", time.Since(start))
+	// Everything that goes into fetching this split's input counts, whatever the
+	// path does under it: opening the reader (an Open RPC on the fslib path, the
+	// delegated whole-window get with a cosandbox, no I/O at all on the direct
+	// getput path) ...
+	m.gets.record(start)
 	defer pfr.Close()
-	// On the fslib path the reads happen as the chunk readers pull chunks, so
-	// time them there rather than at open.
-	if !m.useGetPut {
-		pfr = &timedSplitReader{SplitReader: pfr, gets: &m.gets}
-	}
+	// ... plus every chunk the readers pull below.
+	pfr = &timedSplitReader{SplitReader: pfr, gets: &m.gets}
 
 	type result struct {
 		n   sp.Tlength

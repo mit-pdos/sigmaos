@@ -7,6 +7,7 @@
 package clnt
 
 import (
+	"fmt"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -116,12 +117,21 @@ func (rpcc *RPCClnt) runWrappedRPC(delegate bool, method string, iniov *sessp.Io
 }
 
 func processWrappedRPCRep(outiov *sessp.IoVec, res proto.Message, outblob *rpcproto.Blob) error {
+	if outiov.Len() == 0 {
+		return serr.NewErr(serr.TErrUnreachable, "empty RPC reply")
+	}
 	rep := &rpcproto.Rep{}
 	if err := proto.Unmarshal(outiov.GetFrame(0).GetBuf(), rep); err != nil {
 		return serr.NewErrError(err)
 	}
 	if rep.Err.ErrCode != 0 {
 		return sp.NewErr(rep.Err)
+	}
+	// A reply that carries no error must carry the result message (and its blob
+	// frames, if any). Fewer frames than that means the reply was truncated;
+	// report it rather than indexing past the end.
+	if outiov.Len() < 2 {
+		return serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("short RPC reply: %d frames, no error", outiov.Len()))
 	}
 	if err := proto.Unmarshal(outiov.GetFrame(1).GetBuf(), res); err != nil {
 		return err

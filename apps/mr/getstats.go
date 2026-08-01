@@ -10,26 +10,42 @@ import (
 // of how the input is fetched. What counts as one get differs by path, and so
 // does how the sum relates to elapsed time.
 //
-// A mapper's input is its bin of splits:
+// A mapper times every step of getting a split's bytes, whatever the path does
+// underneath: opening the split's reader, and then each chunk its chunk readers
+// pull. So a get is
 //
-//   - getput, cosandbox: one delegated get per split, which retrieves the
-//     window the cosandbox prefetched (blocking until it materializes).
-//   - getput, direct: one ranged get RPC per split to the local UX/S3 proxy,
-//     plus any lazy tail extension past the probe.
-//   - fslib: one chunk read. CONCURRENCY chunk readers run in parallel per
-//     split, so the sum counts concurrent reads separately and can exceed the
-//     mapper's wall time.
+//   - the open, once per split: an Open RPC on the fslib path, the delegated
+//     whole-window get with a cosandbox (which blocks until the prefetched
+//     window materializes), and no I/O at all on the direct getput path, where
+//     the reader fetches lazily;
+//   - each chunk fetch: a ranged RPC to the UX/S3 proxy on the getput path
+//     (plus any tail extension past the probe on the split's final chunk), a
+//     streamed read on the fslib path, and a slice of the already-fetched
+//     window with a cosandbox.
 //
-// A reducer's input is one output shard per mapper:
+// The paths are therefore measured the same way and the totals are comparable.
+// Read them with one caveat: CONCURRENCY chunk readers run in parallel per
+// split, so time spent in concurrent chunk fetches is counted once per fetch and
+// the sum can exceed the mapper's wall time. A cosandbox moves nearly all of a
+// split's fetch into the (serial) open, which is why its total reads lower.
 //
-//   - getput, cosandbox: one delegated whole-shard get per mapper.
-//   - getput, direct: one whole-shard get RPC per mapper, to the proxy on the
-//     kernel that ran it.
-//   - fslib: one streamed read per shard, timed around the ReadKVs that
-//     consumes it.
+// A reducer's input is one output shard per mapper, read one at a time on every
+// path, so its sums are comparable to elapsed time. Unlike the mapper's, though,
+// the reducer's paths are *not* measured at the same layer, and the two are not
+// directly comparable:
 //
-// Every path but the mapper's fslib one issues its gets serially, so their sums
-// are comparable to elapsed time. Compare across paths with that in mind.
+//   - getput (direct or cosandbox): the whole shard arrives at open — one
+//     whole-shard RPC to the proxy on the kernel that ran the mapper, or one
+//     delegated get of what the cosandbox prefetched — so the figure is the
+//     fetch alone.
+//   - fslib: the shard streams in as ReadKVs consumes it, through a bufio
+//     reader, so there is no layer at which the fetch can be timed separately
+//     without timing every buffered read. The figure therefore brackets ReadKVs
+//     and includes the decode and combine interleaved with the streaming: an
+//     upper bound on fetch time, not the fetch alone.
+//
+// So a smaller reducer figure on the getput path does not by itself mean it
+// fetched faster.
 type getStats struct {
 	ns atomic.Int64
 	n  atomic.Int64

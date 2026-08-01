@@ -529,8 +529,18 @@ func (sca *SPProxySrvAPI) GetDelegatedRPCReply(ctx fs.CtxI, req scproto.SigmaDel
 			db.DFatalf("Err get Shmem Buf: %v", err)
 		}
 		shmemBufStartAddr := uint64(uintptr(unsafe.Pointer(unsafe.SliceData(shmemBuf))))
-		for _, f := range iov.GetFrames() {
+		for i, f := range iov.GetFrames() {
 			off := uint64(uintptr(unsafe.Pointer(unsafe.SliceData(f.GetBuf())))) - shmemBufStartAddr
+			// The offset is a pointer difference, which is only meaningful if the
+			// frame was allocated from this segment. A frame that came from the Go
+			// heap instead yields a wild offset, and the client reads whatever
+			// happens to be at it — surfacing far away as "cannot parse invalid
+			// wire-format data" rather than here. Check rather than trust: the
+			// whole frame must lie inside the segment.
+			if off+uint64(f.Len()) > uint64(len(shmemBuf)) {
+				db.DFatalf("Err delegated RPC(%v) reply frame %v of %v (len %v) is not in shmem segment %v (size %v): offset %v — the frame was not allocated by the segment's allocator",
+					req.RPCIdx, i, iov.Len(), f.Len(), sca.sc.ProcEnv().GetPID(), len(shmemBuf), int64(off))
+			}
 			// Record offset in shmem region
 			rep.ShmOffs = append(rep.ShmOffs, uint64(off))
 			// Record length

@@ -12,17 +12,42 @@ import (
 	sp "sigmaos/sigmap"
 )
 
-// mapperShmemMB sizes the shared-memory segment spproxy sets up for a
-// cosandbox mapper at twice the job's bin size, rounded up to whole MB.
-// spproxy reads each prefetched read window into the segment and the mapper's
-// delegated get maps it there instead of copying it back over the spproxy
-// socket, so the segment has to hold all of a mapper's windows at once (the
-// boot script issues one get per split). mr.NewBins closes a bin once adding
-// another split would reach binsz, so binsz bounds a bin's data; the factor of
-// two covers the per-split tail probes, the marshaled reply framing, and the
-// allocator's slack.
-func mapperShmemMB(binsz int) proc.Tmem {
-	mb := proc.Tmem((2*uint64(binsz) + uint64(sp.MBYTE) - 1) / uint64(sp.MBYTE))
+// Bytes of reply framing spproxy allocates in the segment alongside each
+// prefetched window: the marshaled rpcproto.Rep and the reply message, which
+// measure 2 and 4 bytes for an S3/UX get. Rounded well up, since it is per
+// split and the cost of being wrong is a job that dies mid-map.
+const shmemReplyFramingBytes = 1024
+
+// Headroom over the computed requirement. A segment is a per-proc reservation
+// against the node's /dev/shm, so this is deliberately small: oversizing it
+// costs every concurrently running mapper on the node.
+const SHMEM_MARGIN_MB proc.Tmem = 8
+
+// mapperShmemMB sizes the shared-memory segment spproxy sets up for a cosandbox
+// mapper. spproxy reads each prefetched read window into the segment and the
+// mapper's delegated get maps it there instead of copying it back over the
+// spproxy socket, so the segment has to hold all of a mapper's windows at once
+// (the boot script issues one get per split).
+//
+// mr.NewBins closes a bin once adding another split would reach binsz, so binsz
+// bounds a bin's data; on top of that each split carries a tail probe and its
+// reply framing. Sized to that requirement plus a small margin, and no more: the
+// segment is memory reserved from the node's /dev/shm (400MB, see
+// dcontainer.go) and every mapper running concurrently on the node holds one.
+// A previous 2x-binsz fudge asked for 260MB per mapper where 120MB was used,
+// which with 2 mappers per node oversubscribed /dev/shm.
+func mapperShmemMB(binsz, nsplit, linesz, probesz int) proc.Tmem {
+	// The probe is the same for every split of a job: SplitReadWindow defaults
+	// and caps it without reference to the split.
+	_, _, probe := mrapi.SplitReadWindow(&mrapi.Split{}, linesz, probesz)
+	need := uint64(binsz) + uint64(nsplit)*(uint64(probe)+shmemReplyFramingBytes)
+	return shmemMB(need)
+}
+
+// shmemMB rounds a byte requirement up to whole MB, adds the margin, and
+// enforces the floor.
+func shmemMB(need uint64) proc.Tmem {
+	mb := proc.Tmem((need+uint64(sp.MBYTE)-1)/uint64(sp.MBYTE)) + SHMEM_MARGIN_MB
 	if mb < MIN_SHMEM_MB {
 		return MIN_SHMEM_MB
 	}
@@ -72,19 +97,18 @@ func mapperBootInput(bin mr.Bin, linesz, probesz int) ([]byte, error) {
 // reducer. That keeps a job description that doesn't set it working, but the
 // configured value is what to reach for when a job's per-reducer input is known
 // ahead of time: it is requested memory, so both under- and oversizing it cost.
-func reducerShmemMB(cfgMB int, mapOutBytes int64, nreduce int) proc.Tmem {
+func reducerShmemMB(cfgMB, nshard int, mapOutBytes int64, nreduce int) proc.Tmem {
 	if cfgMB > 0 {
 		return proc.Tmem(cfgMB)
 	}
 	if nreduce < 1 {
 		nreduce = 1
 	}
-	perReducer := uint64(mapOutBytes) / uint64(nreduce)
-	mb := proc.Tmem((2*perReducer + uint64(sp.MBYTE) - 1) / uint64(sp.MBYTE))
-	if mb < MIN_SHMEM_MB {
-		return MIN_SHMEM_MB
-	}
-	return mb
+	// What one reducer reads, plus the framing of one reply per shard. Sized to
+	// the requirement rather than a multiple of it, for the same reason as
+	// mapperShmemMB: it is a reservation against the node's /dev/shm.
+	need := uint64(mapOutBytes)/uint64(nreduce) + uint64(nshard)*shmemReplyFramingBytes
+	return shmemMB(need)
 }
 
 // reducerBootInput builds the boot input for the mr_reducer_boot cosandbox

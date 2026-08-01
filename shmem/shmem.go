@@ -93,6 +93,18 @@ func NewSegment(idStr string, size proc.Tmem, create bool) (*Segment, error) {
 			shmUnlink(name)
 			return nil, fmt.Errorf("err ftruncate: %v", err)
 		}
+		// Reserve the pages now. /dev/shm is a tmpfs whose size is fixed when
+		// the container starts (see dcontainer.go), and it is shared by every
+		// proc on the node — ftruncate and mmap only reserve address space, so
+		// without this an oversubscribed tmpfs is not discovered until some
+		// later write faults, far from the cause. Fallocate on tmpfs allocates
+		// for real and reports ENOSPC here instead.
+		if err := unix.Fallocate(fd, 0, 0, int64(size)); err != nil {
+			db.DPrintf(db.ERROR, "Err fallocate shmem segment %v (%v bytes): %v — /dev/shm too small for the segments this node's procs request", name, size, err)
+			unix.Close(fd)
+			shmUnlink(name)
+			return nil, fmt.Errorf("err fallocate shmem %v (%v bytes): %v", name, size, err)
+		}
 	}
 	// Map the shared memory object into the process address space
 	buf, err := unix.Mmap(fd, 0, sms.size, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED)
@@ -110,6 +122,11 @@ func NewSegment(idStr string, size proc.Tmem, create bool) (*Segment, error) {
 // Retrieve the buffer referring to a shared memory segment
 func (sms *Segment) GetBuf() []byte {
 	return sms.buf
+}
+
+// Name identifies the segment (the owning proc's PID), for error reporting.
+func (sms *Segment) Name() string {
+	return sms.idStr
 }
 
 // Destroy a shared memory segment

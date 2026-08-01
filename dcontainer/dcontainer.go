@@ -147,7 +147,7 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string, useGViso
 			Resources: container.Resources{
 				Ulimits: ulimits,
 			},
-			ShmSize: 400 * sp.MBYTE,
+			ShmSize: 1000 * sp.MBYTE,
 		}, &network.NetworkingConfig{
 			EndpointsConfig: endpoints,
 		}, nil, kernelId+"-procd-"+p.GetPid().String())

@@ -353,9 +353,9 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		}
 		// Retrieve the cosandbox's prefetched splits through shared memory
 		// rather than copying them back over the spproxy socket.
-		shmemMB := mapperShmemMB(c.binsz)
+		shmemMB := mapperShmemMB(c.binsz, len(bin), c.lineszInt, c.tailProbeSz)
 		p.SetShmemMB(shmemMB)
-		db.DPrintf(db.MR_COORD, "mapperProc %v cosandbox shmem %vMB", p.GetPid(), shmemMB)
+		db.DPrintf(db.MR_COORD, "mapperProc %v cosandbox shmem %vMB (binsz %v nsplit %v)", p.GetPid(), shmemMB, c.binsz, len(bin))
 		p.SetCoSandbox(c.mrBootWASM, input)
 		p.SetRunCoSandbox(true)
 		// Deliberately no SetRunAfterCoSandbox(true): DelegatedRPC blocks
@@ -393,7 +393,7 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		}
 		// Retrieve the cosandbox's prefetched shards through shared memory
 		// rather than copying them back over the spproxy socket.
-		shmemMB := reducerShmemMB(c.reduceShmemMB, c.mapOutBytes.Load(), c.nreducetask)
+		shmemMB := reducerShmemMB(c.reduceShmemMB, len(data.Input), c.mapOutBytes.Load(), c.nreducetask)
 		p.SetShmemMB(shmemMB)
 		db.DPrintf(db.MR_COORD, "reducerProc %v cosandbox shmem %vMB (cfg %vMB mapOut %v nreduce %v) nshard %v", p.GetPid(), shmemMB, c.reduceShmemMB, c.mapOutBytes.Load(), c.nreducetask, len(data.Input))
 		p.SetCoSandbox(c.mrReduceBootWASM, input)

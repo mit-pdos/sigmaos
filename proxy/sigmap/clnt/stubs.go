@@ -253,9 +253,18 @@ func (scc *SPProxyClnt) WriteRead(fd int, iniov *sessp.IoVec, outiov *sessp.IoVe
 	if err != nil {
 		return err
 	}
+	// Fewer frames than destinations is normal and must not be fatal: the RPC
+	// carried in this WriteRead may have failed, and an error reply carries only
+	// the error, without the result message or its blob. Trim to what arrived so
+	// the caller unmarshals that error, instead of it being reported here as a
+	// frame-count mismatch. More frames than destinations has nowhere to go, and
+	// is a real bug.
 	if rep.UseShmem && scc.shm != nil {
-		if len(rep.ShmOffs) != outiov.Len() {
+		if len(rep.ShmOffs) > outiov.Len() {
 			db.DFatalf("WriteRead shmem: frame count mismatch: got %v want %v", len(rep.ShmOffs), outiov.Len())
+		}
+		if len(rep.ShmOffs) < outiov.Len() {
+			outiov.TruncateFrames(len(rep.ShmOffs))
 		}
 		buf := scc.shm.GetBuf()
 		for i, off := range rep.ShmOffs {
@@ -264,8 +273,11 @@ func (scc *SPProxyClnt) WriteRead(fd int, iniov *sessp.IoVec, outiov *sessp.IoVe
 		}
 		return nil
 	}
-	if d.Len() != outiov.Len() {
+	if d.Len() > outiov.Len() {
 		db.DFatalf("WriteRead: frame count mismatch: got %v want %v", d.Len(), outiov.Len())
+	}
+	if d.Len() < outiov.Len() {
+		outiov.TruncateFrames(d.Len())
 	}
 	outiov.CopyFrom(d)
 	return nil

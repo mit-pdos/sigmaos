@@ -35,6 +35,12 @@ type CorralConfig struct {
 	ReduceBinSize  int64 // sets how many reducers the job has
 	MaxConcurrency int   // concurrently executing mappers or reducers
 	MaxLineLength  int   // maximum input line length
+
+	// Memory (MB) the Lambda function is deployed with. Lambda scales a
+	// function's vCPU allocation with its memory, so this is what decides how
+	// much CPU a mapper gets — the closest counterpart to the MR benchmark's
+	// per-worker mem request. Zero leaves corral's own default.
+	LambdaMemoryMB int64
 }
 
 // NewCorralConfig builds a corral run configuration. Every option is a
@@ -47,6 +53,7 @@ func NewCorralConfig(
 	lambda bool,
 	splitSize, mapBinSize, reduceBinSize int64,
 	maxConcurrency, maxLineLength int,
+	lambdaMemoryMB int64,
 ) (*CorralConfig, error) {
 	if app != CorralWordCount && app != CorralGrep {
 		return nil, fmt.Errorf("NewCorralConfig: unknown corral app %q (want %q or %q)", app, CorralWordCount, CorralGrep)
@@ -69,6 +76,7 @@ func NewCorralConfig(
 		ReduceBinSize:  reduceBinSize,
 		MaxConcurrency: maxConcurrency,
 		MaxLineLength:  maxLineLength,
+		LambdaMemoryMB: lambdaMemoryMB,
 	}, nil
 }
 
@@ -78,9 +86,9 @@ func (cfg *CorralConfig) String() string {
 }
 
 // tuningFlags renders the flags for the knobs this config sets, and only those:
-// an unset knob is left to the corral app's compiled-in default.
+// an unset knob is left to the corral app's (or corral's) own default.
 func (cfg *CorralConfig) tuningFlags() string {
-	flags := make([]string, 0, 5)
+	flags := make([]string, 0, 6)
 	if cfg.SplitSize > 0 {
 		flags = append(flags, "--splitsize "+strconv.FormatInt(cfg.SplitSize, 10))
 	}
@@ -95,6 +103,11 @@ func (cfg *CorralConfig) tuningFlags() string {
 	}
 	if cfg.MaxLineLength > 0 {
 		flags = append(flags, "--maxlinelength "+strconv.Itoa(cfg.MaxLineLength))
+	}
+	// Only meaningful when deploying to Lambda; a local run has no function to
+	// size.
+	if cfg.Lambda && cfg.LambdaMemoryMB > 0 {
+		flags = append(flags, "--lambdamemory "+strconv.FormatInt(cfg.LambdaMemoryMB, 10))
 	}
 	return strings.Join(flags, " ")
 }

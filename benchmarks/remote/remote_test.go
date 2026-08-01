@@ -408,6 +408,11 @@ func TestCorral(t *testing.T) {
 		corralInput  string = "wiki-10G/"
 		corralOutput string = "output"
 		corralLambda bool   = true
+		// Lambda scales a function's vCPU allocation with its memory, and 1769MB
+		// is where it gets exactly one full vCPU. Pinned here rather than left to
+		// corral's default so that the CPU each mapper gets is recorded with the
+		// run, and so a change to that default can't silently move the baseline.
+		corralLambdaMemoryMB int64 = 1769
 	)
 	// Task-granularity tuning, one block per corral example app: these are the
 	// values each app compiles in as its own defaults
@@ -486,6 +491,7 @@ func TestCorral(t *testing.T) {
 			corralReduceBinSize,
 			corralMaxConcurrency,
 			corralMaxLineLength,
+			corralLambdaMemoryMB,
 		)
 		if !assert.Nil(ts.t, err, "Corral config: %v", err) {
 			return

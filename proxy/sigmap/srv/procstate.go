@@ -248,17 +248,22 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 	}
 	ps.cond = sync.NewCond(&ps.mu)
 	ps.bsCond = sync.NewCond(&ps.mu)
+	// Read the proc's settings from its ProcEnv, not from p: p is nil when the
+	// proc's own Init reaches spproxy before procd's IncomingProc does (the two
+	// race, and whichever arrives first creates the state). Both of these live
+	// on the ProcEnvProto anyway — Proc.GetShmemMB and Proc.GetRunCoSandbox just
+	// forward to it — so reading them here is identical and nil-safe.
 	if pe.GetShmemEnabled() {
 		var err error
 		start := time.Now()
-		ps.shm, err = shmem.NewSegment(pe.GetPID().String(), p.GetShmemMB()*proc.Tmem(sp.MBYTE), true)
+		ps.shm, err = shmem.NewSegment(pe.GetPID().String(), pe.GetShmemMB()*proc.Tmem(sp.MBYTE), true)
 		if err != nil {
 			db.DFatalf("Err shmem NewSegment: %v", err)
 		}
 		ps.shmAlloc = shmem.NewAllocator(ps.shm)
 		perf.LogSpawnLatency("SPProxySrv.shmem.NewSegment", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
 	}
-	if ps.p.GetRunCoSandbox() {
+	if pe.GetRunCoSandbox() {
 		ps.sigmaClntCreationStarted = true
 		go ps.createSigmaClnt(spps)
 	} else {

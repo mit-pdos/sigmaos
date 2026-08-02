@@ -354,6 +354,12 @@ func TestMR(t *testing.T) {
 	// Constant MR benchmark configuration parameters
 	const (
 		measureTpt bool = false
+		// How many times to repeat each configuration. Phase times vary enough
+		// between runs that a single run can't distinguish a real difference
+		// between data paths from noise, so each configuration's results
+		// directory holds one run-<n> subdirectory per repetition, and the graph
+		// script averages them.
+		numRuns int = 5
 	)
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
@@ -393,9 +399,13 @@ func TestMR(t *testing.T) {
 					if ds, ok := mrCfg.JobCfg.InputDataset(); ok {
 						ts.SetInputData([]string{ds})
 					}
-					db.DPrintf(db.ALWAYS, "MR config: benchName %v memReq %v data %v", benchName, mrEP.memReq, data)
+					db.DPrintf(db.ALWAYS, "MR config: benchName %v memReq %v data %v nruns %v", benchName, mrEP.memReq, data, numRuns)
 					numFullNodes := mrEP.numNodes - numProcqOnlyNodes
-					ts.RunStandardBenchmark(benchName, driverVM, GetMRCmdConstructor(mrCfg, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+					for run := 1; run <= numRuns; run++ {
+						runName := filepath.Join(benchName, fmt.Sprintf("run-%d", run))
+						db.DPrintf(db.ALWAYS, "MR run %v/%v: %v", run, numRuns, runName)
+						ts.RunStandardBenchmark(runName, driverVM, GetMRCmdConstructor(mrCfg, prewarmRealm, measureTpt, perf), mrEP.numNodes, mrEP.numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+					}
 				}
 			}
 		}
@@ -429,6 +439,10 @@ func TestCorral(t *testing.T) {
 		// corral's default so that the CPU each mapper gets is recorded with the
 		// run, and so a change to that default can't silently move the baseline.
 		corralLambdaMemoryMB int64 = 1769
+		// How many times to repeat each experiment. Each repetition lands in its
+		// own run-<n> subdirectory of the experiment's results directory, which
+		// the graph script averages; see the same const in TestMR.
+		numRuns int = 5
 	)
 	// Task-granularity tuning, one block per corral example app: these are the
 	// values each app compiles in as its own defaults
@@ -513,8 +527,12 @@ func TestCorral(t *testing.T) {
 			return
 		}
 		benchName := filepath.Join(benchNameBase, fmt.Sprintf("corral-%s-%s", cfg.inputLabel(), exp))
-		db.DPrintf(db.ALWAYS, "Corral config: benchName %v cfg %v", benchName, cfg)
-		ts.RunStandardBenchmark(benchName, driverVM, GetCorralCmdConstructor(cfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+		db.DPrintf(db.ALWAYS, "Corral config: benchName %v cfg %v nruns %v", benchName, cfg, numRuns)
+		for run := 1; run <= numRuns; run++ {
+			runName := filepath.Join(benchName, fmt.Sprintf("run-%d", run))
+			db.DPrintf(db.ALWAYS, "Corral run %v/%v: %v", run, numRuns, runName)
+			ts.RunStandardBenchmark(runName, driverVM, GetCorralCmdConstructor(cfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+		}
 	}
 }
 

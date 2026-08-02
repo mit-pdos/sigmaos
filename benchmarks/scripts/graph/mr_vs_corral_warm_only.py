@@ -58,7 +58,18 @@ def bench_out(dname):
     return None
   return outs[0]
 
-def scrape_times(dname, sigma):
+def run_dirs(dname):
+  # A configuration's results directory either holds a single run's output
+  # directly (the old layout) or one subdirectory per repetition (run-1,
+  # run-2, ...), which is what the benchmark writes when it repeats a
+  # configuration. Accept both.
+  if bench_out(dname) is not None:
+    return [dname]
+  subdirs = sorted(d for d in glob.glob(os.path.join(dname, "*"))
+                   if os.path.isdir(d) and bench_out(d) is not None)
+  return subdirs
+
+def scrape_time(dname, sigma):
   fn = bench_out(dname)
   if fn is None:
     return None
@@ -75,19 +86,27 @@ def scrape_times(dname, sigma):
   t = durationpy.from_str(t_str)
   return t.total_seconds()
 
+def scrape_times(dname, sigma):
+  # Every run's execution time under this configuration's results directory.
+  ts = [ scrape_time(d, sigma) for d in run_dirs(dname) ]
+  return [ t for t in ts if t is not None ]
+
 def collect(args):
-  # The (label, family, seconds) of every configuration which was both supplied
-  # and has a scrapable result, in CONFIGS order.
+  # The (label, family, mean, stddev, nrun) of every configuration which was
+  # both supplied and has at least one scrapable run, in CONFIGS order. The
+  # error bar is the sample standard deviation across runs, and is zero for a
+  # configuration which was only run once.
   bars = []
   for key, label, kind, family in CONFIGS:
     dname = getattr(args, key + "_dir")
     if dname is None:
       continue
-    t = scrape_times(dname, kind == "sigma")
-    if t is None:
+    ts = scrape_times(dname, kind == "sigma")
+    if len(ts) == 0:
       print("Warning: no benchmark output in %s; skipping %s" % (dname, key), file=sys.stderr)
       continue
-    bars.append((label, family, t))
+    sd = float(np.std(ts, ddof=1)) if len(ts) > 1 else 0.0
+    bars.append((label, family, float(np.mean(ts)), sd, len(ts)))
   return bars
 
 def setup_graph(nbar):
@@ -105,19 +124,28 @@ def graph_data(args):
   fig, ax = setup_graph(len(bars))
 
   x = np.arange(len(bars))
-  times = [ t for _, _, t in bars ]
-  colors = [ FAMILY_COLORS[f] for _, f, _ in bars ]
-  plt.bar(x, times, width=0.7, color=colors)
-  for i, v in enumerate(times):
-    plt.text(x[i], v + max(times) * 0.02, str(round(v, 2)), ha="center", fontsize=8)
+  times = [ t for _, _, t, _, _ in bars ]
+  errs = [ e for _, _, _, e, _ in bars ]
+  colors = [ FAMILY_COLORS[f] for _, f, _, _, _ in bars ]
+  plt.bar(x, times, width=0.7, color=colors, yerr=errs, capsize=3,
+          error_kw={"ecolor": "black", "elinewidth": 1})
+  top = max(t + e for t, e in zip(times, errs))
+  for i, (_, _, v, e, n) in enumerate(bars):
+    txt = str(round(v, 2)) if n < 2 else "%.2f±%.2f" % (v, e)
+    plt.text(x[i], v + e + top * 0.02, txt, ha="center", fontsize=8)
   ax.set_xticks(x)
-  ax.set_xticklabels([ l for l, _, _ in bars ], fontsize=7)
-  ax.set_ylim(bottom=0, top=max(times) * 1.25)
+  ax.set_xticklabels([ l for l, _, _, _, _ in bars ], fontsize=7)
+  ax.set_ylim(bottom=0, top=top * 1.25)
   ax.tick_params(axis='x', bottom=False)
+
+  nruns = set(n for _, _, _, _, n in bars)
+  if nruns != {1}:
+    ax.set_ylabel("Execution Time (seconds)\nmean of %s runs, ±1 s.d." %
+                  ("/".join(str(n) for n in sorted(nruns))))
 
   # One legend entry per family which actually appears.
   families = []
-  for _, f, _ in bars:
+  for _, f, _, _, _ in bars:
     if f not in families:
       families.append(f)
   handles = [ matplotlib.patches.Patch(color=FAMILY_COLORS[f], label=FAMILY_LABELS[f]) for f in families ]

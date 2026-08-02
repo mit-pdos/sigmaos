@@ -72,14 +72,20 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 		return false
 	}
 	db.DPrintf(db.REMOTE_BENCH, "Prepared to run benchmark (%v)", time.Since(start))
+	// Warn periodically if the benchmark takes unreasonably long, so that a run
+	// which has wedged is distinguishable from one which is merely slow.
+	wd := startWatchdog(benchName)
+	defer wd.Stop()
 	start = time.Now()
 	// First, stop any previously running cluster
+	wd.SetPhase("stop previous cluster")
 	if err := ts.StopSigmaOSCluster(); !assert.Nil(ts.t, err, "Stop cluster: %v", err) {
 		return false
 	}
 	db.DPrintf(db.REMOTE_BENCH, "Stopped cluster (%v)", time.Since(start))
 	start = time.Now()
 	// Start a SigmaOS cluster
+	wd.SetPhase("start cluster")
 	ccfg, err := ts.StartSigmaOSCluster(numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 	db.DPrintf(db.ALWAYS, "\nCluster config:\n%v", ccfg)
 	if !assert.Nil(ts.t, err, "Start SigmaOS cluster: %v", err) {
@@ -88,6 +94,7 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 	db.DPrintf(db.REMOTE_BENCH, "Started cluster (%v)", time.Since(start))
 	// If running the k8s version of the benchmark, start the k8s app
 	if ts.BCfg.K8s {
+		wd.SetPhase("start k8s app")
 		err := startK8sApp(ts.BCfg, ts.LCfg)
 		if !assert.Nil(ts.t, err, "Start k8s app: %v", err) {
 			return false
@@ -103,7 +110,10 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 	// (useful for debugging)
 	if !ts.BCfg.NoShutdown {
 		defer func() {
-			// Stop the SigmaOS cluster once the benchmark is over
+			// Stop the SigmaOS cluster once the benchmark is over. Runs before
+			// the watchdog's deferred Stop (defers are LIFO), so a shutdown which
+			// hangs is still reported.
+			wd.SetPhase("stop cluster")
 			err := ts.StopSigmaOSCluster()
 			assert.Nil(ts.t, err, "Stop SigmaOS cluster: %v", err)
 		}()
@@ -114,6 +124,7 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 		followerBenchCmd = getFollowerClientBenchCmd(ts.BCfg, ccfg)
 	}
 	start = time.Now()
+	wd.SetPhase("run benchmark clients")
 	done := make(chan error, len(driverVMs))
 	for i := 0; i < len(driverVMs); i++ {
 		// Select the driver VM on which to run this client
@@ -142,6 +153,7 @@ func (ts *Tstate) RunParallelClientBenchmark(benchName string, driverVMs []int, 
 	}
 	db.DPrintf(db.REMOTE_BENCH, "Ran benchmark (%v)", time.Since(start))
 	// Collect the benchmark results
+	wd.SetPhase("collect results")
 	if err := ccfg.CollectResults(benchName, leaderBenchCmd, followerBenchCmd); !assert.Nil(ts.t, err, "CollectResults: %v", err) {
 		return true
 	}

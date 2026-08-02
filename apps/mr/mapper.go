@@ -163,19 +163,23 @@ func (m *Mapper) srvsUsed() []string {
 	if m.usesSrv(sp.UX) {
 		srvs = append(srvs, sp.UX)
 	}
-	// S3 is only reached through a mountable server (the local S3 proxy) on
-	// the getput path. Otherwise sp.S3ClientPath rewrites name/s3/~local to
-	// the s3clnt path client, which talks to S3 directly.
-	if m.useGetPut && m.usesSrv(sp.S3) {
+	// S3 is only reached through a mountable server (the local S3 proxy) when
+	// reading input on the getput path; output always goes through the buffered
+	// writer, where sp.S3ClientPath rewrites name/s3/~local to the s3clnt path
+	// client, which talks to S3 directly.
+	if m.useGetPut && m.inputUsesSrv(sp.S3) {
 		srvs = append(srvs, sp.S3)
 	}
 	return srvs
 }
 
 func (m *Mapper) usesSrv(unionpn string) bool {
-	if strings.HasPrefix(m.intOutput, unionpn) {
-		return true
-	}
+	return strings.HasPrefix(m.intOutput, unionpn) || m.inputUsesSrv(unionpn)
+}
+
+// inputUsesSrv reports whether any of this mapper's input splits live under
+// unionpn.
+func (m *Mapper) inputUsesSrv(unionpn string) bool {
 	for _, s := range m.bin {
 		if strings.HasPrefix(s.File, unionpn) {
 			return true
@@ -255,17 +259,12 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 	return nout, nil
 }
 
+// initWrt creates the shard writer for reducer r. Always the ordinary
+// buffered-writer path: get/put is a property of how a mapper *reads* its
+// input, not of how it writes its output, so a getput or cosandbox mapper
+// writes its shards exactly like an fslib one and the two configurations differ
+// only on the read side.
 func (m *Mapper) initWrt(r int, name string) error {
-	if m.useGetPut {
-		db.DPrintf(db.MR, "InitWrt (getput) %v", name)
-		wrt, err := getput.NewGetPutWriter(m.clnts, name)
-		if err != nil {
-			return err
-		}
-		m.wrts[r] = wrt
-		m.pwrts[r] = perf.NewPerfWriter(wrt, m.perf)
-		return nil
-	}
 	pn, ok := sp.S3ClientPath(name)
 	if ok {
 		name = pn

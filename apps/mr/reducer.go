@@ -133,29 +133,21 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	if err := r.initOutput(); err != nil {
 		return nil, err
 	}
-	// Creating the output file (or, on the getput path, just its writer).
+	// Creating the output file.
 	r.cpu.Mark("Reducer.initOutput")
 	return r, nil
 }
 
-// initOutput opens this reducer's output writer.
+// initOutput opens this reducer's output writer. Always the ordinary
+// buffered-writer path: get/put is a property of how a reducer *reads* the
+// mappers' shards, not of how it writes its output, so a getput or cosandbox
+// reducer writes exactly like an fslib one and the configurations differ only
+// on the read side.
 func (r *Reducer) initOutput() error {
 	start := time.Now()
 	defer func() {
 		perf.LogSpawnLatency("Reducer.initOutput", r.ProcEnv().GetPID(), r.ProcEnv().GetSpawnTime(), start)
 	}()
-	if r.useGetPut {
-		// Nothing is created until the first write: a UX target is created by
-		// the offset-0 chunk, an S3 object by the PutObject on Close.
-		wrt, err := getput.NewGetPutWriter(r.clnts, r.tmp)
-		if err != nil {
-			db.DPrintf(db.MR, "Reducer NewGetPutWriter %v err %v", r.tmp, err)
-			return err
-		}
-		r.wrt = wrt
-		r.pwrt = perf.NewPerfWriter(wrt, r.perf)
-		return nil
-	}
 	w, err := r.CreateBufWriter(r.tmp, 0777)
 	if err != nil {
 		db.DFatalf("Error CreateBufWriter [%v] %v", r.tmp, err)

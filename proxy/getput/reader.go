@@ -25,10 +25,14 @@ const minTailProbe = 4096
 // split and left four of the five chunk readers idle (see
 // claude-slop/GET_PUT_SLOW.md).
 //
-// Delegated: a cosandbox prefetched the whole window under this split's rpcIdx,
-// and the store holds exactly one reply per idx, so there is nothing to tile —
-// the window is served as a single final chunk. The prefetch has already
-// overlapped with the mapper's startup, which is the same win by other means.
+// Delegated: a cosandbox prefetched the whole window under this split's rpcIdx
+// (the store holds exactly one reply per idx, so the fetch cannot be
+// subdivided — the coordinator's manifest already subdivides by issuing one get
+// per split). The window is tiled all the same, out of the buffer already in
+// memory: tiling is what spreads a split across the mapper's CONCURRENCY chunk
+// readers, and serving it as one chunk left the other readers with nothing to
+// do, mapping each split on a single core. Same chunk arithmetic as the direct
+// path, minus the fetch.
 //
 // Either way the final chunk extends past the split end through the first
 // newline, so the line straddling the boundary can be finished; DoChunk's
@@ -40,16 +44,18 @@ type GetPutReader struct {
 	tgt   *Target
 
 	off      sp.Toffset // start of the window
-	splitEnd sp.Toffset // off + body: end of the region to tile
-	max      sp.Toffset // splitEnd + slack: hard cap on the tail
-	probe    sp.Tlength
+	splitEnd sp.Toffset // off + body: end of the split
+	end      sp.Toffset // where tiling stops; splitEnd, or the end of a
+	// delegated buffer which fell short of it (the file ended inside the window)
+	max sp.Toffset // hard cap on the final chunk: splitEnd + slack, or, when
+	// delegated, the end of the prefetched buffer
+	probe sp.Tlength
 
 	mu  sync.Mutex
-	pos sp.Toffset // offset of the next chunk (direct)
+	pos sp.Toffset // offset of the next chunk
 
 	delegated bool
 	buf       []byte // the prefetched window (delegated)
-	served    bool
 }
 
 func NewGetPutReader(clnts *Clnts, pn string, off sp.Toffset, body sp.Tlength,
@@ -72,6 +78,7 @@ func newGetPutReader(clnts clntAPI, pn string, off sp.Toffset, body sp.Tlength,
 		tgt:       tgt,
 		off:       off,
 		splitEnd:  splitEnd,
+		end:       splitEnd,
 		max:       splitEnd + sp.Toffset(slack),
 		probe:     probe,
 		pos:       off,
@@ -95,6 +102,13 @@ func newGetPutReader(clnts clntAPI, pn string, off sp.Toffset, body sp.Tlength,
 			return nil, err
 		}
 	}
+	// Tiles come out of the buffer, so it — not the split end plus slack — is
+	// the hard cap, and a buffer which stopped short of the split end (EOF
+	// inside the window) is where tiling stops.
+	r.max = off + sp.Toffset(len(r.buf))
+	if r.max < r.end {
+		r.end = r.max
+	}
 	return r, nil
 }
 
@@ -111,8 +125,10 @@ func (r *GetPutReader) GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Toffset
 		return nil, 0, false, err
 	}
 	if r.delegated {
-		// Already in memory, whole-window; nextChunk served it exactly once.
-		return io.NopCloser(bytes.NewReader(buf)), o, true, nil
+		// Already in memory: the tile is a window into the prefetched buffer.
+		// nextChunk capped e at the buffer's end, so the slice is in bounds.
+		db.DPrintf(db.MR, "GetPutReader %v tile off %v len %v final %t", r.tgt, o, e-o, final)
+		return io.NopCloser(bytes.NewReader(buf[o-r.off : e-r.off])), o, final, nil
 	}
 	b, err := r.fetchChunk(o, e, final)
 	if err != nil {
@@ -126,20 +142,21 @@ func (r *GetPutReader) GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Toffset
 // under the lock; the fetch itself is not, so that concurrent chunk readers
 // overlap their gets.
 func (r *GetPutReader) nextChunk(sz, offinc int) (o, e sp.Toffset, final bool, err error) {
-	if r.delegated {
-		if r.served {
-			return 0, 0, false, io.EOF
-		}
-		r.served = true
-		return r.off, r.off, true, nil
-	}
-	if r.pos >= r.splitEnd {
+	if r.pos >= r.end {
 		return 0, 0, false, io.EOF
 	}
 	o = r.pos
-	e = min(o+sp.Toffset(sz), r.max)
-	// The final chunk is the one containing the region's last byte.
-	final = o+sp.Toffset(offinc) >= r.splitEnd
+	// The final chunk is the one containing the region's last byte. It runs to
+	// the cap rather than to o+sz: it has to carry the bytes past the split end
+	// that finish the straddling line. The direct path fetches those (fetchChunk
+	// + extendTail); the delegated path already holds them, since the cap is the
+	// end of the prefetched buffer.
+	final = o+sp.Toffset(offinc) >= r.end
+	if final {
+		e = r.max
+	} else {
+		e = min(o+sp.Toffset(sz), r.max)
+	}
 	r.pos += sp.Toffset(offinc)
 	return o, e, final, nil
 }

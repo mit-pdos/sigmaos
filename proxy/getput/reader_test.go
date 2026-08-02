@@ -231,31 +231,81 @@ func TestReaderTilesWindow(t *testing.T) {
 	}
 }
 
-// The delegated (cosandbox) path keeps the whole-window contract: the store
-// holds exactly one reply per rpcIdx, so there is nothing to tile.
-func TestReaderDelegatedWholeWindow(t *testing.T) {
+// The delegated (cosandbox) path tiles its prefetched window exactly as the
+// direct path tiles its fetches: same offsets, same single final chunk. Serving
+// the window as one chunk instead left CONCURRENCY-1 of the mapper's chunk
+// readers with nothing to do, mapping each split on one core.
+func TestReaderDelegatedTilesWindow(t *testing.T) {
+	const (
+		sz     = 64
+		offinc = 60
+		body   = 600
+	)
 	data := bytes.Repeat([]byte("word xyz\n"), 200)
-	s := &mr.Split{File: "name/ux/~local/in", Offset: 0, Length: 600}
+	s := &mr.Split{File: "name/ux/~local/in", Offset: 0, Length: body}
 	f := newFakeClnt(data)
-	off, body, probe := mr.SplitReadWindow(s, 1024, 16)
-	f.delegated[0] = data[off : uint64(off)+uint64(body)+uint64(probe)]
-	r, err := newGetPutReader(f, s.File, off, body, 1024, probe, true, 0)
+	off, bd, probe := mr.SplitReadWindow(s, 1024, 16)
+	f.delegated[0] = data[off : uint64(off)+uint64(bd)+uint64(probe)]
+	r, err := newGetPutReader(f, s.File, off, bd, 1024, probe, true, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	rdr, o, final, err := r.GetChunkReader(64, 60)
-	if err != nil || !final || o != off {
-		t.Fatalf("delegated chunk: o %v final %v err %v", o, final, err)
+	offs := []sp.Toffset{}
+	nfinal := 0
+	total := 0
+	for {
+		rdr, o, final, err := r.GetChunkReader(sz, offinc)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := io.ReadAll(rdr)
+		if len(b) == 0 {
+			t.Errorf("tile at %v is empty", o)
+		}
+		// Every tile must lie inside the prefetched window, and the bytes must
+		// be the window's bytes at that offset — an off-by-one in the slicing
+		// would still produce plausible-looking chunks.
+		if want := data[o : int(o)+len(b)]; !bytes.Equal(b, want) {
+			t.Errorf("tile at %v: %d bytes do not match the file there", o, len(b))
+		}
+		if final {
+			nfinal++
+			// The final tile carries the bytes past the split end which finish
+			// the straddling line, so it runs longer than sz.
+			if int(o)+len(b) <= int(off)+int(bd) {
+				t.Errorf("final tile [%v,%v) does not reach past the split end %v", o, int(o)+len(b), int(off)+int(bd))
+			}
+		}
+		offs = append(offs, o)
+		total++
+		if total > 100 {
+			t.Fatal("tile cursor is not advancing")
+		}
 	}
-	b, _ := io.ReadAll(rdr)
-	if len(b) < int(body) {
-		t.Errorf("delegated chunk %d bytes, want >= %v (the whole window)", len(b), body)
+	// ceil(600/60) = 10 tiles at 0, 60, 120, ... — the same tiling the direct
+	// path produces for this window (see TestReaderTilesWindow).
+	if len(offs) != 10 {
+		t.Errorf("got %d tiles %v, want 10", len(offs), offs)
 	}
-	if _, _, _, err := r.GetChunkReader(64, 60); err != io.EOF {
-		t.Errorf("second chunk: want io.EOF, got %v", err)
+	for i, o := range offs {
+		if o != sp.Toffset(i*offinc) {
+			t.Errorf("tile %d at offset %v, want %v", i, o, i*offinc)
+		}
 	}
+	if nfinal != 1 {
+		t.Errorf("%d final tiles, want exactly 1", nfinal)
+	}
+	// Tiling is free: it comes out of the buffer the cosandbox already
+	// prefetched, so it must not turn into more RPCs. The store holds exactly
+	// one reply per rpcIdx.
 	if f.ndeleg[0] != 1 {
 		t.Errorf("rpcIdx 0 fetched %d times, want exactly 1", f.ndeleg[0])
+	}
+	if f.ngets > 1 {
+		t.Errorf("%d direct gets: tiling a prefetched window must not fetch", f.ngets)
 	}
 }
 

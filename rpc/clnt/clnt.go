@@ -191,7 +191,7 @@ func (rpcc *RPCClnt) OutgoingDelegatedRPC(rpcIdx uint64, method string, arg prot
 	}
 	rep := &spproxyproto.SigmaErrRep{}
 	if err := rpcc.rpc(true, "SPProxySrvAPI.OutgoingDelegatedRPC", req, rep); err != nil {
-		db.DPrintf(db.ERROR, "Err OutgoingDelegatedRPC(%v): %v", err)
+		db.DPrintf(db.ERROR, "Err OutgoingDelegatedRPC(%v): %v", rpcIdx, err)
 		return err
 	}
 	if rep.Err.ErrCode != 0 {
@@ -248,10 +248,24 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) (time.Durati
 	if err != nil {
 		return 0, err
 	}
+	// Before touching the reply's frames: the delegated RPC itself may have
+	// failed, in which case there is no result message or blob to map — only the
+	// error. Checking after the frame handling below meant an errored delegated
+	// RPC underflowed the frame count to -1 and died on the sanity check with a
+	// message about buffer counts, hiding the error that actually happened.
+	if rep.Err.ErrCode != 0 {
+		return 0, sp.NewErr(rep.Err)
+	}
 	if rpcc.useShmemDelegatedRPCs {
 		// Set IOVec from shared memory region
 		if rep.UseShmem {
-			// Sanity check
+			// The reply is the wrapper, the result message, and one frame per
+			// blob buffer the caller supplied. Fewer frames than that (with no
+			// error reported above) means a truncated reply: report it rather
+			// than mapping frames that aren't there.
+			if len(rep.ShmOffs) < 2 {
+				return 0, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("short shmem delegated RPC(%v) reply: %d frames", rpcIdx, len(rep.ShmOffs)))
+			}
 			if len(outblob.Iov) != len(rep.ShmOffs)-2 {
 				db.DFatalf("Wrong number of buffers supplied for shared-memory delegated RPC: %v != %v", len(outblob.Iov), len(rep.ShmOffs)-2)
 			}
@@ -260,6 +274,12 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) (time.Durati
 			for i := range rep.ShmOffs {
 				start := rep.ShmOffs[i]
 				end := start + rep.ShmLens[i]
+				// The offsets come from another process; a frame that doesn't lie
+				// inside this segment would otherwise panic on the slice, or
+				// silently hand the caller unrelated bytes to unmarshal.
+				if end < start || end > uint64(len(b)) {
+					return 0, serr.NewErr(serr.TErrUnreachable, fmt.Sprintf("shmem delegated RPC(%v) frame %d of %d out of segment: [%v,%v) size %v", rpcIdx, i, len(rep.ShmOffs), start, end, len(b)))
+				}
 				frames[i] = sessp.NewFrame(b[start:end], nil)
 			}
 			outiov.AppendFrames(frames)
@@ -270,9 +290,6 @@ func (rpcc *RPCClnt) DelegatedRPC(rpcIdx uint64, res proto.Message) (time.Durati
 	}
 	transferDur := time.Since(rep.TransferStartPB.AsTime())
 	perf.LogSpawnLatency("DelegatedRPC.RunRPC %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)
-	if rep.Err.ErrCode != 0 {
-		return 0, sp.NewErr(rep.Err)
-	}
 	start = time.Now()
 	defer func(start time.Time) {
 		perf.LogSpawnLatency("DelegatedRPC.Unmarshal %d", sp.NOT_SET, perf.TIME_NOT_SET, start, rpcIdx)

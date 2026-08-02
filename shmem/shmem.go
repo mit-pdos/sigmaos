@@ -34,6 +34,10 @@ import (
 	"sigmaos/proc"
 )
 
+// Where POSIX shared memory objects live; the tmpfs whose free space bounds
+// every segment on the node.
+const shmDir = "/dev/shm"
+
 type Segment struct {
 	idStr string
 	size  int // Segment size, in bytes
@@ -93,17 +97,24 @@ func NewSegment(idStr string, size proc.Tmem, create bool) (*Segment, error) {
 			shmUnlink(name)
 			return nil, fmt.Errorf("err ftruncate: %v", err)
 		}
-		// Reserve the pages now. /dev/shm is a tmpfs whose size is fixed when
-		// the container starts (see dcontainer.go), and it is shared by every
-		// proc on the node — ftruncate and mmap only reserve address space, so
-		// without this an oversubscribed tmpfs is not discovered until some
-		// later write faults, far from the cause. Fallocate on tmpfs allocates
-		// for real and reports ENOSPC here instead.
-		if err := unix.Fallocate(fd, 0, 0, int64(size)); err != nil {
-			db.DPrintf(db.ERROR, "Err fallocate shmem segment %v (%v bytes): %v — /dev/shm too small for the segments this node's procs request", name, size, err)
+		// ftruncate and mmap only reserve address space: /dev/shm is a tmpfs
+		// whose size is fixed when the container starts (see dcontainer.go) and
+		// is shared by every proc on the node, so an oversubscribed tmpfs would
+		// otherwise surface as a fault on some later write, far from the cause.
+		// Check the free space rather than reserving the pages with fallocate:
+		// reserving 139MB costs ~60ms on the proc-spawn path (statfs costs ~4us),
+		// which is several times the whole exec->main window. The check races
+		// with other procs allocating, so it catches the gross case only; a
+		// segment that is merely too small for its own proc still fails loudly in
+		// the allocator (see alloc.go).
+		var st unix.Statfs_t
+		if err := unix.Statfs(shmDir, &st); err != nil {
+			db.DPrintf(db.SHMEM, "Statfs %v err %v; skipping free-space check", shmDir, err)
+		} else if avail := uint64(st.Bavail) * uint64(st.Bsize); avail < uint64(size) {
+			db.DPrintf(db.ERROR, "Err shmem segment %v (%v bytes) larger than free space in %v (%v bytes) — /dev/shm too small for the segments this node's procs request", name, size, shmDir, avail)
 			unix.Close(fd)
 			shmUnlink(name)
-			return nil, fmt.Errorf("err fallocate shmem %v (%v bytes): %v", name, size, err)
+			return nil, fmt.Errorf("err shmem %v: %v bytes requested, %v free in %v", name, size, avail, shmDir)
 		}
 	}
 	// Map the shared memory object into the process address space

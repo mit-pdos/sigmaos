@@ -167,6 +167,16 @@ func (r *GetPutReader) fetchChunk(o, e sp.Toffset, final bool) ([]byte, error) {
 // the split's last byte), the max cap, or EOF. All extension reads are direct
 // RPCs, never delegated: the cosandbox deposited exactly one reply per rpcIdx.
 func (r *GetPutReader) extendTail(b []byte, start sp.Toffset) ([]byte, error) {
+	// Cap b at its length so that the appends below allocate a new array
+	// instead of writing in place. A delegated reply's buffer points into the
+	// shared-memory segment, and the segment's allocator hands out
+	// segment[start:end] — a slice whose capacity runs to the *end of the
+	// segment*. Appending onto that writes straight over whatever the allocator
+	// handed out next, i.e. the frames of the delegated replies for this
+	// mapper's later splits, which the cosandbox has already prefetched. Those
+	// splits then fail to unmarshal ("cannot parse invalid wire-format data")
+	// with perfectly valid offsets, far from here.
+	b = b[:len(b):len(b)]
 	scanFrom := 0
 	if first := r.splitEnd - 1; first > start {
 		scanFrom = int(first - start)

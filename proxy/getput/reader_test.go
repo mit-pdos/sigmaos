@@ -258,3 +258,52 @@ func TestReaderDelegatedWholeWindow(t *testing.T) {
 		t.Errorf("rpcIdx 0 fetched %d times, want exactly 1", f.ndeleg[0])
 	}
 }
+
+// A delegated reply's buffer points into the shared-memory segment, and the
+// segment allocator hands out segment[start:end] — a slice whose capacity runs
+// to the end of the segment. The reader must not append onto it: that writes
+// over the frames of the replies the cosandbox prefetched for later splits,
+// which then fail to unmarshal with valid-looking offsets, far from the cause.
+func TestReaderTailDoesNotClobberSegment(t *testing.T) {
+	// A stand-in segment: this split's window, followed by the next replies'
+	// frames. The delegated buffer is a sub-slice, so its cap covers the rest.
+	const winsz = 40
+	seg := make([]byte, 4096)
+	for i := range seg {
+		seg[i] = 'N' // the next replies' bytes
+	}
+	// A window whose last line has no newline in the probe, forcing extension.
+	win := []byte("aaaa bbbb\ncccc dddd eeee ffff gggg hhhh!")
+	if len(win) != winsz {
+		t.Fatalf("test window is %d bytes, expected %d", len(win), winsz)
+	}
+	copy(seg[:winsz], win)
+	delegated := seg[0:winsz] // exactly what the shmem allocator returns
+
+	data := append(append([]byte{}, win...), []byte(" iiii\njjjj\n")...)
+	f := newFakeClnt(data)
+	f.delegated[0] = delegated
+
+	s := &mr.Split{File: "name/ux/~local/in", Offset: 0, Length: 20}
+	off, body, probe := mr.SplitReadWindow(s, 1024, 4)
+	r, err := newGetPutReader(f, s.File, off, body, 1024, probe, true, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The tail must have been extended (the window has no newline after the
+	// split end), which is the case that appends.
+	rdr, _, _, err := r.GetChunkReader(64, 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := io.ReadAll(rdr)
+	if len(b) <= winsz {
+		t.Fatalf("tail was not extended (%d bytes); the test does not exercise the append", len(b))
+	}
+	// Everything past the window must be untouched.
+	for i := winsz; i < len(seg); i++ {
+		if seg[i] != 'N' {
+			t.Fatalf("segment clobbered at %d: %q — the reader appended into shared memory, over the next replies' frames", i, seg[i:min(i+16, len(seg))])
+		}
+	}
+}

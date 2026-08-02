@@ -120,10 +120,28 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 	if m.useGetPut {
 		m.clnts = getput.NewClnts(sc.FsLib)
 	}
-	// Constructing the S3 path client (an AWS SDK client: config, credential
-	// and endpoint resolution, HTTP setup) — done unconditionally, even for a
-	// job whose input and output are both in UX.
-	m.MountS3PathClnt()
+	// Mount the S3 path client (an AWS SDK client: config, credential and
+	// endpoint resolution, HTTP setup) if this mapper resolves any S3 pathname
+	// itself, so that it reads and writes S3 directly rather than through the S3
+	// proxy server: its input splits on the fslib path (the getput path reaches
+	// S3 through the local proxy instead), and its intermediate output, which
+	// always goes through the buffered writer. A mapper whose input and output
+	// are both in UX doesn't pay for the client at all.
+	//
+	// Fatal if it fails: the pathnames above are rewritten to their s3clnt form,
+	// which resolves nowhere without the mount. Procs reaching SigmaOS through
+	// spproxy mount it in-proc too (see SPProxyClnt.MountPathClnt), so the only
+	// way left to fail is a principal without S3 secrets — a misconfiguration,
+	// not a condition to work around.
+	//
+	// The condition covers every case in which a pathname is rewritten, so a
+	// rewrite implies the mount happened and the rewrite sites need no further
+	// check.
+	if (!m.useGetPut && m.inputUsesSrv(sp.S3)) || sp.IsS3Path(m.intOutput) {
+		if err := m.MountS3PathClnt(); err != nil {
+			db.DFatalf("Mapper MountS3PathClnt err %v", err)
+		}
+	}
 	m.cpu.Mark("Mapper.MountS3PathClnt")
 	go func() {
 		// initOutput runs concurrently with the phases below, so its CPU is
@@ -265,8 +283,7 @@ func (m *Mapper) CloseWrt() (sp.Tlength, error) {
 // writes its shards exactly like an fslib one and the two configurations differ
 // only on the read side.
 func (m *Mapper) initWrt(r int, name string) error {
-	pn, ok := sp.S3ClientPath(name)
-	if ok {
+	if pn, ok := sp.S3ClientPath(name); ok {
 		name = pn
 	}
 	db.DPrintf(db.MR, "InitWrt %v", name)

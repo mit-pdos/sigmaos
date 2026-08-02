@@ -30,6 +30,9 @@ type SPProxyClnt struct {
 	disconnected bool
 	useShmemWriteread bool
 	shm          *shmem.Segment
+	// Path clients mounted in this proc, whose paths are served here rather
+	// than by spproxyd; see pathclnt.go.
+	pcs *pathClntTable
 }
 
 func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProxyClnt, error) {
@@ -44,6 +47,7 @@ func NewSPProxyClnt(pe *proc.ProcEnv, npc *dialproxyclnt.DialProxyClnt) (*SPProx
 		rpcc:         rpcc,
 		seqcntr:      new(sessp.Tseqcntr),
 		disconnected: false,
+		pcs:          newPathClntTable(),
 	}
 	// Initialize the server-side component of sigmaclnt by sending the proc env
 	db.DPrintf(db.SPPROXYCLNT, "Init sigmaproxyclnt for %v", pe.GetPID())

@@ -123,10 +123,26 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 
 	if r.useGetPut {
 		r.clnts = getput.NewClnts(sc.FsLib)
-	} else if sp.IsS3Path(r.input[0].File) {
-		// On the getput path S3 is reached through the local proxy instead, so
-		// the S3 path client isn't needed.
-		r.MountS3PathClnt()
+	}
+	// Mount the S3 path client if this reducer resolves any S3 pathname itself,
+	// so that it reads and writes S3 directly rather than through the S3 proxy
+	// server: its input shards on the fslib path (the getput path reaches S3
+	// through the local proxy instead), and its output, which always goes
+	// through the buffered writer.
+	//
+	// Fatal if it fails: the pathnames below are rewritten to their s3clnt form,
+	// which resolves nowhere without the mount. Procs reaching SigmaOS through
+	// spproxy mount it in-proc too (see SPProxyClnt.MountPathClnt), so the only
+	// way left to fail is a principal without S3 secrets — a misconfiguration,
+	// not a condition to work around.
+	//
+	// The condition is exactly the union of the cases in which a pathname below
+	// is rewritten, so a rewrite implies the mount happened and the rewrite
+	// sites need no further check.
+	if (!r.useGetPut && sp.IsS3Path(r.input[0].File)) || sp.IsS3Path(r.tmp) {
+		if err := r.MountS3PathClnt(); err != nil {
+			db.DFatalf("Reducer MountS3PathClnt err %v", err)
+		}
 	}
 	r.cpu.Mark("Reducer.mountS3")
 
@@ -148,9 +164,17 @@ func (r *Reducer) initOutput() error {
 	defer func() {
 		perf.LogSpawnLatency("Reducer.initOutput", r.ProcEnv().GetPID(), r.ProcEnv().GetSpawnTime(), start)
 	}()
-	w, err := r.CreateBufWriter(r.tmp, 0777)
+	// An S3 output goes through the path client, which NewReducer mounted. Only
+	// the writer's pathname is rewritten: r.tmp stays the sigma pathname, since
+	// it is what gets published in the job's output symlink and an s3clnt/...
+	// path means nothing to a reader which hasn't mounted the path client.
+	pn := r.tmp
+	if p, ok := sp.S3ClientPath(pn); ok {
+		pn = p
+	}
+	w, err := r.CreateBufWriter(pn, 0777)
 	if err != nil {
-		db.DFatalf("Error CreateBufWriter [%v] %v", r.tmp, err)
+		db.DFatalf("Error CreateBufWriter [%v] %v", pn, err)
 		return err
 	}
 	r.wrt = w
@@ -247,7 +271,8 @@ func (r *Reducer) openInput(f string, idx int) (getput.FileReader, error) {
 func (r *Reducer) readFile(rr *readResult, idx int) {
 	if !r.useGetPut {
 		// The getput path reaches S3 through the local proxy, so it keeps the
-		// sigma pathname; only the fslib path rewrites it to the s3clnt form.
+		// sigma pathname; only the fslib path rewrites it to the s3clnt form,
+		// whose path client NewReducer mounted.
 		if pn, ok := sp.S3ClientPath(rr.f); ok {
 			rr.f = pn
 		}

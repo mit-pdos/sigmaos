@@ -81,6 +81,16 @@ func (scc *SPProxyClnt) Init() error {
 }
 
 func (scc *SPProxyClnt) CloseFd(fd int) error {
+	if isLocalFd(fd) {
+		f, err := scc.pcs.lookupFd(fd)
+		if err != nil {
+			return err
+		}
+		scc.pcs.freeFd(fd)
+		err = f.pc.Clunk(f.fid)
+		db.DPrintf(db.SPPROXYCLNT, "CloseFd local fd %v %q err %v", fd, f.pn, err)
+		return err
+	}
 	req := spproto.SigmaCloseReq{Fd: uint32(fd)}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.CloseFd", &req, &rep)
@@ -102,16 +112,41 @@ func (scc *SPProxyClnt) Stat(path string) (*sp.Tstat, error) {
 	return sp.NewStatProto(rep.Stat), nil
 }
 
-func (scc *SPProxyClnt) Create(path string, p sp.Tperm, m sp.Tmode) (int, error) {
-	req := spproto.SigmaCreateReq{Path: path, Perm: uint32(p), Mode: uint32(m)}
+func (scc *SPProxyClnt) Create(pn string, p sp.Tperm, m sp.Tmode) (int, error) {
+	// A path served by a locally-mounted path client never goes to spproxyd;
+	// see pathclnt.go.
+	if pc, ok := scc.pcs.lookup(pn); ok {
+		fid, err := pc.Create(pn, scc.pe.GetPrincipal(), p, m, sp.NoLeaseId, sp.NullFence())
+		if err != nil {
+			db.DPrintf(db.SPPROXYCLNT, "Create local %q err %v", pn, err)
+			return -1, err
+		}
+		fd := scc.pcs.allocFd(fid, pc, m, pn)
+		db.DPrintf(db.SPPROXYCLNT, "Create local %q fd %v", pn, fd)
+		return fd, nil
+	}
+	req := spproto.SigmaCreateReq{Path: pn, Perm: uint32(p), Mode: uint32(m)}
 	rep := spproto.SigmaFdRep{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.Create", &req, &rep)
 	db.DPrintf(db.SPPROXYCLNT, "Create %v %v fd %v err %v", req, rep, fd, err)
 	return fd, err
 }
 
-func (scc *SPProxyClnt) Open(path string, m sp.Tmode, w sos.Twait) (int, error) {
-	req := spproto.SigmaCreateReq{Path: path, Mode: uint32(m), Wait: bool(w)}
+func (scc *SPProxyClnt) Open(pn string, m sp.Tmode, w sos.Twait) (int, error) {
+	if pc, ok := scc.pcs.lookup(pn); ok {
+		// Watches are a namespace feature; a path client has nothing to watch,
+		// so O_WAIT degenerates to a plain open (as it does in fsclnt, where the
+		// watch callback a path client never invokes just never fires).
+		fid, err := pc.Open(pn, scc.pe.GetPrincipal(), m, nil)
+		if err != nil {
+			db.DPrintf(db.SPPROXYCLNT, "Open local %q err %v", pn, err)
+			return -1, err
+		}
+		fd := scc.pcs.allocFd(fid, pc, m, pn)
+		db.DPrintf(db.SPPROXYCLNT, "Open local %q fd %v", pn, fd)
+		return fd, nil
+	}
+	req := spproto.SigmaCreateReq{Path: pn, Mode: uint32(m), Wait: bool(w)}
 	rep := spproto.SigmaFdRep{}
 	fd, err := scc.rpcFd("SPProxySrvAPI.Open", &req, &rep)
 	db.DPrintf(db.SPPROXYCLNT, "Open %v %v %v %v", req, rep, fd, err)
@@ -156,6 +191,22 @@ func (scc *SPProxyClnt) PutFile(path string, p sp.Tperm, m sp.Tmode, data []byte
 }
 
 func (scc *SPProxyClnt) Read(fd int, b []byte) (sp.Tsize, error) {
+	if isLocalFd(fd) {
+		f, err := scc.pcs.lookupFd(fd)
+		if err != nil {
+			return 0, err
+		}
+		off, err := scc.pcs.off(fd)
+		if err != nil {
+			return 0, err
+		}
+		n, err := f.pc.ReadF(f.fid, off, b, sp.NullFence())
+		if err != nil {
+			return 0, err
+		}
+		scc.pcs.incOff(fd, sp.Toffset(n))
+		return n, nil
+	}
 	req := spproto.SigmaReadReq{Fd: uint32(fd), Size: uint64(len(b)), Off: uint64(sp.NoOffset)}
 	rep := spproto.SigmaDataRep{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
@@ -168,6 +219,13 @@ func (scc *SPProxyClnt) Read(fd int, b []byte) (sp.Tsize, error) {
 }
 
 func (scc *SPProxyClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) {
+	if isLocalFd(fd) {
+		f, err := scc.pcs.lookupFd(fd)
+		if err != nil {
+			return 0, err
+		}
+		return f.pc.ReadF(f.fid, o, b, sp.NullFence())
+	}
 	req := spproto.SigmaReadReq{Fd: uint32(fd), Size: uint64(len(b)), Off: uint64(o)}
 	rep := spproto.SigmaDataRep{}
 	rep.Blob = &rpcproto.Blob{Iov: [][]byte{b}}
@@ -180,11 +238,34 @@ func (scc *SPProxyClnt) Pread(fd int, b []byte, o sp.Toffset) (sp.Tsize, error) 
 }
 
 func (scc *SPProxyClnt) PreadRdr(fd int, o sp.Toffset, sz sp.Tsize) (io.ReadCloser, error) {
+	if isLocalFd(fd) {
+		f, err := scc.pcs.lookupFd(fd)
+		if err != nil {
+			return nil, err
+		}
+		return f.pc.PreadRdr(f.fid, o, sz)
+	}
 	db.DFatalf("PreadRdr")
 	return nil, nil
 }
 
 func (scc *SPProxyClnt) Write(fd int, data []byte) (sp.Tsize, error) {
+	if isLocalFd(fd) {
+		f, err := scc.pcs.lookupFd(fd)
+		if err != nil {
+			return 0, err
+		}
+		off, err := scc.pcs.off(fd)
+		if err != nil {
+			return 0, err
+		}
+		n, err := f.pc.WriteF(f.fid, off, data, sp.NullFence())
+		if err != nil {
+			return 0, err
+		}
+		scc.pcs.incOff(fd, sp.Toffset(n))
+		return n, nil
+	}
 	blob := &rpcproto.Blob{Iov: [][]byte{data}}
 	req := spproto.SigmaWriteReq{Fd: uint32(fd), Blob: blob}
 	rep := spproto.SigmaSizeRep{}
@@ -195,6 +276,9 @@ func (scc *SPProxyClnt) Write(fd int, data []byte) (sp.Tsize, error) {
 }
 
 func (scc *SPProxyClnt) Seek(fd int, off sp.Toffset) error {
+	if isLocalFd(fd) {
+		return scc.pcs.setOff(fd, off)
+	}
 	req := spproto.SigmaSeekReq{Fd: uint32(fd), Offset: uint64(off)}
 	rep := spproto.SigmaErrRep{}
 	err := scc.rpcErr("SPProxySrvAPI.Seek", &req, &rep)
@@ -385,8 +469,13 @@ func (scc *SPProxyClnt) SetLocalMount(ep *sp.Tendpoint, port sp.Tport) {
 	db.DFatalf("SetLocalMount %v", ep)
 }
 
-func (scc *SPProxyClnt) MountPathClnt(path string, clnt sos.PathClntAPI) error {
-	return serr.NewErr(serr.TErrNotSupported, "MountPathClnt")
+// Mount a local path client (e.g. the S3 path client). Paths under mnt are
+// served in-proc from here on instead of being sent to spproxyd, which has no
+// such mount of its own; see pathclnt.go.
+func (scc *SPProxyClnt) MountPathClnt(mnt string, clnt sos.PathClntAPI) error {
+	db.DPrintf(db.SPPROXYCLNT, "MountPathClnt %v", mnt)
+	scc.pcs.mount(mnt, clnt)
+	return nil
 }
 
 func (scc *SPProxyClnt) Detach(path string) error {

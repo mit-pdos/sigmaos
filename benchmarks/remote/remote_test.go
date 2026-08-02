@@ -307,31 +307,45 @@ func TestMR(t *testing.T) {
 		numCoresPerNode uint
 		memReq          proc.Tmem
 	}
-	// How a mapper moves its data. Cosandboxes prefetch through the get/put
-	// API, so the three entries below are the valid combinations of the two
-	// knobs; the suffix names the run's results directory. The reducer has its
-	// own pair of knobs, deliberately left off here so that a difference between
-	// these runs is attributable to the mapper alone.
+	// How a job's tasks move their data. A cosandbox prefetches through the
+	// get/put API, so cosandboxes imply get/put on the same side; the mapper and
+	// the reducer have independent knobs. The suffix names the run's results
+	// directory: no suffix is the fslib baseline, "-mapper" changes the mapper
+	// only, "-reducer" the reducer only, and "-both" changes both. Varying one
+	// side at a time is what makes a difference attributable to that side.
 	type MRDataPathExperiment struct {
-		nameSuffix     string
-		useGetPut      bool
-		useCosandboxes bool
+		nameSuffix           string
+		useGetPut            bool
+		useCosandboxes       bool
+		useGetPutReduce      bool
+		useCosandboxesReduce bool
 	}
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
 			//			{"mr-grep-wiki2G-bench-s3.json", 9, 4, 7000},
 			//			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000},
-			{"mr-wc-wiki10G-bench.json", 17, 4, 7000},
-			{"mr-wc-wiki10G-bench-s3.json", 17, 4, 7000},
+			{"mr-wc-wiki10G-bench.json", 17, 2, 7000},
+			{"mr-wc-wiki10G-bench-s3.json", 17, 2, 7000},
 		}
+		// Each entry is a full run (a cluster boot plus the job), per app, so
+		// trim this list rather than the apps when a sweep is too long.
 		mrDataPaths []MRDataPathExperiment = []MRDataPathExperiment{
-			// fslib streaming reader/writer
-			{"", false, false},
-			// UX/S3 proxy get/put RPCs
-			{"-getput", true, false},
+			// fslib streaming reader/writer on both sides
+			{"", false, false, false, false},
+			// UX/S3 proxy get/put RPCs, mapper only
+			{"-getput", true, false, false, false},
 			// get/put, with a cosandbox prefetching each mapper's splits
-			{"-cosandbox", true, true},
+			{"-cosandbox-mapper", true, true, false, false},
+			// The same two, reducer only: a reducer reads one whole shard per
+			// mapper, so its get/put path has a quite different shape from the
+			// mapper's window tiling.
+			{"-getput-reducer", false, false, true, false},
+			{"-cosandbox-reducer", false, false, true, true},
+			// And both sides at once, which is the configuration a getput/
+			// cosandbox job would actually run in.
+			{"-getput-both", true, false, true, false},
+			{"-cosandbox-both", true, true, true, true},
 		}
 		perfs         []bool = []bool{false}
 		prewarmRealms []bool = []bool{true}
@@ -364,8 +378,10 @@ func TestMR(t *testing.T) {
 					}
 					benchName += dp.nameSuffix
 					data := benchmarks.MRDataPathCfg{
-						MapGetPut:      dp.useGetPut,
-						MapCosandboxes: dp.useCosandboxes,
+						MapGetPut:         dp.useGetPut,
+						MapCosandboxes:    dp.useCosandboxes,
+						ReduceGetPut:      dp.useGetPutReduce,
+						ReduceCosandboxes: dp.useCosandboxesReduce,
 					}
 					mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.memReq, data)
 					if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {

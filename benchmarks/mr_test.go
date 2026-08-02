@@ -14,6 +14,7 @@ import (
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
 	"sigmaos/util/perf"
+	"sigmaos/util/spstats"
 )
 
 type MRJobInstance struct {
@@ -87,8 +88,41 @@ func (ji *MRJobInstance) PrintPhaseDurations() {
 	db.DPrintf(db.ALWAYS, "MR job %v map phase %vms reduce phase %vms", ji.jobname, pd.MapMs, pd.ReduceMs)
 }
 
+// WaitJobExit waits for the job's coordinator(s) to exit, and fails the
+// benchmark if any mapper or reducer failed along the way.
+//
+// A job that loses tasks still finishes and still reports phase durations — the
+// MR fault-tolerance machinery just re-runs them — so a benchmark can otherwise
+// report a perfectly plausible number for a run that was quietly retrying work.
+// The coordinator counts what happened in its AStat and returns it in its exit
+// status (see coord.Work), which is where these counters come from.
 func (ji *MRJobInstance) WaitJobExit() {
-	ji.cm.WaitGroup()
+	stati := ji.cm.WaitGroup()
+	st := spstats.NewTcounterSnapshot()
+	for _, s := range stati {
+		if !s.IsStatusOK() {
+			assert.True(ji.Ts.T, false, "MR job %v: coordinator exited with status %v", ji.jobname, s)
+			continue
+		}
+		stro, err := spstats.UnmarshalTcounterSnapshot(s.Data())
+		if !assert.Nil(ji.Ts.T, err, "Error unmarshal MR coord stats: %v", err) {
+			continue
+		}
+		// A restarted coordinator reports its own counters; keep the ones from
+		// the coordinator that ran the tasks.
+		if stro.Counters["Nmap"] > 0 || stro.Counters["Nreduce"] > 0 {
+			st = stro
+		}
+	}
+	db.DPrintf(db.ALWAYS, "MR job %v coord stats %v", ji.jobname, st)
+	// Nfail counts mappers and reducers that exited non-OK; the recover counters
+	// count tasks re-run because a reducer couldn't read a mapper's output. Any
+	// of them means the run's timings include re-executed work.
+	for _, c := range []string{"Nfail", "Nrestart", "NrecoverMap", "NrecoverReduce"} {
+		assert.Equal(ji.Ts.T, int64(0), st.Counters[c],
+			"MR job %v: %v = %v, so some mappers/reducers failed and were re-run; this run's numbers include repeated work (coord stats %v)",
+			ji.jobname, c, st.Counters[c], st)
+	}
 }
 
 func chooseMRJobRoot(ts *test.RealmTstate) string {

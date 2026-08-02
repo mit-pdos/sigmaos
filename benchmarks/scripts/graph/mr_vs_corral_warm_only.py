@@ -16,25 +16,28 @@ matplotlib.rcParams['ps.fonttype'] = 42
 # One entry per configuration the graph can show. Each becomes an optional
 # --<key>_dir argument holding that run's results directory; only the ones
 # supplied on the command line are plotted, in this order. "kind" selects how
-# the run's execution time is scraped, and "family" only picks the bar color, so
-# that the fslib/getput/cosandbox/lambda groups are distinguishable at a glance.
+# the run's execution time is scraped, "family" picks the bar color so that the
+# fslib/getput/cosandbox/lambda groups are distinguishable at a glance, and
+# "source" is where the job read its input, which --source filters on.
 CONFIGS = [
-  ("ux",                   "UX\nfslib",       "sigma",  "fslib"),
-  ("ux_getput_mapper",     "UX\ngetput\nmap", "sigma",  "getput"),
-  ("ux_getput_reducer",    "UX\ngetput\nred", "sigma",  "getput"),
-  ("ux_getput_both",       "UX\ngetput\nboth", "sigma", "getput"),
-  ("ux_cosandbox_mapper",  "UX\ncosbx\nmap",  "sigma",  "cosandbox"),
-  ("ux_cosandbox_reducer", "UX\ncosbx\nred",  "sigma",  "cosandbox"),
-  ("ux_cosandbox_both",    "UX\ncosbx\nboth", "sigma",  "cosandbox"),
-  ("s3",                   "S3\nfslib",       "sigma",  "fslib"),
-  ("s3_getput_mapper",     "S3\ngetput\nmap", "sigma",  "getput"),
-  ("s3_getput_reducer",    "S3\ngetput\nred", "sigma",  "getput"),
-  ("s3_getput_both",       "S3\ngetput\nboth", "sigma", "getput"),
-  ("s3_cosandbox_mapper",  "S3\ncosbx\nmap",  "sigma",  "cosandbox"),
-  ("s3_cosandbox_reducer", "S3\ncosbx\nred",  "sigma",  "cosandbox"),
-  ("s3_cosandbox_both",    "S3\ncosbx\nboth", "sigma",  "cosandbox"),
-  ("corral",               "λ-mr",            "corral", "lambda"),
+  ("ux",                   "UX\nfslib",       "sigma",  "fslib",     "ux"),
+  ("ux_getput_mapper",     "UX\ngetput\nmap", "sigma",  "getput",    "ux"),
+  ("ux_getput_reducer",    "UX\ngetput\nred", "sigma",  "getput",    "ux"),
+  ("ux_getput_both",       "UX\ngetput\nboth", "sigma", "getput",    "ux"),
+  ("ux_cosandbox_mapper",  "UX\ncosbx\nmap",  "sigma",  "cosandbox", "ux"),
+  ("ux_cosandbox_reducer", "UX\ncosbx\nred",  "sigma",  "cosandbox", "ux"),
+  ("ux_cosandbox_both",    "UX\ncosbx\nboth", "sigma",  "cosandbox", "ux"),
+  ("s3",                   "S3\nfslib",       "sigma",  "fslib",     "s3"),
+  ("s3_getput_mapper",     "S3\ngetput\nmap", "sigma",  "getput",    "s3"),
+  ("s3_getput_reducer",    "S3\ngetput\nred", "sigma",  "getput",    "s3"),
+  ("s3_getput_both",       "S3\ngetput\nboth", "sigma", "getput",    "s3"),
+  ("s3_cosandbox_mapper",  "S3\ncosbx\nmap",  "sigma",  "cosandbox", "s3"),
+  ("s3_cosandbox_reducer", "S3\ncosbx\nred",  "sigma",  "cosandbox", "s3"),
+  ("s3_cosandbox_both",    "S3\ncosbx\nboth", "sigma",  "cosandbox", "s3"),
+  ("corral",               "λ-mr",            "corral", "lambda",    "lambda"),
 ]
+
+SOURCES = ["ux", "s3", "lambda"]
 
 FAMILY_COLORS = {
   "fslib":     "C0",
@@ -97,9 +100,13 @@ def collect(args):
   # error bar is the sample standard deviation across runs, and is zero for a
   # configuration which was only run once.
   bars = []
-  for key, label, kind, family in CONFIGS:
+  for key, label, kind, family, source in CONFIGS:
     dname = getattr(args, key + "_dir")
     if dname is None:
+      continue
+    # --source restricts the graph to configurations reading from one input
+    # source, so that a directory list naming everything can be reused as-is.
+    if args.source is not None and source not in args.source:
       continue
     ts = scrape_times(dname, kind == "sigma")
     if len(ts) == 0:
@@ -118,7 +125,10 @@ def setup_graph(nbar):
 def graph_data(args):
   bars = collect(args)
   if len(bars) == 0:
-    print("Error: no configurations supplied (pass at least one --<config>_dir)", file=sys.stderr)
+    if args.source is not None:
+      print("Error: no configurations with results match --source %s" % ",".join(args.source), file=sys.stderr)
+    else:
+      print("Error: no configurations supplied (pass at least one --<config>_dir)", file=sys.stderr)
     sys.exit(1)
 
   fig, ax = setup_graph(len(bars))
@@ -165,9 +175,12 @@ def graph_data(args):
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
-  for key, label, _, _ in CONFIGS:
+  for key, label, _, _, _ in CONFIGS:
     parser.add_argument("--" + key + "_dir", type=str, default=None,
                         help="Results directory for the %s configuration" % label.replace("\n", " "))
+  parser.add_argument("--source", type=str, action="append", choices=SOURCES, default=None,
+                      help="Only graph configurations reading from this input source. "
+                           "Repeatable; omit to graph every supplied configuration.")
   parser.add_argument("--app", type=str, default="wc")
   parser.add_argument("--title", type=str, default=None)
   parser.add_argument("--out", type=str, required=True)

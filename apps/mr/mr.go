@@ -125,11 +125,17 @@ func (b Bin) String() string {
 	return r
 }
 
-// Wall-clock duration of a job's map and reduce phases, as measured by the
-// coordinator and persisted for the driver to report.
+// Wall-clock durations of a job, as measured by the coordinator and persisted
+// for the driver to report. E2eMs is the coordinator's own end-to-end figure:
+// the time it spent executing tasks, i.e. from the point it had acquired
+// leadership and recovered any prior state to the point the last task was done.
+// It excludes what the driver's own timer cannot separate out — spawning the
+// coordinator, leader election, and fttask setup — so it is the job's time
+// rather than the job's time plus its scaffolding.
 type PhaseDurations struct {
 	MapMs    int64 `json:"MapMs"`
 	ReduceMs int64 `json:"ReduceMs"`
+	E2eMs    int64 `json:"E2eMs"`
 }
 
 // Result of mapper or reducer

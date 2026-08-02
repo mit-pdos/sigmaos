@@ -177,7 +177,7 @@ func PrintMRStats(fsl *fslib.FsLib, jobRoot, job string) error {
 		db.DPrintf(db.MR, "ReadPhaseDurations err %v", err)
 	} else {
 		fmt.Println("==== PHASE DURATIONS:")
-		fmt.Printf("map phase %vms reduce phase %vms\n", pd.MapMs, pd.ReduceMs)
+		fmt.Printf("e2e %vms map phase %vms reduce phase %vms\n", pd.E2eMs, pd.MapMs, pd.ReduceMs)
 	}
 	return nil
 }

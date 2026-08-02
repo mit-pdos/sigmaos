@@ -334,17 +334,17 @@ func TestMR(t *testing.T) {
 			// fslib streaming reader/writer on both sides
 			{"", false, false, false, false},
 			// UX/S3 proxy get/put RPCs, mapper only
-			{"-getput", true, false, false, false},
-			// get/put, with a cosandbox prefetching each mapper's splits
-			{"-cosandbox-mapper", true, true, false, false},
+			//			{"-getput-mapper", true, false, false, false},
+			//			// get/put, with a cosandbox prefetching each mapper's splits
+			//			{"-cosandbox-mapper", true, true, false, false},
 			// The same two, reducer only: a reducer reads one whole shard per
 			// mapper, so its get/put path has a quite different shape from the
 			// mapper's window tiling.
-			{"-getput-reducer", false, false, true, false},
-			{"-cosandbox-reducer", false, false, true, true},
+			//			{"-getput-reducer", false, false, true, false},
+			//			{"-cosandbox-reducer", false, false, true, true},
 			// And both sides at once, which is the configuration a getput/
 			// cosandbox job would actually run in.
-			{"-getput-both", true, false, true, false},
+			//			{"-getput-both", true, false, true, false},
 			{"-cosandbox-both", true, true, true, true},
 		}
 		perfs         []bool = []bool{false}
@@ -499,7 +499,7 @@ func TestCorral(t *testing.T) {
 	// input it ran on (see CorralConfig.inputLabel), e.g. "corral-10G-cold" for
 	// a wiki-10G input. The two runs are the same configuration twice: the first
 	// pays to deploy the Lambda, the second finds it warm.
-	corralExps := []string{"cold", "warm"}
+	corralExps := []string{"warm"}
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return

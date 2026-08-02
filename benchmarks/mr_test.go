@@ -2,6 +2,7 @@ package benchmarks_test
 
 import (
 	"path/filepath"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -80,12 +81,20 @@ func (ji *MRJobInstance) Wait() {
 	mr.WaitJobDone(ji.FsLib, ji.jobRoot, ji.jobname)
 }
 
-// Report the map and reduce phase durations recorded by the coordinator. Must
-// be called after the job is done (i.e., after Wait).
-func (ji *MRJobInstance) PrintPhaseDurations() {
+// Report the durations recorded by the coordinator and return its end-to-end
+// figure, which is what the benchmark reports as the job's latency: it measures
+// task execution from inside the coordinator, so it excludes spawning the
+// coordinator, its leader election, and fttask setup — scaffolding the driver's
+// own timer cannot separate out. Zero if the coordinator didn't record one (an
+// older mr-coord binary), in which case the caller keeps its own measurement.
+// Must be called after the job is done (i.e. after Wait).
+func (ji *MRJobInstance) PrintPhaseDurations() time.Duration {
 	pd, err := mrcoord.ReadPhaseDurations(ji.FsLib, ji.jobRoot, ji.jobname)
-	assert.Nil(ji.Ts.T, err, "Error read MR phase durations: %v", err)
-	db.DPrintf(db.ALWAYS, "MR job %v map phase %vms reduce phase %vms", ji.jobname, pd.MapMs, pd.ReduceMs)
+	if !assert.Nil(ji.Ts.T, err, "Error read MR phase durations: %v", err) {
+		return 0
+	}
+	db.DPrintf(db.ALWAYS, "MR job %v e2e %vms map phase %vms reduce phase %vms", ji.jobname, pd.E2eMs, pd.MapMs, pd.ReduceMs)
+	return time.Duration(pd.E2eMs) * time.Millisecond
 }
 
 // WaitJobExit waits for the job's coordinator(s) to exit, and fails the

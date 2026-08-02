@@ -7,6 +7,8 @@ import numpy as np
 import argparse
 import glob
 import os
+import re
+import statistics
 import sys
 import durationpy
 
@@ -94,6 +96,72 @@ def scrape_times(dname, sigma):
   ts = [ scrape_time(d, sigma) for d in run_dirs(dname) ]
   return [ t for t in ts if t is not None ]
 
+# The per-task stats block names each task and then reports its times:
+#   [mr-m-wc-<job>-<pid>, kid:sigma-...]:
+#       in 216 MB out 19 MB tot ... inner 7166ms outer 7965ms gets 5997ms (n 86) ...
+# mr-m-* is a mapper, mr-r-* a reducer.
+TASK_RE = re.compile(r'^\[(mr-[mr])-')
+GETS_RE = re.compile(r'\bgets (\d+)ms')
+PHASE_RE = re.compile(r'map phase (\d+)ms reduce phase (\d+)ms')
+
+def scrape_run_stats(dname):
+  # A run's median mapper/reducer gets time and its phase durations, in ms; any
+  # of them None if the run's output doesn't carry it (a corral run carries
+  # none). Medians rather than means: straggler tails inflate the mean by ~30%.
+  fn = bench_out(dname)
+  if fn is None:
+    return {}
+  with open(fn, "r") as f:
+    lines = f.read().split("\n")
+  gets = {"mr-m": [], "mr-r": []}
+  kind = None
+  st = {}
+  for l in lines:
+    m = TASK_RE.match(l)
+    if m:
+      kind = m.group(1)
+      continue
+    if kind is not None:
+      g = GETS_RE.search(l)
+      if g:
+        gets[kind].append(int(g.group(1)))
+        kind = None
+        continue
+    p = PHASE_RE.search(l)
+    if p and "map_ms" not in st:
+      st["map_ms"] = int(p.group(1))
+      st["reduce_ms"] = int(p.group(2))
+  for k, name in (("mr-m", "map_gets_ms"), ("mr-r", "reduce_gets_ms")):
+    if gets[k]:
+      st[name] = int(statistics.median(gets[k]))
+      st[name + "_n"] = len(gets[k])
+  return st
+
+def fmt_ms(st, key):
+  return "%6s" % (st[key] if key in st else "-")
+
+def report_runs(label, dirs, times):
+  # Print what each run contributed, so that a config's mean and error bar can
+  # be traced back to individual runs, and so the input-read cost (gets) and the
+  # phase split are visible next to the end-to-end number they explain.
+  print("%s (%d run%s)" % (label.replace("\n", " "), len(dirs), "" if len(dirs) == 1 else "s"))
+  rows = []
+  for d, t in zip(dirs, times):
+    st = scrape_run_stats(d)
+    rows.append(st)
+    print("    %-10s e2e %6.2fs  map %s  reduce %s  gets/mapper %s  gets/reducer %s"
+          % (os.path.basename(d.rstrip("/")), t, fmt_ms(st, "map_ms"), fmt_ms(st, "reduce_ms"),
+             fmt_ms(st, "map_gets_ms"), fmt_ms(st, "reduce_gets_ms")))
+  if len(rows) > 1:
+    med = {}
+    for k in ("map_ms", "reduce_ms", "map_gets_ms", "reduce_gets_ms"):
+      v = [ r[k] for r in rows if k in r ]
+      if v:
+        med[k] = int(statistics.median(v))
+    print("    %-10s e2e %6.2fs  map %s  reduce %s  gets/mapper %s  gets/reducer %s"
+          % ("median", statistics.median(times), fmt_ms(med, "map_ms"), fmt_ms(med, "reduce_ms"),
+             fmt_ms(med, "map_gets_ms"), fmt_ms(med, "reduce_gets_ms")))
+
 def collect(args):
   # The (label, family, mean, stddev, nrun) of every configuration which was
   # both supplied and has at least one scrapable run, in CONFIGS order. The
@@ -108,10 +176,12 @@ def collect(args):
     # source, so that a directory list naming everything can be reused as-is.
     if args.source is not None and source not in args.source:
       continue
+    dirs = run_dirs(dname)
     ts = scrape_times(dname, kind == "sigma")
     if len(ts) == 0:
       print("Warning: no benchmark output in %s; skipping %s" % (dname, key), file=sys.stderr)
       continue
+    report_runs(label, dirs, ts)
     sd = float(np.std(ts, ddof=1)) if len(ts) > 1 else 0.0
     bars.append((label, family, float(np.mean(ts)), sd, len(ts)))
   return bars

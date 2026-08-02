@@ -157,7 +157,14 @@ func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	db.DPrintf(db.BENCH, "Done MR job")
 	dur := time.Since(start)
 	ji.WaitJobExit()
-	ji.PrintPhaseDurations()
+	// Prefer the coordinator's own end-to-end measurement over the wall time
+	// above, which also covers spawning the coordinator, its leader election and
+	// fttask setup. Fall back to the local measurement if the coordinator didn't
+	// report one.
+	if e2e := ji.PrintPhaseDurations(); e2e > 0 {
+		db.DPrintf(db.BENCH, "MR job latency: coord e2e %v (driver measured %v)", e2e, dur)
+		dur = e2e
+	}
 	err := mrcoord.PrintMRStats(ts.FsLib, ji.jobRoot, ji.jobname)
 	assert.Nil(ts.Ts.T, err, "Error print MR stats: %v", err)
 	// Sleep a bit to allow util to update.

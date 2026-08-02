@@ -108,6 +108,7 @@ type Coord struct {
 	mapperGOMAXPROCS int
 	phaseStart       time.Time
 	mapPhaseMs       int64
+	reducePhaseMs    int64
 	mapPhaseDone     bool
 }
 
@@ -667,7 +668,9 @@ func (c *Coord) Work() {
 
 	start = time.Now()
 	c.phaseStart = start
+	executed := false
 	if int(m+r) < c.nmaptask+c.nreducetask {
+		executed = true
 
 		wg := &sync.WaitGroup{}
 		wg.Add(2)
@@ -712,7 +715,15 @@ func (c *Coord) Work() {
 
 	db.DPrintf(db.ALWAYS, "job done stat %v", &c.stat)
 
-	db.DPrintf(db.ALWAYS, "E2e bench took %v", time.Since(start))
+	e2e := time.Since(start)
+	db.DPrintf(db.ALWAYS, "E2e bench took %v", e2e)
+	// Before JobDone: the driver reads these as soon as that semaphore is up.
+	// Only if this coordinator ran the tasks: one which took over a job that was
+	// already complete has no durations to report, and writing its ~0 figures
+	// would overwrite those of the coordinator that did the work.
+	if executed {
+		c.writePhaseDurations(e2e.Milliseconds())
+	}
 	mr.JobDone(c.FsLib, c.jobRoot, c.job)
 
 	stro := spstats.NewTcounterSnapshot()
@@ -736,15 +747,23 @@ func (c *Coord) recordMapPhaseDone() {
 }
 
 // Record the wall-clock duration of the reduce phase (time from the end of the
-// map phase to the completion of all reduce tasks) and persist both phase
-// durations to the job's phase-stats file so the driver can report them.
+// map phase to the completion of all reduce tasks). Persisting is left to
+// writePhaseDurations, which runs once the end-to-end figure is known too.
 func (c *Coord) recordReducePhaseDone() {
 	totalMs := time.Since(c.phaseStart).Milliseconds()
+	c.reducePhaseMs = totalMs - c.mapPhaseMs
+	db.DPrintf(db.ALWAYS, "reduce phase took %vms", c.reducePhaseMs)
+}
+
+// Persist the job's durations for the driver to report. Must run before
+// mr.JobDone: the driver waits on that semaphore and reads this file straight
+// after, so writing it later races with the read.
+func (c *Coord) writePhaseDurations(e2eMs int64) {
 	pd := &mr.PhaseDurations{
 		MapMs:    c.mapPhaseMs,
-		ReduceMs: totalMs - c.mapPhaseMs,
+		ReduceMs: c.reducePhaseMs,
+		E2eMs:    e2eMs,
 	}
-	db.DPrintf(db.ALWAYS, "reduce phase took %vms", pd.ReduceMs)
 	if err := c.PutFileJson(mr.MRPhaseStats(c.jobRoot, c.job), 0777, pd); err != nil {
 		db.DPrintf(db.ERROR, "PutFileJson %v err %v", mr.MRPhaseStats(c.jobRoot, c.job), err)
 	}

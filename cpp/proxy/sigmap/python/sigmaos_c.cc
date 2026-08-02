@@ -17,8 +17,7 @@ struct SigmaosClntState {
   std::shared_ptr<sigmaos::proxy::s3::Clnt> s3;
   std::shared_ptr<sigmaos::proxy::ux::Clnt> ux;
   // Keeps DataBuf alive while Python holds a memoryview into its data.
-  std::map<uint64_t, std::shared_ptr<sigmaos::proxy::buf::DataBuf>>
-      data_bufs;
+  std::map<uint64_t, std::shared_ptr<sigmaos::proxy::buf::DataBuf>> data_bufs;
 };
 
 static SigmaosClntState* state(SigmaosClnt clnt) {
@@ -112,7 +111,6 @@ char* sigmaos_get_file(SigmaosClnt clnt, const char* pn, size_t* out_len) {
   return buf;
 }
 
-
 void sigmaos_free_buf(char* buf) { free(buf); }
 
 int sigmaos_put_file(SigmaosClnt clnt, const char* pn, unsigned int perm,
@@ -198,8 +196,8 @@ const char* sigmaos_s3_get_object_view(SigmaosClnt clnt, const char* bucket,
 }
 
 const char* sigmaos_s3_delegated_get_object_view(SigmaosClnt clnt,
-                                                  uint64_t rpc_idx,
-                                                  size_t* out_len) {
+                                                 uint64_t rpc_idx,
+                                                 size_t* out_len) {
   clear_error();
   auto res = s3_clnt(state(clnt))->DelegatedGetObject(rpc_idx);
   if (!res.has_value()) {
@@ -296,9 +294,10 @@ const char* sigmaos_ux_delegated_get_file_view(SigmaosClnt clnt,
 
 void sigmaos_log_spawn_latency(SigmaosClnt clnt, const char* label,
                                uint64_t elapsed_micros) {
-  auto now_us = std::chrono::duration_cast<std::chrono::microseconds>(
-                    std::chrono::high_resolution_clock::now().time_since_epoch())
-                    .count();
+  auto now_us =
+      std::chrono::duration_cast<std::chrono::microseconds>(
+          std::chrono::high_resolution_clock::now().time_since_epoch())
+          .count();
   int64_t op_start_us = now_us - static_cast<int64_t>(elapsed_micros);
   google::protobuf::Timestamp op_start;
   op_start.set_seconds(op_start_us / 1000000);

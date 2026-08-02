@@ -422,7 +422,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::WriteRead(
   if (views != nullptr && _shmem == nullptr) {
     fatal("views requested but shmem segment is null");
   }
-  bool use_shmem = (_use_shmem_writeread || views != nullptr) && _shmem != nullptr;
+  bool use_shmem =
+      (_use_shmem_writeread || views != nullptr) && _shmem != nullptr;
   int n_out_vec = out_iov->Size() + (views ? (int)views->size() : 0);
   Blob in_blob;
   auto req_iov = in_blob.mutable_iov();

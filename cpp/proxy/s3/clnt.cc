@@ -54,7 +54,8 @@ Clnt::GetObject(std::string bucket, std::string key, bool cache) {
   } else {
     dbuf = std::make_shared<sigmaos::proxy::buf::DataBuf>(std::move(s));
   }
-  log(S3CLNT, "GetObject ok bucket:{} key:{} len:{} shmem:{}", bucket, key, dbuf->size(), use_shmem);
+  log(S3CLNT, "GetObject ok bucket:{} key:{} len:{} shmem:{}", bucket, key,
+      dbuf->size(), use_shmem);
   return dbuf;
 }
 

@@ -237,8 +237,8 @@ std::expected<int, sigmaos::serr::Error> Clnt::wrap_and_run_rpc(
   }
 
   // Create the call object to be sent, and perform the RPC.
-  auto wrapped_call = std::make_shared<io::transport::Call>(seqno, wrapped_in_iov,
-                                                            out_iov, views);
+  auto wrapped_call = std::make_shared<io::transport::Call>(
+      seqno, wrapped_in_iov, out_iov, views);
   auto start = GetCurrentTime();
   std::expected<std::shared_ptr<sigmaos::io::transport::Call>,
                 sigmaos::serr::Error>

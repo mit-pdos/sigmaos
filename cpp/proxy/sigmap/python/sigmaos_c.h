@@ -62,8 +62,8 @@ const char* sigmaos_s3_get_object_view(SigmaosClnt clnt, const char* bucket,
 // or NULL on error. Valid for the proc's lifetime. The client retains ownership
 // of the underlying DelegatedBuf; callers must not free the returned pointer.
 const char* sigmaos_s3_delegated_get_object_view(SigmaosClnt clnt,
-                                                  uint64_t rpc_idx,
-                                                  size_t* out_len);
+                                                 uint64_t rpc_idx,
+                                                 size_t* out_len);
 
 // Returns malloc'd buffer of *out_len bytes, or NULL on error.
 // Caller must free with sigmaos_free_buf().
@@ -100,8 +100,8 @@ void sigmaos_log_spawn_latency(SigmaosClnt clnt, const char* label,
 // Returns 1 if the shmem segment was initialized for this proc, 0 otherwise.
 int sigmaos_get_shmem_enabled(SigmaosClnt clnt);
 
-// Enables or disables shmem for general WriteRead RPCs (GetObject, GetFile, etc.).
-// Pass 1 to enable, 0 to disable. Independent of cosandbox shmem.
+// Enables or disables shmem for general WriteRead RPCs (GetObject, GetFile,
+// etc.). Pass 1 to enable, 0 to disable. Independent of cosandbox shmem.
 void sigmaos_set_use_shmem_writeread(SigmaosClnt clnt, int enable);
 
 // Returns a thread-local string describing the last error, or "" if none.

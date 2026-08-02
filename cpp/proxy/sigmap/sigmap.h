@@ -88,7 +88,9 @@ class Clnt {
   // True if the shmem segment was initialized for this proc.
   bool GetShmemEnabled() { return _shmem != nullptr; }
   // True if shmem is available AND WriteRead shmem has been explicitly enabled.
-  bool GetUseShmemWriteread() { return _shmem != nullptr && _use_shmem_writeread; }
+  bool GetUseShmemWriteread() {
+    return _shmem != nullptr && _use_shmem_writeread;
+  }
 
   // Stubs
 

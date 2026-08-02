@@ -45,20 +45,21 @@ $GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
   --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only.pdf \
   --app wc \
   --ux_dir $MR_UX \
-  --ux_getput_mapper_dir $MR_UX-getput \
-  --ux_getput_reducer_dir $MR_UX-getput-reducer \
-  --ux_getput_both_dir $MR_UX-getput-both \
-  --ux_cosandbox_mapper_dir $MR_UX-cosandbox-mapper \
-  --ux_cosandbox_reducer_dir $MR_UX-cosandbox-reducer \
   --ux_cosandbox_both_dir $MR_UX-cosandbox-both \
   --s3_dir $MR_S3 \
-  --s3_getput_mapper_dir $MR_S3-getput \
-  --s3_getput_reducer_dir $MR_S3-getput-reducer \
-  --s3_getput_both_dir $MR_S3-getput-both \
-  --s3_cosandbox_mapper_dir $MR_S3-cosandbox-mapper \
-  --s3_cosandbox_reducer_dir $MR_S3-cosandbox-reducer \
   --s3_cosandbox_both_dir $MR_S3-cosandbox-both \
   --corral_dir $MR_RES_DIR/corral-10G-warm
+#  --ux_getput_mapper_dir $MR_UX-getput-mapper \
+#  --ux_getput_reducer_dir $MR_UX-getput-reducer \
+#  --ux_getput_both_dir $MR_UX-getput-both \
+#  --ux_cosandbox_mapper_dir $MR_UX-cosandbox-mapper \
+#  --ux_cosandbox_reducer_dir $MR_UX-cosandbox-reducer \
+#  --s3_getput_mapper_dir $MR_S3-getput-mapper \
+#  --s3_getput_reducer_dir $MR_S3-getput-reducer \
+#  --s3_getput_both_dir $MR_S3-getput-both \
+#  --s3_cosandbox_mapper_dir $MR_S3-cosandbox-mapper \
+#  --s3_cosandbox_reducer_dir $MR_S3-cosandbox-reducer \
+
 echo "Done generating MR graph (new)..."
 
 ## Figure 12

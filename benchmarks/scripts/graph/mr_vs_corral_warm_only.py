@@ -22,38 +22,49 @@ matplotlib.rcParams['ps.fonttype'] = 42
 # fslib/getput/cosandbox/lambda groups are distinguishable at a glance, and
 # "source" is where the job read its input, which --source filters on.
 CONFIGS = [
-  ("ux",                   "UX\nfslib",       "sigma",  "fslib",     "ux"),
-  ("ux_getput_mapper",     "UX\ngetput\nmap", "sigma",  "getput",    "ux"),
-  ("ux_getput_reducer",    "UX\ngetput\nred", "sigma",  "getput",    "ux"),
-  ("ux_getput_both",       "UX\ngetput\nboth", "sigma", "getput",    "ux"),
-  ("ux_cosandbox_mapper",  "UX\ncosbx\nmap",  "sigma",  "cosandbox", "ux"),
-  ("ux_cosandbox_reducer", "UX\ncosbx\nred",  "sigma",  "cosandbox", "ux"),
-  ("ux_cosandbox_both",    "UX\ncosbx\nboth", "sigma",  "cosandbox", "ux"),
-  ("s3",                   "S3\nfslib",       "sigma",  "fslib",     "s3"),
-  ("s3_getput_mapper",     "S3\ngetput\nmap", "sigma",  "getput",    "s3"),
-  ("s3_getput_reducer",    "S3\ngetput\nred", "sigma",  "getput",    "s3"),
-  ("s3_getput_both",       "S3\ngetput\nboth", "sigma", "getput",    "s3"),
-  ("s3_cosandbox_mapper",  "S3\ncosbx\nmap",  "sigma",  "cosandbox", "s3"),
-  ("s3_cosandbox_reducer", "S3\ncosbx\nred",  "sigma",  "cosandbox", "s3"),
-  ("s3_cosandbox_both",    "S3\ncosbx\nboth", "sigma",  "cosandbox", "s3"),
-  ("corral",               "λ-mr",            "corral", "lambda",    "lambda"),
+  ("ux",                   "σOS-mr (UX)",                     "sigma",  "fslib",     "ux"),
+  ("ux_getput_mapper",     "σOS-mr get/put map (UX)",         "sigma",  "getput",    "ux"),
+  ("ux_getput_reducer",    "σOS-mr get/put red (UX)",         "sigma",  "getput",    "ux"),
+  ("ux_getput_both",       "σOS-mr get/put both (UX)",        "sigma",  "getput",    "ux"),
+  ("ux_cosandbox_mapper",  "σOS-mr co-sandbox map (UX)",      "sigma",  "cosandbox", "ux"),
+  ("ux_cosandbox_reducer", "σOS-mr co-sandbox red (UX)",      "sigma",  "cosandbox", "ux"),
+  ("ux_cosandbox_both",    "σOS-mr co-sandbox both (UX)",     "sigma",  "cosandbox", "ux"),
+  ("s3",                   "σOS-mr (S3)",                     "sigma",  "fslib",     "s3"),
+  ("s3_getput_mapper",     "σOS-mr get/put map (S3)",         "sigma",  "getput",    "s3"),
+  ("s3_getput_reducer",    "σOS-mr get/put red (S3)",         "sigma",  "getput",    "s3"),
+  ("s3_getput_both",       "σOS-mr get/put both (S3)",        "sigma",  "getput",    "s3"),
+  ("s3_cosandbox_mapper",  "σOS-mr co-sandbox map (S3)",      "sigma",  "cosandbox", "s3"),
+  ("s3_cosandbox_reducer", "σOS-mr co-sandbox red (S3)",      "sigma",  "cosandbox", "s3"),
+  ("s3_cosandbox_both",    "σOS-mr co-sandbox both (S3)",     "sigma",  "cosandbox", "s3"),
+  ("corral",               "λ-mr",                            "corral", "lambda",    "lambda"),
 ]
 
 SOURCES = ["ux", "s3", "lambda"]
 
-FAMILY_COLORS = {
-  "fslib":     "C0",
-  "getput":    "C1",
-  "cosandbox": "C2",
-  "lambda":    "C3",
+# Bars are identified by the legend rather than by tick labels, so each needs
+# its own color. One hue per family, shaded across the bars within it, so the
+# families still read as groups.
+FAMILY_CMAP = {
+  "fslib":     "Blues",
+  "getput":    "Oranges",
+  "cosandbox": "Greens",
+  "lambda":    "Reds",
 }
 
-FAMILY_LABELS = {
-  "fslib":     "σOS-mr (fslib)",
-  "getput":    "σOS-mr (get/put)",
-  "cosandbox": "σOS-mr (co-sandbox)",
-  "lambda":    "λ-mr",
-}
+def bar_colors(families):
+  # A shade per bar, spread over the middle of its family's colormap: the
+  # extremes are too pale to see and too dark to tell apart.
+  n = {}
+  for f in families:
+    n[f] = n.get(f, 0) + 1
+  seen = {}
+  out = []
+  for f in families:
+    i = seen.get(f, 0)
+    seen[f] = i + 1
+    frac = 0.65 if n[f] == 1 else 0.45 + 0.4 * i / (n[f] - 1)
+    out.append(matplotlib.colormaps[FAMILY_CMAP[f]](frac))
+  return out
 
 def bench_out(dname):
   # The benchmark names its output file after the number of nodes in the run
@@ -187,8 +198,9 @@ def collect(args):
   return bars
 
 def setup_graph(nbar):
-  # Widen with the number of bars so the tick labels stay legible.
-  fig, ax = plt.subplots(figsize=(max(6.4, 0.85 * nbar + 1.0), 3.2))
+  # Widen with the number of bars so the tick labels — the widest of which is
+  # "co-sandbox" — stay legible.
+  fig, ax = plt.subplots(figsize=(max(6.4, 0.95 * nbar + 1.0), 3.2))
   ax.set_ylabel("Execution Time (seconds)")
   return fig, ax
 
@@ -206,30 +218,28 @@ def graph_data(args):
   x = np.arange(len(bars))
   times = [ t for _, _, t, _, _ in bars ]
   errs = [ e for _, _, _, e, _ in bars ]
-  colors = [ FAMILY_COLORS[f] for _, f, _, _, _ in bars ]
+  colors = bar_colors([ f for _, f, _, _, _ in bars ])
   plt.bar(x, times, width=0.7, color=colors, yerr=errs, capsize=3,
           error_kw={"ecolor": "black", "elinewidth": 1})
   top = max(t + e for t, e in zip(times, errs))
   for i, (_, _, v, e, n) in enumerate(bars):
     txt = str(round(v, 2)) if n < 2 else "%.2f±%.2f" % (v, e)
     plt.text(x[i], v + e + top * 0.02, txt, ha="center", fontsize=8)
-  ax.set_xticks(x)
-  ax.set_xticklabels([ l for l, _, _, _, _ in bars ], fontsize=7)
+  # No x ticks: the bars are named in the legend, one entry each, in bar order.
+  ax.set_xticks([])
   ax.set_ylim(bottom=0, top=top * 1.25)
-  ax.tick_params(axis='x', bottom=False)
 
   nruns = set(n for _, _, _, _, n in bars)
   if nruns != {1}:
     ax.set_ylabel("Execution Time (seconds)\nmean of %s runs, ±1 s.d." %
                   ("/".join(str(n) for n in sorted(nruns))))
 
-  # One legend entry per family which actually appears.
-  families = []
-  for _, f, _, _, _ in bars:
-    if f not in families:
-      families.append(f)
-  handles = [ matplotlib.patches.Patch(color=FAMILY_COLORS[f], label=FAMILY_LABELS[f]) for f in families ]
-  ax.legend(handles=handles, loc="upper left", fontsize=8, ncol=len(families))
+  handles = [ matplotlib.patches.Patch(color=c, label=l)
+              for c, (l, _, _, _, _) in zip(colors, bars) ]
+  # Below the axes, in the space the tick labels used to occupy: inside the plot
+  # a legend this long covers the bars it is naming.
+  ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.02),
+            ncol=min(4, len(handles)), fontsize=7, frameon=False)
 
   if args.title is not None:
     title = args.title

@@ -13,7 +13,7 @@ import (
 // that never came up, a driver waiting on a reply that will never arrive)
 // rather than slow progress, and the run is otherwise indistinguishable from
 // one which is simply taking a while.
-const benchWatchdogInterval = 10 * time.Millisecond
+const benchWatchdogInterval = 5 * time.Minute
 
 // Warns periodically while a benchmark is still running, naming the phase it
 // is stuck in so the warning points somewhere.

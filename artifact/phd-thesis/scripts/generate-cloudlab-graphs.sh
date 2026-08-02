@@ -36,7 +36,29 @@ SYS_NAME_CAMEL="${SYS_NAME_CAMEL:-CoSandbox}"
 
 # Figure 10
 echo "Generating MR graph (new)..."
-$GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py --measurement_dir $RES_OUT_DIR/mr_vs_corral/ --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only.pdf --datasize=10G
+MR_RES_DIR=$RES_OUT_DIR/mr_vs_corral
+MR_UX=$MR_RES_DIR/mr-wc-wiki10G-bench.json-warm
+MR_S3=$MR_RES_DIR/mr-wc-wiki10G-bench-s3.json-warm
+# Every configuration the MR data-path sweep produces. Any of these which
+# hasn't been run yet is simply skipped by the graph script.
+$GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
+  --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only.pdf \
+  --app wc \
+  --ux_dir $MR_UX \
+  --ux_getput_mapper_dir $MR_UX-getput \
+  --ux_getput_reducer_dir $MR_UX-getput-reducer \
+  --ux_getput_both_dir $MR_UX-getput-both \
+  --ux_cosandbox_mapper_dir $MR_UX-cosandbox-mapper \
+  --ux_cosandbox_reducer_dir $MR_UX-cosandbox-reducer \
+  --ux_cosandbox_both_dir $MR_UX-cosandbox-both \
+  --s3_dir $MR_S3 \
+  --s3_getput_mapper_dir $MR_S3-getput \
+  --s3_getput_reducer_dir $MR_S3-getput-reducer \
+  --s3_getput_both_dir $MR_S3-getput-both \
+  --s3_cosandbox_mapper_dir $MR_S3-cosandbox-mapper \
+  --s3_cosandbox_reducer_dir $MR_S3-cosandbox-reducer \
+  --s3_cosandbox_both_dir $MR_S3-cosandbox-both \
+  --corral_dir $MR_RES_DIR/corral-10G-warm
 echo "Done generating MR graph (new)..."
 
 ## Figure 12

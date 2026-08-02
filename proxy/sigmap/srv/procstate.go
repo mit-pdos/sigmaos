@@ -44,6 +44,13 @@ func (psm *ProcStateMgr) AllocProcState(pe *proc.ProcEnv, p *proc.Proc) *procSta
 	// If already exists or already being created, bail out
 	if ps, ok := psm.ps[pe.GetPID()]; ok {
 		db.DPrintf(db.SPPROXYSRV, "AllocProcState already exists %v", pe.GetPID())
+		// The state may have been created by the proc's own Init, which only
+		// carries a ProcEnv. Hand it the Proc now: the cosandbox's WASM module and
+		// input live on the Proc, so this is the first moment the cosandbox can
+		// start.
+		if p != nil {
+			ps.setProc(p)
+		}
 		return ps
 	}
 
@@ -158,6 +165,34 @@ func (psm *ProcStateMgr) InsertReply(pe *proc.ProcEnv, rpcIdx uint64, iov *sessp
 	ps.rpcReps.InsertReply(rpcIdx, iov, err)
 }
 
+// How long a delegated RPC reply may be outstanding before the watchdog starts
+// complaining. Delegated RPCs are prefetches of a proc's input, so they are
+// expected to take a while, but not this long.
+const delegatedRPCWatchdogInterval = 10 * time.Second
+
+// Complain periodically while a delegated RPC reply is outstanding. GetReply
+// blocks indefinitely: nothing will ever unblock it if the cosandbox which was
+// supposed to produce the reply never ran or died without inserting one, and
+// the proc (and, in a job like MR, the phase waiting on it) then hangs
+// silently. Return a function which stops the watchdog.
+func watchDelegatedRPCReply(pid sp.Tpid, rpcIdx uint64) func() {
+	done := make(chan struct{})
+	go func() {
+		start := time.Now()
+		t := time.NewTicker(delegatedRPCWatchdogInterval)
+		defer t.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-t.C:
+				db.DPrintf(db.ALWAYS, "WARNING: [%v] DelegatedRPC.GetReply(%v) has blocked for %v; the cosandbox may not be running", pid, rpcIdx, time.Since(start).Truncate(time.Second))
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
 func (psm *ProcStateMgr) GetReply(pid sp.Tpid, rpcIdx uint64) (*sessp.IoVec, error) {
 	db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetReply(%v)", pid, rpcIdx)
 	defer db.DPrintf(db.SPPROXYSRV, "[%v] DelegatedRPC.GetReply(%v) done", pid, rpcIdx)
@@ -167,7 +202,14 @@ func (psm *ProcStateMgr) GetReply(pid sp.Tpid, rpcIdx uint64) (*sessp.IoVec, err
 		db.DPrintf(db.SPPROXYSRV_ERR, "Try to get delegated RPC reply for unknown proc: %v", pid)
 		return nil, fmt.Errorf("Try to get delegated RPC reply for unknown proc: %v", pid)
 	}
-	return ps.rpcReps.GetReply(rpcIdx)
+	start := time.Now()
+	stopWatchdog := watchDelegatedRPCReply(pid, rpcIdx)
+	iov, err := ps.rpcReps.GetReply(rpcIdx)
+	stopWatchdog()
+	if d := time.Since(start); d > delegatedRPCWatchdogInterval {
+		db.DPrintf(db.ALWAYS, "[%v] DelegatedRPC.GetReply(%v) returned after blocking for %v", pid, rpcIdx, d.Truncate(time.Millisecond))
+	}
+	return iov, err
 }
 
 func (psm *ProcStateMgr) GetShmemBuf(pid sp.Tpid) ([]byte, error) {
@@ -231,6 +273,8 @@ type procState struct {
 	wasmScriptBooted         bool
 	delRPCStartSet           bool
 	shmAlloc                 malloc.Allocator
+	scCreated                bool            // has the sigmaclnt been constructed?
+	coSandboxStarted         bool            // has the cosandbox been kicked off?
 	err                      error           // Creation result
 	bsStatus                 wasmrpc.Tstatus // CoSandbox exit status
 	bsMsg                    string          // CoSandbox exit message
@@ -270,6 +314,54 @@ func newProcState(spps *SPProxySrv, pe *proc.ProcEnv, p *proc.Proc) *procState {
 		ps.coSandboxCompleted = true
 	}
 	return ps
+}
+
+// Attach the full Proc to a proc state which was created from a bare ProcEnv,
+// and start the cosandbox if it is now startable.
+//
+// The proc's own Init and procd's IncomingProc race, and whichever arrives
+// first creates the state. Only IncomingProc carries the Proc, and the
+// cosandbox's WASM module and input live on the Proc, so when Init wins the
+// race the cosandbox cannot be started until this is called. Failing to start
+// it here is not merely a lost optimization: the proc's first delegated RPC
+// blocks in GetReply forever waiting for a reply the cosandbox would have
+// produced, which hangs the proc and, with it, the job.
+func (ps *procState) setProc(p *proc.Proc) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	if ps.p == nil {
+		ps.p = p
+	}
+	ps.startCoSandboxL()
+}
+
+// Start the proc's cosandbox, if it has one and everything it needs is
+// available. Idempotent; ps.mu must be held.
+func (ps *procState) startCoSandboxL() {
+	if ps.coSandboxStarted || !ps.scCreated || ps.p == nil || !ps.p.GetRunCoSandbox() {
+		return
+	}
+	ps.coSandboxStarted = true
+
+	p, sc := ps.p, ps.sc
+	start := time.Now()
+	// The proc specified a boot script: create a WASM runtime and run it
+	rpcAPI := NewWASMRPCProxy(ps.spps, sc, p)
+	ps.wrt = wasmrt.NewWasmerRuntime(rpcAPI)
+	perf.LogSpawnLatency("Create wasmRT", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
+	ps.wasmScriptStart = time.Now()
+	wrt := ps.wrt
+	go func() {
+		// Run the module
+		bufSz := wasmrt.DEFAULT_WASM_BUF_SZ
+		if mb := p.GetCoSandboxBufMB(); mb > 0 {
+			bufSz = int(mb) * int(sp.MBYTE)
+		}
+		status, msg, err := wrt.RunModule(p.GetPid(), p.GetSpawnTime(), p.GetCoSandbox(), p.GetCoSandboxInput(), bufSz)
+		// Mark the script as done
+		ps.coSandboxDone(status, msg, err)
+	}()
 }
 
 func (ps *procState) AddRegisteredEP(svcName string, instanceName string, ep *sp.Tendpoint) {
@@ -382,25 +474,11 @@ func (ps *procState) createSigmaClnt(spps *SPProxySrv) {
 	if err != nil {
 		db.DPrintf(db.SPPROXYSRV_ERR, "Error NewSigmaClnt proc %v", ps.pe.GetPID())
 	}
-	if ps.p != nil && ps.p.GetRunCoSandbox() {
-		start := time.Now()
-		// If the proc specified a boot script, create a WASM runtime and run the
-		// script
-		rpcAPI := NewWASMRPCProxy(spps, sc, ps.p)
-		ps.wrt = wasmrt.NewWasmerRuntime(rpcAPI)
-		perf.LogSpawnLatency("Create wasmRT", ps.pe.GetPID(), ps.pe.GetSpawnTime(), start)
-		ps.wasmScriptStart = time.Now()
-		go func() {
-			// Run the module
-			bufSz := wasmrt.DEFAULT_WASM_BUF_SZ
-			if mb := ps.p.GetCoSandboxBufMB(); mb > 0 {
-				bufSz = int(mb) * int(sp.MBYTE)
-			}
-			status, msg, err := ps.wrt.RunModule(ps.p.GetPid(), ps.p.GetSpawnTime(), ps.p.GetCoSandbox(), ps.p.GetCoSandboxInput(), bufSz)
-			// Mark the script as done
-			ps.coSandboxDone(status, msg, err)
-		}()
-	}
+	ps.mu.Lock()
+	ps.sc = sc
+	ps.scCreated = true
+	ps.startCoSandboxL()
+	ps.mu.Unlock()
 	var epcc *epcacheclnt.EndpointCacheClnt
 	// Initialize a procclnt too
 	if err == nil {

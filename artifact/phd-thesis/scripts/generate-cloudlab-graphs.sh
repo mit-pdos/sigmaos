@@ -43,6 +43,7 @@ MR_S3=$MR_RES_DIR/mr-wc-wiki10G-bench-s3.json-warm
 # hasn't been run yet is simply skipped by the graph script.
 $GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
   --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only.pdf \
+  --error_bars \
   --app wc \
   --ux_dir $MR_UX \
   --s3_dir $MR_S3 \
@@ -71,11 +72,11 @@ GREP_S3=$MR_RES_DIR/mr-grep-wiki2G-bench-s3.json-warm
 $GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
   --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only_grep.pdf \
   --app grep \
-  --ux_dir $GREP_UX \
-  --ux_cosandbox_both_dir $GREP_UX-cosandbox-both \
   --s3_dir $GREP_S3 \
   --s3_cosandbox_both_dir $GREP_S3-cosandbox-both \
   --corral_dir $MR_RES_DIR/corral-grep-wiki2G-warm
+#  --ux_dir $GREP_UX \
+#  --ux_cosandbox_both_dir $GREP_UX-cosandbox-both \
 echo "Done generating MR vs corral grep graph..."
 
 ## Figure 12

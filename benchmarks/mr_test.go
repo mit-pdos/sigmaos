@@ -101,7 +101,8 @@ func (ji *MRJobInstance) PrintPhaseDurations() time.Duration {
 }
 
 // WaitJobExit waits for the job's coordinator(s) to exit, and fails the
-// benchmark if any mapper or reducer failed along the way.
+// benchmark if any mapper or reducer failed along the way, or if the reducers
+// didn't read everything the mappers wrote.
 //
 // A job that loses tasks still finishes and still reports phase durations — the
 // MR fault-tolerance machinery just re-runs them — so a benchmark can otherwise
@@ -130,10 +131,24 @@ func (ji *MRJobInstance) WaitJobExit() {
 	// Nfail counts mappers and reducers that exited non-OK; the recover counters
 	// count tasks re-run because a reducer couldn't read a mapper's output. Any
 	// of them means the run's timings include re-executed work.
+	clean := true
 	for _, c := range []string{"Nfail", "Nrestart", "NrecoverMap", "NrecoverReduce"} {
-		assert.Equal(ji.Ts.T, int64(0), st.Counters[c],
+		if !assert.Equal(ji.Ts.T, int64(0), st.Counters[c],
 			"MR job %v: %v = %v, so some mappers/reducers failed and were re-run; this run's numbers include repeated work (coord stats %v)",
-			ji.jobname, c, st.Counters[c], st)
+			ji.jobname, c, st.Counters[c], st) {
+			clean = false
+		}
+	}
+	// Every mapper shard is read by exactly one reducer, so the bytes the
+	// reducers read must equal the bytes the mappers wrote. Checking it catches
+	// the failure mode none of the counters above can see: a read path that
+	// silently returns short (or nothing) leaves every task exiting OK, the
+	// phases timed, and the answer wrong or empty. Only meaningful when no task
+	// ran twice, since a re-run mapper's output is counted again.
+	if clean {
+		assert.Equal(ji.Ts.T, st.Counters["MapOutBytes"], st.Counters["ReduceInBytes"],
+			"MR job %v: reducers read %v bytes but mappers wrote %v — the reduce phase did not see all of the intermediate output, so this run's result is wrong (coord stats %v)",
+			ji.jobname, st.Counters["ReduceInBytes"], st.Counters["MapOutBytes"], st)
 	}
 }
 

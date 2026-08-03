@@ -333,7 +333,7 @@ func TestMR(t *testing.T) {
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			{"mr-grep-wiki2G-bench-s3.json", 54, 2, 7000, 7000},
+			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 2, 7000, 7000},
 			{"mr-wc-wiki10G-bench.json", 17, 2, 7000, 10000},
 			{"mr-wc-wiki10G-bench-s3.json", 17, 2, 7000, 10000},
 		}
@@ -410,6 +410,10 @@ func TestMR(t *testing.T) {
 					}
 					db.DPrintf(db.ALWAYS, "MR config: benchName %v mapperMem %v reducerMem %v data %v nruns %v", benchName, mrEP.mapperMem, mrEP.reducerMem, data, numRuns)
 					numFullNodes := mrEP.numNodes - numProcqOnlyNodes
+					// The cluster occupies VMs 0..numNodes-1, so the driver is the
+					// next one along: a benchmark with fewer nodes drives from a
+					// lower-numbered VM rather than from one outside its cluster.
+					driverVM := mrEP.numNodes + 1
 					for run := 1; run <= numRuns; run++ {
 						runName := filepath.Join(benchName, fmt.Sprintf("run-%d", run))
 						db.DPrintf(db.ALWAYS, "MR run %v/%v: %v", run, numRuns, runName)
@@ -479,7 +483,7 @@ func TestCorral(t *testing.T) {
 	const MB = 1024 * 1024
 	corralApps := []*CorralExperiment{
 		{CorralWordCount, "wiki-10G/", 10 * MB, 130 * MB, 160 * MB * 5, 32, 2 * MB},
-		{CorralGrep, "wiki-2G/", 10 * MB, 10 * MB, 160 * MB * 100, 200, 2 * MB},
+		{CorralGrep, "wiki-2G/", 10 * MB, 10 * MB, 160 * MB * 100, 210, 2 * MB},
 	}
 	// Whether the run finds the Lambda already deployed. Both kinds land in
 	// their own results directory (…-warm, …-cold); see

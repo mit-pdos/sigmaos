@@ -125,10 +125,18 @@ type AStat struct {
 	Nrestart       spstats.Tcounter
 	NrecoverMap    spstats.Tcounter
 	NrecoverReduce spstats.Tcounter
+	// Bytes the mappers wrote and bytes the reducers read. Every mapper shard is
+	// read by exactly one reducer, so in a run with no failed or re-run tasks
+	// these must be equal. They are reported so the driver can check that: a
+	// reducer which silently reads short (an intermediate-store read path that
+	// drops data at EOF, say) otherwise produces a job that "succeeds" with
+	// every task OK, plausible phase times, and a wrong or empty answer.
+	MapOutBytes   spstats.Tcounter
+	ReduceInBytes spstats.Tcounter
 }
 
 func (s *AStat) String() string {
-	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d}", s.Ntask.Load(), s.Nmap.Load(), s.Nreduce.Load(), s.Nfail.Load(), s.Nrestart.Load(), s.NrecoverMap.Load(), s.NrecoverReduce.Load())
+	return fmt.Sprintf("{nT %d nM %d nR %d nfail %d nrestart %d nrecoverM %d nrecoverR %d mapOut %d reduceIn %d}", s.Ntask.Load(), s.Nmap.Load(), s.Nreduce.Load(), s.Nfail.Load(), s.Nrestart.Load(), s.NrecoverMap.Load(), s.NrecoverReduce.Load(), s.MapOutBytes.Load(), s.ReduceInBytes.Load())
 }
 
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
@@ -831,6 +839,7 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 			}
 			if r.IsM {
 				c.mapOutBytes.Add(int64(r.Out))
+				c.stat.MapOutBytes.Add(int64(r.Out))
 				if _, ok := ts[res.Id]; ok {
 					db.DFatalf("task id already finished %v", res.Id)
 				}
@@ -843,6 +852,7 @@ func (c *Coord) processResult(ch <-chan ftmgr.Tresult[[]byte, []byte], m, r int3
 					}
 				}
 			} else {
+				c.stat.ReduceInBytes.Add(int64(r.In))
 				nR += 1
 				if nR >= c.nreducetask {
 					c.recordReducePhaseDone()

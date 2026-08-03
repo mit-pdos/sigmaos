@@ -1,7 +1,7 @@
 {
   "app": "grep",
   "nreduce": 1,
-  "binsz": 13631488,
+  "binsz": 10485760,
   "splitsz": 10485760,
   "input": "name/s3/~local/9ps3/wiki-2G/",
   "intermediate": "name/s3/~local/9ps3/mr-intermediate",

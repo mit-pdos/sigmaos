@@ -88,9 +88,8 @@ run_scratch() {
 #sudo usermod -aG docker ubuntu
 #docker --version
 cd sigmaos
-./set-cores.sh --start 4 --end 16 --set 0
+./set-cores.sh --start 2 --end 16 --set 0
 nproc
-docker pull arielszekely/sigmauser:arielck
 ENDSSH
 }
 

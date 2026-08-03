@@ -45,10 +45,10 @@ $GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
   --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only.pdf \
   --app wc \
   --ux_dir $MR_UX \
-  --ux_cosandbox_both_dir $MR_UX-cosandbox-both \
   --s3_dir $MR_S3 \
   --s3_cosandbox_both_dir $MR_S3-cosandbox-both \
-  --corral_dir $MR_RES_DIR/corral-10G-warm
+  --corral_dir $MR_RES_DIR/corral-wc-wiki10G-warm
+#  --ux_cosandbox_both_dir $MR_UX-cosandbox-both \
 #  --ux_getput_mapper_dir $MR_UX-getput-mapper \
 #  --ux_getput_reducer_dir $MR_UX-getput-reducer \
 #  --ux_getput_both_dir $MR_UX-getput-both \
@@ -62,11 +62,27 @@ $GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
 
 echo "Done generating MR graph (new)..."
 
+# The grep workload runs on its own dataset size (see corralApps in TestCorral
+# and mrApps in TestMR), so it gets its own graph rather than sharing the
+# word-count one's axes.
+echo "Generating MR vs corral grep graph..."
+GREP_UX=$MR_RES_DIR/mr-grep-wiki2G-bench.json-warm
+GREP_S3=$MR_RES_DIR/mr-grep-wiki2G-bench-s3.json-warm
+$GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
+  --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only_grep.pdf \
+  --app grep \
+  --ux_dir $GREP_UX \
+  --ux_cosandbox_both_dir $GREP_UX-cosandbox-both \
+  --s3_dir $GREP_S3 \
+  --s3_cosandbox_both_dir $GREP_S3-cosandbox-both \
+  --corral_dir $MR_RES_DIR/corral-grep-wiki2G-warm
+echo "Done generating MR vs corral grep graph..."
+
 ## Figure 12
 #echo "Generating Figure 12..."
 #$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_imgresize_rpc_multiplexing --out $GRAPH_OUT_DIR/be_imgresize_rpc_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 40 --prefix "imgresize-"
 #echo "Done generating Figure 12..."
 
-#echo "Generating MR+MR multiplexing graph..."
-#$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000 --out $GRAPH_OUT_DIR/be_mr_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 96 --prefix "mr-" --xmax 70000
-#echo "Done generating MR+MR multiplexing graph..."
+echo "Generating MR+MR multiplexing graph..."
+$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000 --out $GRAPH_OUT_DIR/be_mr_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 96 --prefix "mr-" --xmax 70000
+echo "Done generating MR+MR multiplexing graph..."

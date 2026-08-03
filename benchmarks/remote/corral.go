@@ -131,6 +131,31 @@ func (cfg *CorralConfig) inputLabel() string {
 	return ds
 }
 
+// datasetLabel names this run's dataset the way the MR job descriptions do
+// ("wiki-10G/" -> "wiki10G"), so that a corral run and the σOS MR run on the
+// same data file their results under matching names.
+func (cfg *CorralConfig) datasetLabel() string {
+	return strings.ReplaceAll(path.Base(strings.Trim(cfg.Input, "/")), "-", "")
+}
+
+// appLabel is the short name of this run's app, again matching the MR job
+// descriptions (mr-wc-..., mr-grep-...) so that the two systems' results
+// directories for the same workload line up.
+func (cfg *CorralConfig) appLabel() string {
+	if cfg.App == CorralWordCount {
+		return "wc"
+	}
+	return cfg.App
+}
+
+// ResultsDirName is where a run of this configuration files its results:
+// corral-<app>-<dataset>-<start>, e.g. "corral-wc-wiki10G-warm". start
+// distinguishes a run that had to deploy the Lambda from one that found it
+// warm.
+func (cfg *CorralConfig) ResultsDirName(start string) string {
+	return fmt.Sprintf("corral-%s-%s-%s", cfg.appLabel(), cfg.datasetLabel(), start)
+}
+
 // outputURL is the S3 URL the job's output (and its intermediate data) goes to.
 func (cfg *CorralConfig) outputURL() string {
 	return fmt.Sprintf("s3://%s/%s", cfg.Bucket, cfg.Output)

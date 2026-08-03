@@ -132,3 +132,30 @@ func TestCorralInputLabel(t *testing.T) {
 		}
 	}
 }
+
+// The results directory carries the app and the dataset, so that runs of
+// different workloads on different dataset sizes can't collide, and so that a
+// corral run files alongside the σOS MR run on the same data. The graph script
+// is pointed at these names, so they are worth pinning down.
+func TestCorralResultsDirName(t *testing.T) {
+	for _, tc := range []struct {
+		app   string
+		input string
+		start string
+		want  string
+	}{
+		{CorralWordCount, "wiki-10G/", "warm", "corral-wc-wiki10G-warm"},
+		{CorralWordCount, "wiki-10G/", "cold", "corral-wc-wiki10G-cold"},
+		{CorralGrep, "wiki-2G/", "warm", "corral-grep-wiki2G-warm"},
+		{CorralGrep, "wiki-128M", "warm", "corral-grep-wiki128M-warm"},
+		// A nested prefix is named by its last element, as with inputLabel.
+		{CorralWordCount, "data/wiki-20G/", "warm", "corral-wc-wiki20G-warm"},
+		// A dataset with no size suffix keeps its whole name.
+		{CorralGrep, "gutenberg/", "warm", "corral-grep-gutenberg-warm"},
+	} {
+		cfg := &CorralConfig{App: tc.app, Input: tc.input}
+		if got := cfg.ResultsDirName(tc.start); got != tc.want {
+			t.Errorf("ResultsDirName(%q, %q, %q) = %q want %q", tc.app, tc.input, tc.start, got, tc.want)
+		}
+	}
+}

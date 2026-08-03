@@ -294,9 +294,11 @@ func TestMR(t *testing.T) {
 	var (
 		benchNameBase string = "mr_vs_corral"
 	)
-	// Cluster configuration parameters
+	// Cluster configuration parameters. The driver VM is not one of the cluster's
+	// nodes, so it is derived per benchmark from that benchmark's node count
+	// (see driverVM below) rather than fixed here: a benchmark with fewer nodes
+	// would otherwise drive from a VM that isn't in its cluster.
 	const (
-		driverVM          int  = 17
 		numProcqOnlyNodes int  = 1
 		turboBoost        bool = true
 		useGVisor         bool = false
@@ -331,8 +333,7 @@ func TestMR(t *testing.T) {
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			//			{"mr-grep-wiki2G-bench-s3.json", 9, 4, 7000, 7000},
-			//			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000, 7000},
+			{"mr-grep-wiki2G-bench-s3.json", 54, 2, 7000, 7000},
 			{"mr-wc-wiki10G-bench.json", 17, 2, 7000, 10000},
 			{"mr-wc-wiki10G-bench-s3.json", 17, 2, 7000, 10000},
 		}
@@ -434,12 +435,10 @@ func TestCorral(t *testing.T) {
 		turboBoost        bool = true
 		useGVisor         bool = false
 	)
-	// Corral run configuration, app-independent part.
+	// Corral run configuration, shared by every workload.
 	const (
-		corralApp    string = CorralWordCount
 		corralBranch string = "play-perf-asynch"
 		corralBucket string = "9ps3"
-		corralInput  string = "wiki-10G/"
 		corralOutput string = "output"
 		corralLambda bool   = true
 		// Lambda scales a function's vCPU allocation with its memory, and 1769MB
@@ -452,62 +451,40 @@ func TestCorral(t *testing.T) {
 		// the graph script averages; see the same const in TestMR.
 		numRuns int = 5
 	)
-	// Task-granularity tuning, one block per corral example app: these are the
-	// values each app compiles in as its own defaults
-	// (corral.SetTuningDefaults in corral/examples/<app>), restated here so
-	// that a run's configuration is visible in one place and a sweep is a
-	// matter of editing a number. The two apps are tuned an order of magnitude
-	// apart on the map bin size and concurrency, so they get separate blocks
-	// rather than one shared set that would silently be wrong for one of them.
+	// One entry per workload: the corral example app, the dataset it reads, and
+	// its task-granularity tuning. Each workload names its own input because the
+	// workloads are not compared against each other — each is compared against
+	// the σOS MR job on the same data — so grep and word_count are free to run
+	// on different dataset sizes, and adding a size means adding a line here.
 	//
-	// word_count: 130M map bins are 8 mappers with 1G of input, 16 with 2G;
-	// 800M reduce bins are 16 reducers on 10G.
-	const (
-		wcSplitSize      int64 = 10 * 1024 * 1024
-		wcMapBinSize     int64 = 130 * 1024 * 1024
-		wcReduceBinSize  int64 = 160 * 1024 * 1024 * 5
-		wcMaxConcurrency int   = 32
-		wcMaxLineLength  int   = 2 * 1024 * 1024
-	)
-	// grep: 13M map bins, i.e. far more and smaller mappers than word_count,
-	// and a reduce bin large enough that grep's small output lands in one
-	// reducer.
-	const (
-		grepSplitSize      int64 = 10 * 1024 * 1024
-		grepMapBinSize     int64 = 13 * 1024 * 1024
-		grepReduceBinSize  int64 = 160 * 1024 * 1024 * 100
-		grepMaxConcurrency int   = 200
-		grepMaxLineLength  int   = 2 * 1024 * 1024
-	)
-	var (
-		corralSplitSize      int64
-		corralMapBinSize     int64
-		corralReduceBinSize  int64
-		corralMaxConcurrency int
-		corralMaxLineLength  int
-	)
-	switch corralApp {
-	case CorralWordCount:
-		corralSplitSize = wcSplitSize
-		corralMapBinSize = wcMapBinSize
-		corralReduceBinSize = wcReduceBinSize
-		corralMaxConcurrency = wcMaxConcurrency
-		corralMaxLineLength = wcMaxLineLength
-	case CorralGrep:
-		corralSplitSize = grepSplitSize
-		corralMapBinSize = grepMapBinSize
-		corralReduceBinSize = grepReduceBinSize
-		corralMaxConcurrency = grepMaxConcurrency
-		corralMaxLineLength = grepMaxLineLength
-	default:
-		assert.Fail(t, "No tuning block for corral app %v", corralApp)
-		return
+	// The tuning values are what each app compiles in as its own defaults
+	// (corral.SetTuningDefaults in corral/examples/<app>), restated so that a
+	// run's configuration is visible in one place and a sweep is a matter of
+	// editing a number. The apps are tuned an order of magnitude apart on map
+	// bin size and concurrency, which is why they are per-workload rather than
+	// one shared set that would silently be wrong for one of them.
+	type CorralExperiment struct {
+		app   string
+		input string // dataset prefix within corralBucket
+		// word_count: 130M map bins are 8 mappers with 1G of input, 16 with 2G;
+		// 800M reduce bins are 16 reducers on 10G. grep: 13M map bins, i.e. far
+		// more and smaller mappers, and a reduce bin large enough that grep's
+		// small output lands in one reducer.
+		splitSize      int64
+		mapBinSize     int64
+		reduceBinSize  int64
+		maxConcurrency int
+		maxLineLength  int
 	}
-	// One entry per run; each names the run's results directory together with the
-	// input it ran on (see CorralConfig.inputLabel), e.g. "corral-10G-cold" for
-	// a wiki-10G input. The two runs are the same configuration twice: the first
-	// pays to deploy the Lambda, the second finds it warm.
-	corralExps := []string{"warm"}
+	const MB = 1024 * 1024
+	corralApps := []*CorralExperiment{
+		{CorralWordCount, "wiki-10G/", 10 * MB, 130 * MB, 160 * MB * 5, 32, 2 * MB},
+		{CorralGrep, "wiki-2G/", 10 * MB, 10 * MB, 160 * MB * 100, 200, 2 * MB},
+	}
+	// Whether the run finds the Lambda already deployed. Both kinds land in
+	// their own results directory (…-warm, …-cold); see
+	// CorralConfig.ResultsDirName.
+	corralStarts := []string{"warm"}
 	ts, err := NewTstate(t)
 	if !assert.Nil(ts.t, err, "Creating test state: %v", err) {
 		return
@@ -516,30 +493,32 @@ func TestCorral(t *testing.T) {
 		return
 	}
 	db.DPrintf(db.ALWAYS, "Benchmark configuration:\n%v", ts)
-	for _, exp := range corralExps {
-		cfg, err := NewCorralConfig(
-			corralApp,
-			corralBranch,
-			corralBucket,
-			corralInput,
-			corralOutput,
-			corralLambda,
-			corralSplitSize,
-			corralMapBinSize,
-			corralReduceBinSize,
-			corralMaxConcurrency,
-			corralMaxLineLength,
-			corralLambdaMemoryMB,
-		)
-		if !assert.Nil(ts.t, err, "Corral config: %v", err) {
-			return
-		}
-		benchName := filepath.Join(benchNameBase, fmt.Sprintf("corral-%s-%s", cfg.inputLabel(), exp))
-		db.DPrintf(db.ALWAYS, "Corral config: benchName %v cfg %v nruns %v", benchName, cfg, numRuns)
-		for run := 1; run <= numRuns; run++ {
-			runName := filepath.Join(benchName, fmt.Sprintf("run-%d", run))
-			db.DPrintf(db.ALWAYS, "Corral run %v/%v: %v", run, numRuns, runName)
-			ts.RunStandardBenchmark(runName, driverVM, GetCorralCmdConstructor(cfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+	for _, app := range corralApps {
+		for _, start := range corralStarts {
+			cfg, err := NewCorralConfig(
+				app.app,
+				corralBranch,
+				corralBucket,
+				app.input,
+				corralOutput,
+				corralLambda,
+				app.splitSize,
+				app.mapBinSize,
+				app.reduceBinSize,
+				app.maxConcurrency,
+				app.maxLineLength,
+				corralLambdaMemoryMB,
+			)
+			if !assert.Nil(ts.t, err, "Corral config: %v", err) {
+				return
+			}
+			benchName := filepath.Join(benchNameBase, cfg.ResultsDirName(start))
+			db.DPrintf(db.ALWAYS, "Corral config: benchName %v cfg %v nruns %v", benchName, cfg, numRuns)
+			for run := 1; run <= numRuns; run++ {
+				runName := filepath.Join(benchName, fmt.Sprintf("run-%d", run))
+				db.DPrintf(db.ALWAYS, "Corral run %v/%v: %v", run, numRuns, runName)
+				ts.RunStandardBenchmark(runName, driverVM, GetCorralCmdConstructor(cfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
+			}
 		}
 	}
 }

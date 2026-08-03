@@ -22,6 +22,8 @@ matplotlib.rcParams['ps.fonttype'] = 42
 # fslib/getput/cosandbox/lambda groups are distinguishable at a glance, and
 # "source" is where the job read its input, which --source filters on.
 CONFIGS = [
+  ("corral",               "λ-mr",                            "corral", "lambda",    "lambda"),
+  ("s3",                   "σOS-mr (S3)",                     "sigma",  "fslib",     "s3"),
   ("ux",                   "σOS-mr (UX)",                     "sigma",  "fslib",     "ux"),
   ("ux_getput_mapper",     "σOS-mr get/put map (UX)",         "sigma",  "getput",    "ux"),
   ("ux_getput_reducer",    "σOS-mr get/put red (UX)",         "sigma",  "getput",    "ux"),
@@ -29,14 +31,12 @@ CONFIGS = [
   ("ux_cosandbox_mapper",  "σOS-mr co-sandbox map (UX)",      "sigma",  "cosandbox", "ux"),
   ("ux_cosandbox_reducer", "σOS-mr co-sandbox red (UX)",      "sigma",  "cosandbox", "ux"),
   ("ux_cosandbox_both",    "σOS-mr co-sandbox (UX)",          "sigma",  "cosandbox", "ux"),
-  ("s3",                   "σOS-mr (S3)",                     "sigma",  "fslib",     "s3"),
   ("s3_getput_mapper",     "σOS-mr get/put map (S3)",         "sigma",  "getput",    "s3"),
   ("s3_getput_reducer",    "σOS-mr get/put red (S3)",         "sigma",  "getput",    "s3"),
   ("s3_getput_both",       "σOS-mr get/put (S3)",             "sigma",  "getput",    "s3"),
   ("s3_cosandbox_mapper",  "σOS-mr co-sandbox map (S3)",      "sigma",  "cosandbox", "s3"),
   ("s3_cosandbox_reducer", "σOS-mr co-sandbox red (S3)",      "sigma",  "cosandbox", "s3"),
   ("s3_cosandbox_both",    "σOS-mr (S3) co-sandbox",          "sigma",  "cosandbox", "s3"),
-  ("corral",               "λ-mr",                            "corral", "lambda",    "lambda"),
 ]
 
 SOURCES = ["ux", "s3", "lambda"]

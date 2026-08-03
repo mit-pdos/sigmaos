@@ -82,7 +82,12 @@ type Coord struct {
 	leaderclnt      *leaderclnt.LeaderClnt
 	outdir          string
 	intOutdir       string
-	memPerTask      proc.Tmem
+	// Memory reserved per task, separately for mappers and reducers: it is what
+	// bounds how many run concurrently per node, and the two phases want
+	// different packings (a reducer reads every mapper's shard, so spreading
+	// reducers across nodes matters more than packing them densely).
+	mapperMem  proc.Tmem
+	reducerMem proc.Tmem
 	stat            AStat
 	perf            *perf.Perf
 	useGetPut       bool
@@ -129,8 +134,8 @@ func (s *AStat) String() string {
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 20 {
-		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 20 (stale mr-coord binary?): %v", len(args), args)
+	if len(args) != 21 {
+		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 21 (stale mr-coord binary?): %v", len(args), args)
 	}
 	c := &Coord{}
 	c.jobRoot = args[1]
@@ -168,9 +173,17 @@ func NewCoord(args []string) (*Coord, error) {
 
 	mem, err := strconv.Atoi(args[8])
 	if err != nil {
-		return nil, fmt.Errorf("NewCoord: nreducetask %v isn't int", args[3])
+		return nil, fmt.Errorf("NewCoord: mapperMem %v isn't int", args[8])
 	}
-	c.memPerTask = proc.Tmem(mem)
+	c.mapperMem = proc.Tmem(mem)
+
+	// Appended after the arguments above rather than placed next to mapperMem,
+	// so that adding it did not renumber every later index.
+	mem, err = strconv.Atoi(args[20])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: reducerMem %v isn't int", args[20])
+	}
+	c.reducerMem = proc.Tmem(mem)
 
 	b, err := c.GetFile(mr.JobOutLink(c.jobRoot, c.job))
 	if err != nil {
@@ -335,7 +348,7 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	if err != nil {
 		db.DFatalf("mapperProc: %v err %v", bin, err)
 	}
-	p := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), c.intOutdir, c.linesz, c.wordsz, strconv.FormatBool(c.useGetPut), strconv.FormatBool(c.useCosandbox), strconv.Itoa(c.tailProbeSz)}, c.memPerTask)
+	p := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), c.intOutdir, c.linesz, c.wordsz, strconv.FormatBool(c.useGetPut), strconv.FormatBool(c.useCosandbox), strconv.Itoa(c.tailProbeSz)}, c.mapperMem)
 	if c.mapperGOMAXPROCS > 0 {
 		// Bound the mapper's Go runtime instead of letting it size itself to
 		// the whole machine, which every proc sharing the machine otherwise
@@ -381,7 +394,7 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	outlink := mr.ReduceOut(c.jobRoot, c.job) + data.Task
 	outTarget := mr.ReduceOutTarget(c.outdir, c.job) + data.Task
 	c.stat.Nreduce.Add(1)
-	p := c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.useGetPutReduce), strconv.FormatBool(c.useCosandboxReduce)}, c.memPerTask)
+	p := c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.useGetPutReduce), strconv.FormatBool(c.useCosandboxReduce)}, c.reducerMem)
 	if c.useGetPutReduce {
 		// The UX/S3 proxy client RPC channels — and the delegated-RPC path in
 		// particular — are serviced by spproxy.

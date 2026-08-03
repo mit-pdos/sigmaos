@@ -508,7 +508,7 @@ func TestAppMR(t *testing.T) {
 	rs := benchmarks.NewResults(1, benchmarks.E2E)
 	p := newRealmPerf(mrts.GetRealm(REALM1))
 	defer p.Done()
-	jobs, apps := newNMRJobs(mrts.GetRealm(REALM1), p, 1, MRBenchConfig.App, MRBenchConfig.JobCfg, chooseMRJobRoot(mrts.GetRealm(REALM1)), MRBenchConfig.MemReq)
+	jobs, apps := newNMRJobs(mrts.GetRealm(REALM1), p, 1, MRBenchConfig.App, MRBenchConfig.JobCfg, chooseMRJobRoot(mrts.GetRealm(REALM1)), MRBenchConfig.MapperMem, MRBenchConfig.ReducerMem)
 	go func() {
 		for _, j := range jobs {
 			// Wait until ready
@@ -638,7 +638,7 @@ func TestRealmBalanceMRHotel(t *testing.T) {
 		benchmarks.WarmupRealm(mrts.GetRealm(REALM2), []string{"mr-coord", "mr-m-grep", "mr-r-grep", "mr-m-wc", "mr-r-wc"})
 	}
 	// Prep MR job
-	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM2), p1, 1, MRBenchConfig.App, MRBenchConfig.JobCfg, chooseMRJobRoot(mrts.GetRealm(REALM2)), MRBenchConfig.MemReq)
+	mrjobs, mrapps := newNMRJobs(mrts.GetRealm(REALM2), p1, 1, MRBenchConfig.App, MRBenchConfig.JobCfg, chooseMRJobRoot(mrts.GetRealm(REALM2)), MRBenchConfig.MapperMem, MRBenchConfig.ReducerMem)
 	// Prep Hotel job
 	pc2 := newRealmCostPerf(mrts.GetRealm(REALM1))
 	defer pc2.Done()
@@ -877,7 +877,7 @@ func TestRealmBalanceMRMR(t *testing.T) {
 		rses[i] = benchmarks.NewResults(1, benchmarks.E2E)
 		ps[i] = newRealmPerf(mrts.GetRealm(realms[i]))
 		defer ps[i].Done()
-		mrjob, mrapp := newNMRJobs(mrts.GetRealm(realms[i]), ps[i], 1, MRBenchConfig.App, MRBenchConfig.JobCfg, chooseMRJobRoot(mrts.GetRealm(realms[i])), MRBenchConfig.MemReq)
+		mrjob, mrapp := newNMRJobs(mrts.GetRealm(realms[i]), ps[i], 1, MRBenchConfig.App, MRBenchConfig.JobCfg, chooseMRJobRoot(mrts.GetRealm(realms[i])), MRBenchConfig.MapperMem, MRBenchConfig.ReducerMem)
 		mrjobs[i] = mrjob
 		mrapps[i] = mrapp
 	}

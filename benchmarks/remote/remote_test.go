@@ -305,7 +305,15 @@ func TestMR(t *testing.T) {
 		benchName       string
 		numNodes        int
 		numCoresPerNode uint
-		memReq          proc.Tmem
+		// Memory each mapper and each reducer reserves, which is what bounds how
+		// many of them run per node. Held apart because the phases want different
+		// packings. Mappers are throughput-bound, so they pack densely: 7000MB on
+		// these ~14.5GB nodes is two per node. Reducers are spread instead —
+		// 10000MB admits only one per node — because a reducer reads every
+		// mapper's shard, two on a node contend for CPU and network and both
+		// stretch, and the phase waits for the slowest.
+		mapperMem  proc.Tmem
+		reducerMem proc.Tmem
 	}
 	// How a job's tasks move their data. A cosandbox prefetches through the
 	// get/put API, so cosandboxes imply get/put on the same side; the mapper and
@@ -323,10 +331,10 @@ func TestMR(t *testing.T) {
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			//			{"mr-grep-wiki2G-bench-s3.json", 9, 4, 7000},
-			//			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000},
-			{"mr-wc-wiki10G-bench.json", 17, 2, 7000},
-			{"mr-wc-wiki10G-bench-s3.json", 17, 2, 7000},
+			//			{"mr-grep-wiki2G-bench-s3.json", 9, 4, 7000, 7000},
+			//			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 4, 7000, 7000},
+			{"mr-wc-wiki10G-bench.json", 17, 2, 7000, 10000},
+			{"mr-wc-wiki10G-bench-s3.json", 17, 2, 7000, 10000},
 		}
 		// Each entry is a full run (a cluster boot plus the job), per app, so
 		// trim this list rather than the apps when a sweep is too long.
@@ -389,7 +397,7 @@ func TestMR(t *testing.T) {
 						ReduceGetPut:      dp.useGetPutReduce,
 						ReduceCosandboxes: dp.useCosandboxesReduce,
 					}
-					mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.memReq, data)
+					mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.mapperMem, mrEP.reducerMem, data)
 					if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 						return
 					}
@@ -399,7 +407,7 @@ func TestMR(t *testing.T) {
 					if ds, ok := mrCfg.JobCfg.InputDataset(); ok {
 						ts.SetInputData([]string{ds})
 					}
-					db.DPrintf(db.ALWAYS, "MR config: benchName %v memReq %v data %v nruns %v", benchName, mrEP.memReq, data, numRuns)
+					db.DPrintf(db.ALWAYS, "MR config: benchName %v mapperMem %v reducerMem %v data %v nruns %v", benchName, mrEP.mapperMem, mrEP.reducerMem, data, numRuns)
 					numFullNodes := mrEP.numNodes - numProcqOnlyNodes
 					for run := 1; run <= numRuns; run++ {
 						runName := filepath.Join(benchName, fmt.Sprintf("run-%d", run))
@@ -1119,13 +1127,13 @@ func TestBEMRMultiplexing(t *testing.T) {
 	// Bench params
 	const (
 		sleepBetweenRealms time.Duration = 5 * time.Second
-		nRealms            int           = 4
+		nRealms            int           = 1
 		prewarmRealm       bool          = true
-		useGetPut          bool          = false
+		//		useGetPut          bool          = false
 		// The reducer data path is a separate pair of knobs from the mapper's;
 		// the sweep below is over the mapper's, so set these explicitly rather
 		// than letting the sweep imply them.
-		useGetPutReduce      bool = false
+		//		useGetPutReduce      bool = false
 		useCosandboxesReduce bool = false
 		// Shared memory per cosandbox reducer, which has to hold every shard
 		// the cosandbox prefetches for it: all of the mappers' output divided by
@@ -1134,10 +1142,11 @@ func TestBEMRMultiplexing(t *testing.T) {
 		reduceShmemMB int = 0
 		//		benchConfig        string        = "mr-grep-wiki1G-granular-bench.json"
 		benchConfig string = "mr-grep-uxinput-granular-bench.json"
+		//		benchConfig string = "mr-wc-uxinput-granular-bench.json"
 	)
 	// Run the benchmark with mappers reading and writing directly, and then
 	// through cosandboxes.
-	cosandboxCfgs := []bool{false} //, true}
+	cosandboxCfgs := []bool{false, true}
 	// Mem request per worker is what bounds concurrent mappers per node
 	// (msched admits on memory), so it is the knob for the packing sweep:
 	// --mr_mem_req 8000 ~1/node, 3000 ~5/node, 1500 ~10/node, 1200 ~13/node.
@@ -1161,12 +1170,12 @@ func TestBEMRMultiplexing(t *testing.T) {
 			benchName = benchName + "_cosandboxes"
 		}
 		data := benchmarks.MRDataPathCfg{
-			MapGetPut:         useGetPut,
+			MapGetPut:         useCosandboxes,
 			MapCosandboxes:    useCosandboxes,
-			ReduceGetPut:      useGetPutReduce,
+			ReduceGetPut:      useCosandboxesReduce,
 			ReduceCosandboxes: useCosandboxesReduce,
 		}
-		mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker, data)
+		mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker, memPerWorker, data)
 		if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 			return
 		}
@@ -1491,7 +1500,7 @@ func TestLCBEHotelMRMultiplexing(t *testing.T) {
 		},
 		CosSimBenchCfg: nil,
 	}
-	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000), benchmarks.MRDataPathCfg{})
+	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000), proc.Tmem(7000), benchmarks.MRDataPathCfg{})
 	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 		return
 	}

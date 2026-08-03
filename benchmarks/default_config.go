@@ -119,8 +119,9 @@ var DefaultHotelBenchConfig = &HotelBenchConfig{
 }
 
 var DefaultMRBenchConfig = &MRBenchConfig{
-	App:    "mr-grep-wiki2G-bench-s3.json",
-	MemReq: proc.Tmem(7000),
+	App:        "mr-grep-wiki2G-bench-s3.json",
+	MapperMem:  proc.Tmem(7000),
+	ReducerMem: proc.Tmem(7000),
 	// Default job description, mirroring mr-grep-wiki2G-bench-s3.json
 	JobCfg: &mr.Job{
 		App:          "grep",

@@ -127,8 +127,14 @@ func (c MRDataPathCfg) String() string {
 }
 
 type MRBenchConfig struct {
-	App    string    `json:"app"`     // Name of the MR job description json file
-	MemReq proc.Tmem `json:"mem_req"` // Amount of memory (in MB) required by each mapper/reducer
+	App string `json:"app"` // Name of the MR job description json file
+	// Memory (in MB) each mapper and each reducer reserves. This is what bounds
+	// how many of them run concurrently per node, and the two are separate
+	// because the phases want different packings: mappers are throughput-bound
+	// and want to pack densely, while a reducer reads every mapper's shard and
+	// contends for CPU and network with whatever shares its node.
+	MapperMem  proc.Tmem `json:"mapper_mem"`
+	ReducerMem proc.Tmem `json:"reducer_mem"`
 	// Mapper knobs (kept under their original names so existing results stay
 	// comparable); the reducer ones follow.
 	UseGetPut            bool    `json:"use_getput"`             // Mappers use the UX/S3 proxy Get/Put client API
@@ -142,7 +148,7 @@ type MRBenchConfig struct {
 // description named app from jobDir on the local file system. data overrides
 // the corresponding job-description fields, so one job description serves all
 // variants.
-func NewMRBenchConfig(jobDir, app string, memReq proc.Tmem, data MRDataPathCfg) (*MRBenchConfig, error) {
+func NewMRBenchConfig(jobDir, app string, mapperMem, reducerMem proc.Tmem, data MRDataPathCfg) (*MRBenchConfig, error) {
 	jobCfg, err := mr.ReadJobConfig(filepath.Join(jobDir, app))
 	if err != nil {
 		return nil, err
@@ -159,7 +165,8 @@ func NewMRBenchConfig(jobDir, app string, memReq proc.Tmem, data MRDataPathCfg) 
 	jobCfg.UseCosandboxesReduce = data.ReduceCosandboxes
 	return &MRBenchConfig{
 		App:                  app,
-		MemReq:               memReq,
+		MapperMem:            mapperMem,
+		ReducerMem:           reducerMem,
 		UseGetPut:            data.MapGetPut,
 		UseCosandboxes:       data.MapCosandboxes,
 		UseGetPutReduce:      data.ReduceGetPut,
@@ -169,7 +176,7 @@ func NewMRBenchConfig(jobDir, app string, memReq proc.Tmem, data MRDataPathCfg) 
 }
 
 func (cfg *MRBenchConfig) String() string {
-	return fmt.Sprintf("&{ App:%v MemReq:%v JobCfg:%v }", cfg.App, cfg.MemReq, cfg.JobCfg)
+	return fmt.Sprintf("&{ App:%v MapperMem:%v ReducerMem:%v JobCfg:%v }", cfg.App, cfg.MapperMem, cfg.ReducerMem, cfg.JobCfg)
 }
 
 func (cfg *MRBenchConfig) GetJobConfig() *mr.Job {

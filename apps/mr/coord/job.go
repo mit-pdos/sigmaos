@@ -139,7 +139,13 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *mr.Job)
 	return len(bins), err
 }
 
-func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *mr.Job, nmap int, memPerTask proc.Tmem, maliciousMapper int, mftid task.FtTaskSvcId, rftid task.FtTaskSvcId) *procgroupmgr.ProcGroupMgr {
+// mapperMem and reducerMem are the memory each mapper and each reducer
+// reserves, which is what bounds how many of them run concurrently per node.
+// They are separate because the phases want different packings: mappers are
+// throughput-bound and want to pack densely, while a reducer reads every
+// mapper's shard and contends for CPU and network with anything sharing its
+// node, so spreading reducers out can matter more than packing them.
+func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *mr.Job, nmap int, mapperMem, reducerMem proc.Tmem, maliciousMapper int, mftid task.FtTaskSvcId, rftid task.FtTaskSvcId) *procgroupmgr.ProcGroupMgr {
 	cfg := procgroupmgr.NewProcGroupConfig(NCOORD, "mr-coord",
 		[]string{
 			jobRoot,
@@ -149,7 +155,7 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *mr.Job, n
 			"mr-r-" + job.App,
 			strconv.Itoa(job.Linesz),
 			strconv.Itoa(job.Wordsz),
-			strconv.Itoa(int(memPerTask)),
+			strconv.Itoa(int(mapperMem)),
 			strconv.Itoa(maliciousMapper),
 			string(mftid),
 			string(rftid),
@@ -161,6 +167,9 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *mr.Job, n
 			strconv.FormatBool(job.UseGetPutReduce),
 			strconv.FormatBool(job.UseCosandboxesReduce),
 			strconv.Itoa(job.ReduceShmemMB),
+			// Appended rather than placed next to mapperMem above, so that adding
+			// it did not renumber the coordinator's other argument indices.
+			strconv.Itoa(int(reducerMem)),
 		}, 1000, jobName)
 	return cfg.StartGrpMgr(sc)
 }

@@ -26,14 +26,16 @@ type MRJobInstance struct {
 	jobRoot string
 	jobname string
 	nmap    int
-	memreq  proc.Tmem
+	// Memory each mapper and each reducer reserves; see mrcoord.StartMRJob.
+	mapperMem  proc.Tmem
+	reducerMem proc.Tmem
 	job     *mr.Job
 	cm      *procgroupmgr.ProcGroupMgr
 	mftid   fttask.FtTaskSvcId
 	rftid   fttask.FtTaskSvcId
 }
 
-func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app string, jobCfg *mr.Job, jobRoot, jobname string, memreq proc.Tmem) *MRJobInstance {
+func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app string, jobCfg *mr.Job, jobRoot, jobname string, mapperMem, reducerMem proc.Tmem) *MRJobInstance {
 	ji := &MRJobInstance{}
 	ji.RealmTstate = ts
 	ji.p = p
@@ -42,7 +44,8 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app string, jobCfg *mr
 	ji.job = jobCfg
 	ji.jobRoot = jobRoot
 	ji.jobname = jobname
-	ji.memreq = memreq
+	ji.mapperMem = mapperMem
+	ji.reducerMem = reducerMem
 	return ji
 }
 
@@ -69,12 +72,12 @@ func (ji *MRJobInstance) PrepareMRJob() {
 	ji.nmap = nmap
 	assert.Nil(ji.Ts.T, err, "Error PrepareJob: %v", err)
 	assert.NotEqual(ji.Ts.T, 0, nmap, "Error PrepareJob nmap 0")
-	db.DPrintf(db.ALWAYS, "MR job %v expected stats: nmappers %d nreducers %d binsz %d memreq %vMB", ji.jobname, nmap, ji.job.Nreduce, ji.job.Binsz, ji.memreq)
+	db.DPrintf(db.ALWAYS, "MR job %v expected stats: nmappers %d nreducers %d binsz %d mapperMem %vMB reducerMem %vMB", ji.jobname, nmap, ji.job.Nreduce, ji.job.Binsz, ji.mapperMem, ji.reducerMem)
 }
 
 func (ji *MRJobInstance) StartMRJob() {
 	db.DPrintf(db.TEST, "Start MR job %v %v", ji.jobname, ji.job)
-	ji.cm = mrcoord.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.memreq, 0, ji.mftid, ji.rftid)
+	ji.cm = mrcoord.StartMRJob(ji.SigmaClnt, ji.jobRoot, ji.jobname, ji.job, ji.nmap, ji.mapperMem, ji.reducerMem, 0, ji.mftid, ji.rftid)
 }
 
 func (ji *MRJobInstance) Wait() {

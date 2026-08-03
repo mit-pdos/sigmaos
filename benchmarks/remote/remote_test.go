@@ -316,6 +316,14 @@ func TestMR(t *testing.T) {
 		// stretch, and the phase waits for the slowest.
 		mapperMem  proc.Tmem
 		reducerMem proc.Tmem
+		// How many mapper shards this job's reducers fetch at once. A shard read
+		// is latency-bound, so fetching one at a time makes the reduce phase the
+		// sum of every shard's latency. Per job because the right value follows
+		// the job's shard count: defaultReduceGets covers the latency for a job
+		// with large shards, while a granular job's reducer reads one small shard
+		// per mapper and wants them all in flight (grep on 2G is 205 mappers, so
+		// 205), which is also what corral's reducer is given for the same job.
+		reduceGetsConcurrency int
 	}
 	// How a job's tasks move their data. A cosandbox prefetches through the
 	// get/put API, so cosandboxes imply get/put on the same side; the mapper and
@@ -330,12 +338,21 @@ func TestMR(t *testing.T) {
 		useGetPutReduce      bool
 		useCosandboxesReduce bool
 	}
+	// Per-job reduce-fetch concurrency; see MRExperimentConfig above. 1 is the
+	// one-at-a-time behaviour.
+	const (
+		defaultReduceGets int = 16
+		// The 2G grep job is 205 mappers, hence 205 shards of a few hundred bytes
+		// each: all of them in flight at once, matching what TestCorral gives
+		// corral's reducer for the same job.
+		grepReduceGets int = 205
+	)
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 2, 7000, 7000},
-			{"mr-wc-wiki10G-bench.json", 17, 2, 7000, 10000},
-			{"mr-wc-wiki10G-bench-s3.json", 17, 2, 7000, 10000},
+			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 2, 7000, 7000, grepReduceGets},
+			{"mr-wc-wiki10G-bench.json", 17, 2, 7000, 10000, defaultReduceGets},
+			{"mr-wc-wiki10G-bench-s3.json", 17, 2, 7000, 10000, defaultReduceGets},
 		}
 		// Each entry is a full run (a cluster boot plus the job), per app, so
 		// trim this list rather than the apps when a sweep is too long.
@@ -393,10 +410,11 @@ func TestMR(t *testing.T) {
 					}
 					benchName += dp.nameSuffix
 					data := benchmarks.MRDataPathCfg{
-						MapGetPut:         dp.useGetPut,
-						MapCosandboxes:    dp.useCosandboxes,
-						ReduceGetPut:      dp.useGetPutReduce,
-						ReduceCosandboxes: dp.useCosandboxesReduce,
+						MapGetPut:             dp.useGetPut,
+						MapCosandboxes:        dp.useCosandboxes,
+						ReduceGetPut:          dp.useGetPutReduce,
+						ReduceCosandboxes:     dp.useCosandboxesReduce,
+						ReduceGetsConcurrency: mrEP.reduceGetsConcurrency,
 					}
 					mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.mapperMem, mrEP.reducerMem, data)
 					if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
@@ -453,7 +471,7 @@ func TestCorral(t *testing.T) {
 		// How many times to repeat each experiment. Each repetition lands in its
 		// own run-<n> subdirectory of the experiment's results directory, which
 		// the graph script averages; see the same const in TestMR.
-		numRuns int = 5
+		numRuns int = 3
 	)
 	// One entry per workload: the corral example app, the dataset it reads, and
 	// its task-granularity tuning. Each workload names its own input because the
@@ -479,11 +497,16 @@ func TestCorral(t *testing.T) {
 		reduceBinSize  int64
 		maxConcurrency int
 		maxLineLength  int
+		// How many intermediate files this workload's reducers fetch at once.
+		// Per workload for the same reason MR's is per job: word_count's reducers
+		// read a few large files, while grep's read one small file per map bin
+		// (205 of them on 2G), so all of them want to be in flight.
+		reduceGetsConcurrency int
 	}
 	const MB = 1024 * 1024
 	corralApps := []*CorralExperiment{
-		{CorralWordCount, "wiki-10G/", 10 * MB, 130 * MB, 160 * MB * 5, 32, 2 * MB},
-		{CorralGrep, "wiki-2G/", 10 * MB, 10 * MB, 160 * MB * 100, 210, 2 * MB},
+		{CorralWordCount, "wiki-10G/", 10 * MB, 130 * MB, 160 * MB * 5, 32, 2 * MB, 16},
+		{CorralGrep, "wiki-2G/", 10 * MB, 10 * MB, 160 * MB * 100, 205, 2 * MB, 205},
 	}
 	// Whether the run finds the Lambda already deployed. Both kinds land in
 	// their own results directory (…-warm, …-cold); see
@@ -512,6 +535,7 @@ func TestCorral(t *testing.T) {
 				app.maxConcurrency,
 				app.maxLineLength,
 				corralLambdaMemoryMB,
+				app.reduceGetsConcurrency,
 			)
 			if !assert.Nil(ts.t, err, "Corral config: %v", err) {
 				return
@@ -1130,6 +1154,12 @@ func TestBEMRMultiplexing(t *testing.T) {
 	// Run the benchmark with mappers reading and writing directly, and then
 	// through cosandboxes.
 	cosandboxCfgs := []bool{false, true}
+	// How many mapper shards a reducer fetches at once; see the same knob in
+	// TestMR. Left at the default rather than raised to the shard count as the
+	// 2G grep comparison does: this job is 10240 mappers per realm, so "all of
+	// them in flight" would be 10240 outstanding fetches, each holding a shard
+	// and its KV map.
+	const reduceGetsConcurrency int = 16
 	// Mem request per worker is what bounds concurrent mappers per node
 	// (msched admits on memory), so it is the knob for the packing sweep:
 	// --mr_mem_req 8000 ~1/node, 3000 ~5/node, 1500 ~10/node, 1200 ~13/node.
@@ -1153,10 +1183,11 @@ func TestBEMRMultiplexing(t *testing.T) {
 			benchName = benchName + "_cosandboxes"
 		}
 		data := benchmarks.MRDataPathCfg{
-			MapGetPut:         useCosandboxes,
-			MapCosandboxes:    useCosandboxes,
-			ReduceGetPut:      useCosandboxesReduce,
-			ReduceCosandboxes: useCosandboxesReduce,
+			MapGetPut:             useCosandboxes,
+			MapCosandboxes:        useCosandboxes,
+			ReduceGetPut:          useCosandboxesReduce,
+			ReduceCosandboxes:     useCosandboxesReduce,
+			ReduceGetsConcurrency: reduceGetsConcurrency,
 		}
 		mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker, memPerWorker, data)
 		if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
@@ -1483,7 +1514,7 @@ func TestLCBEHotelMRMultiplexing(t *testing.T) {
 		},
 		CosSimBenchCfg: nil,
 	}
-	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000), proc.Tmem(7000), benchmarks.MRDataPathCfg{})
+	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000), proc.Tmem(7000), benchmarks.MRDataPathCfg{ReduceGetsConcurrency: 16})
 	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 		return
 	}

@@ -114,11 +114,27 @@ def scrape_times(dname, sigma):
 TASK_RE = re.compile(r'^\[(mr-[mr])-')
 GETS_RE = re.compile(r'\bgets (\d+)ms')
 PHASE_RE = re.compile(r'map phase (\d+)ms reduce phase (\d+)ms')
+# The run's own aggregate lines, e.g.
+#   mappers  inner: n 86 min 4086ms mean 10101.9ms median 8902ms p90 ... max ...
+TASKSUM_RE = re.compile(r'^(mappers|reducers)\s+(inner|outer):\s+n \d+ .*?\bmean ([0-9.]+)ms')
+# Corral reports only its map phase; its reduce phase is the rest of the job.
+CORRAL_MAP_RE = re.compile(r'map phase: time (\d+)ms')
+# Corral's per-task line, one per invocation:
+#   mapper time 0 in 136 MB out 19 MB inner 753ms outer 775ms ninvoc 7 ...
+# The mapper/reducer tag was added to tell the two apart (they used to be
+# byte-identical); a log without it falls back to the map-phase boundary below.
+CORRAL_TASK_RE = re.compile(r'\b(mapper|reducer) time \d+ in .*?\binner (\d+)ms outer (\d+)ms')
+CORRAL_TASK_UNTAGGED_RE = re.compile(r'\btime \d+ in .*?\binner (\d+)ms outer (\d+)ms')
 
-def scrape_run_stats(dname):
-  # A run's median mapper/reducer gets time and its phase durations, in ms; any
-  # of them None if the run's output doesn't carry it (a corral run carries
-  # none). Medians rather than means: straggler tails inflate the mean by ~30%.
+def scrape_run_stats(dname, e2e=None):
+  # What a run reports beyond its end-to-end time: the phase split, the median
+  # per-task gets time, and the mean per-task inner/outer times. Any key is
+  # absent if the run's output doesn't carry it. Medians for gets (straggler
+  # tails inflate the mean by ~30%); means for inner/outer, which is what the
+  # benchmark's own aggregate lines report.
+  #
+  # e2e, in seconds, lets a corral run's reduce phase be derived: corral logs
+  # only its map phase, and the rest of the job is the reduce phase.
   fn = bench_out(dname)
   if fn is None:
     return {}
@@ -127,6 +143,11 @@ def scrape_run_stats(dname):
   gets = {"mr-m": [], "mr-r": []}
   kind = None
   st = {}
+  # Corral's per-task inner/outer times, gathered per task type.
+  ctask = {"map": {"inner": [], "outer": []}, "reduce": {"inner": [], "outer": []}}
+  # For an untagged corral log, everything logged before the map phase completes
+  # is a mapper and everything after is a reducer.
+  cphase = "map"
   for l in lines:
     m = TASK_RE.match(l)
     if m:
@@ -138,40 +159,80 @@ def scrape_run_stats(dname):
         gets[kind].append(int(g.group(1)))
         kind = None
         continue
+    if s := TASKSUM_RE.match(l):
+      who = "map" if s.group(1) == "mappers" else "reduce"
+      st["%s_%s_ms" % (who, s.group(2))] = int(round(float(s.group(3))))
+      continue
     p = PHASE_RE.search(l)
     if p and "map_ms" not in st:
       st["map_ms"] = int(p.group(1))
       st["reduce_ms"] = int(p.group(2))
+      continue
+    if t := CORRAL_TASK_RE.search(l):
+      who = "map" if t.group(1) == "mapper" else "reduce"
+      ctask[who]["inner"].append(int(t.group(2)))
+      ctask[who]["outer"].append(int(t.group(3)))
+      continue
+    if t := CORRAL_TASK_UNTAGGED_RE.search(l):
+      ctask[cphase]["inner"].append(int(t.group(1)))
+      ctask[cphase]["outer"].append(int(t.group(2)))
+      continue
+    if c := CORRAL_MAP_RE.search(l):
+      cphase = "reduce"
+      if "map_ms" not in st:
+        st["map_ms"] = int(c.group(1))
+        # Corral's reported job time spans the whole job (and its Lambda deploy),
+        # so what is left after the map phase is the reduce phase plus that
+        # deploy — see the note in the run's log about "Building Lambda function".
+        if e2e is not None:
+          st["reduce_ms"] = max(0, int(round(e2e * 1000)) - st["map_ms"])
   for k, name in (("mr-m", "map_gets_ms"), ("mr-r", "reduce_gets_ms")):
     if gets[k]:
       st[name] = int(statistics.median(gets[k]))
       st[name + "_n"] = len(gets[k])
+  # A corral run has no aggregate lines, so its means come from its per-task
+  # ones. Same statistic as the sigmaos side reports, so the columns compare.
+  for who in ("map", "reduce"):
+    for which in ("inner", "outer"):
+      v = ctask[who][which]
+      key = "%s_%s_ms" % (who, which)
+      if v and key not in st:
+        st[key] = int(round(statistics.mean(v)))
   return st
 
 def fmt_ms(st, key):
   return "%6s" % (st[key] if key in st else "-")
 
+# The keys a row reports, in print order.
+ROW_KEYS = ("map_ms", "reduce_ms",
+            "map_inner_ms", "map_outer_ms", "map_gets_ms",
+            "reduce_inner_ms", "reduce_outer_ms", "reduce_gets_ms")
+
+def fmt_row(name, t, st):
+  return ("    %-9s e2e %6.2fs  map %s  reduce %s  |  mapper: inner %s outer %s gets %s"
+          "  |  reducer: inner %s outer %s gets %s"
+          % (name, t, fmt_ms(st, "map_ms"), fmt_ms(st, "reduce_ms"),
+             fmt_ms(st, "map_inner_ms"), fmt_ms(st, "map_outer_ms"), fmt_ms(st, "map_gets_ms"),
+             fmt_ms(st, "reduce_inner_ms"), fmt_ms(st, "reduce_outer_ms"), fmt_ms(st, "reduce_gets_ms")))
+
 def report_runs(label, dirs, times):
   # Print what each run contributed, so that a config's mean and error bar can
-  # be traced back to individual runs, and so the input-read cost (gets) and the
-  # phase split are visible next to the end-to-end number they explain.
+  # be traced back to individual runs, and so the phase split and the per-task
+  # costs are visible next to the end-to-end number they explain. inner/outer
+  # are the run's own means, gets its median; all in ms.
   print("%s (%d run%s)" % (label.replace("\n", " "), len(dirs), "" if len(dirs) == 1 else "s"))
   rows = []
   for d, t in zip(dirs, times):
-    st = scrape_run_stats(d)
+    st = scrape_run_stats(d, e2e=t)
     rows.append(st)
-    print("    %-10s e2e %6.2fs  map %s  reduce %s  gets/mapper %s  gets/reducer %s"
-          % (os.path.basename(d.rstrip("/")), t, fmt_ms(st, "map_ms"), fmt_ms(st, "reduce_ms"),
-             fmt_ms(st, "map_gets_ms"), fmt_ms(st, "reduce_gets_ms")))
+    print(fmt_row(os.path.basename(d.rstrip("/")), t, st))
   if len(rows) > 1:
     med = {}
-    for k in ("map_ms", "reduce_ms", "map_gets_ms", "reduce_gets_ms"):
+    for k in ROW_KEYS:
       v = [ r[k] for r in rows if k in r ]
       if v:
         med[k] = int(statistics.median(v))
-    print("    %-10s e2e %6.2fs  map %s  reduce %s  gets/mapper %s  gets/reducer %s"
-          % ("median", statistics.median(times), fmt_ms(med, "map_ms"), fmt_ms(med, "reduce_ms"),
-             fmt_ms(med, "map_gets_ms"), fmt_ms(med, "reduce_gets_ms")))
+    print(fmt_row("median", statistics.median(times), med))
 
 def collect(args):
   # The (label, family, mean, stddev, nrun) of every configuration which was

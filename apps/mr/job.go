@@ -119,6 +119,13 @@ type Job struct {
 	// pre-fetches every shard a reducer reads (requires UseGetPutReduce).
 	UseGetPutReduce      bool `json:"use_getput_reduce,omitempty"`
 	UseCosandboxesReduce bool `json:"use_cosandboxes_reduce,omitempty"`
+	// How many mapper shards a reducer fetches at once. A shard read is dominated
+	// by per-object latency, so fetching them one at a time (0 or 1) costs the sum
+	// of every shard's latency — which for a job with many mappers is most of the
+	// reduce phase. Each in-flight fetch holds its own KV map, so this trades
+	// memory for the latency it hides. Independent of the getput/cosandbox knobs:
+	// it applies to whichever read path is in use.
+	ReduceGetsConcurrency int `json:"reduce_gets_concurrency,omitempty"`
 	// Size (in MB) of the shared-memory segment spproxy sets up for a
 	// cosandbox reducer, through which it hands over the shards it prefetched.
 	// Every shard is resident at once, so this has to cover the whole

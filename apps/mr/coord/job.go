@@ -170,6 +170,7 @@ func StartMRJob(sc *sigmaclnt.SigmaClnt, jobRoot, jobName string, job *mr.Job, n
 			// Appended rather than placed next to mapperMem above, so that adding
 			// it did not renumber the coordinator's other argument indices.
 			strconv.Itoa(int(reducerMem)),
+			strconv.Itoa(job.ReduceGetsConcurrency),
 		}, 1000, jobName)
 	return cfg.StartGrpMgr(sc)
 }

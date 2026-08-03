@@ -41,6 +41,12 @@ type CorralConfig struct {
 	// much CPU a mapper gets — the closest counterpart to the MR benchmark's
 	// per-worker mem request. Zero leaves corral's own default.
 	LambdaMemoryMB int64
+
+	// How many intermediate files a reducer fetches at once. Corral's reducer
+	// reads its files in a loop, so at 1 the reduce phase is the sum of every
+	// file's fetch latency — the same knob MR has
+	// (mr.Job.ReduceGetsConcurrency), so the two stay comparable.
+	ReduceGetsConcurrency int
 }
 
 // NewCorralConfig builds a corral run configuration. Every option is a
@@ -54,6 +60,7 @@ func NewCorralConfig(
 	splitSize, mapBinSize, reduceBinSize int64,
 	maxConcurrency, maxLineLength int,
 	lambdaMemoryMB int64,
+	reduceGetsConcurrency int,
 ) (*CorralConfig, error) {
 	if app != CorralWordCount && app != CorralGrep {
 		return nil, fmt.Errorf("NewCorralConfig: unknown corral app %q (want %q or %q)", app, CorralWordCount, CorralGrep)
@@ -77,6 +84,8 @@ func NewCorralConfig(
 		MaxConcurrency: maxConcurrency,
 		MaxLineLength:  maxLineLength,
 		LambdaMemoryMB: lambdaMemoryMB,
+
+		ReduceGetsConcurrency: reduceGetsConcurrency,
 	}, nil
 }
 
@@ -109,6 +118,10 @@ func (cfg *CorralConfig) tuningFlags() string {
 	if cfg.Lambda && cfg.LambdaMemoryMB > 0 {
 		flags = append(flags, "--lambdamemory "+strconv.FormatInt(cfg.LambdaMemoryMB, 10))
 	}
+	// Always passed explicitly, whatever its value: it changes what the reduce
+	// phase measures, so the run's command should record how it ran rather than
+	// leaving it to corral's default.
+	flags = append(flags, "--reducegetsconcurrency "+strconv.Itoa(cfg.ReduceGetsConcurrency))
 	return strings.Join(flags, " ")
 }
 

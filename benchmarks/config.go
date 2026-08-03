@@ -119,11 +119,14 @@ type MRDataPathCfg struct {
 	// A cosandbox pre-fetches every shard a reducer reads (requires
 	// ReduceGetPut).
 	ReduceCosandboxes bool
+	// How many mapper shards a reducer fetches at once (0 or 1 = one at a time).
+	// Independent of the read path above: it applies to whichever one is in use.
+	ReduceGetsConcurrency int
 }
 
 func (c MRDataPathCfg) String() string {
-	return fmt.Sprintf("{mapGetPut:%v mapCosandboxes:%v reduceGetPut:%v reduceCosandboxes:%v}",
-		c.MapGetPut, c.MapCosandboxes, c.ReduceGetPut, c.ReduceCosandboxes)
+	return fmt.Sprintf("{mapGetPut:%v mapCosandboxes:%v reduceGetPut:%v reduceCosandboxes:%v reduceGetsConcurrency:%v}",
+		c.MapGetPut, c.MapCosandboxes, c.ReduceGetPut, c.ReduceCosandboxes, c.ReduceGetsConcurrency)
 }
 
 type MRBenchConfig struct {
@@ -137,11 +140,12 @@ type MRBenchConfig struct {
 	ReducerMem proc.Tmem `json:"reducer_mem"`
 	// Mapper knobs (kept under their original names so existing results stay
 	// comparable); the reducer ones follow.
-	UseGetPut            bool    `json:"use_getput"`             // Mappers use the UX/S3 proxy Get/Put client API
-	UseCosandboxes       bool    `json:"use_cosandboxes"`        // Cosandboxes pre-fetch mapper input splits (requires UseGetPut)
-	UseGetPutReduce      bool    `json:"use_getput_reduce"`      // Reducers use the Get/Put client API
-	UseCosandboxesReduce bool    `json:"use_cosandboxes_reduce"` // Cosandboxes pre-fetch reducer input shards (requires UseGetPutReduce)
-	JobCfg               *mr.Job `json:"job_cfg"`                // MR job description
+	UseGetPut             bool    `json:"use_getput"`              // Mappers use the UX/S3 proxy Get/Put client API
+	UseCosandboxes        bool    `json:"use_cosandboxes"`         // Cosandboxes pre-fetch mapper input splits (requires UseGetPut)
+	UseGetPutReduce       bool    `json:"use_getput_reduce"`       // Reducers use the Get/Put client API
+	UseCosandboxesReduce  bool    `json:"use_cosandboxes_reduce"`  // Cosandboxes pre-fetch reducer input shards (requires UseGetPutReduce)
+	ReduceGetsConcurrency int     `json:"reduce_gets_concurrency"` // How many mapper shards a reducer fetches at once
+	JobCfg                *mr.Job `json:"job_cfg"`                 // MR job description
 }
 
 // NewMRBenchConfig creates an MR benchmark config, reading the MR job
@@ -163,15 +167,17 @@ func NewMRBenchConfig(jobDir, app string, mapperMem, reducerMem proc.Tmem, data 
 	jobCfg.UseCosandboxes = data.MapCosandboxes
 	jobCfg.UseGetPutReduce = data.ReduceGetPut
 	jobCfg.UseCosandboxesReduce = data.ReduceCosandboxes
+	jobCfg.ReduceGetsConcurrency = data.ReduceGetsConcurrency
 	return &MRBenchConfig{
-		App:                  app,
-		MapperMem:            mapperMem,
-		ReducerMem:           reducerMem,
-		UseGetPut:            data.MapGetPut,
-		UseCosandboxes:       data.MapCosandboxes,
-		UseGetPutReduce:      data.ReduceGetPut,
-		UseCosandboxesReduce: data.ReduceCosandboxes,
-		JobCfg:               jobCfg,
+		App:                   app,
+		MapperMem:             mapperMem,
+		ReducerMem:            reducerMem,
+		UseGetPut:             data.MapGetPut,
+		UseCosandboxes:        data.MapCosandboxes,
+		UseGetPutReduce:       data.ReduceGetPut,
+		UseCosandboxesReduce:  data.ReduceCosandboxes,
+		ReduceGetsConcurrency: data.ReduceGetsConcurrency,
+		JobCfg:                jobCfg,
 	}, nil
 }
 

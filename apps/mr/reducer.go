@@ -48,7 +48,14 @@ type Reducer struct {
 	perf         *perf.Perf
 	useGetPut    bool
 	useCosandbox bool
-	clnts        *getput.Clnts
+	// How many shard fetches to keep in flight. A shard read is dominated by
+	// per-object latency (an S3 GET, a UX open+read), so fetching them one at a
+	// time costs the sum of those latencies with nothing to hide them behind; the
+	// reduce phase of a job with many mappers is mostly that sum. 0 or 1 keeps the
+	// one-at-a-time behaviour. From the job description
+	// (mr.Job.ReduceGetsConcurrency).
+	getsConcurrency int
+	clnts           *getput.Clnts
 	// Attributes this proc's CPU to its phases; see perf.CPUPhases.
 	cpu *perf.CPUPhases
 	// Time spent fetching this reducer's input shards; see getStats.
@@ -63,8 +70,8 @@ type Reducer struct {
 // cpu, if non-nil, is the proc's CPU-phase chain (see perf.CPUPhases); the
 // reducer marks its setup steps on it. Callers that don't care (tests) pass nil.
 func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *perf.Perf, cpu *perf.CPUPhases) (*Reducer, error) {
-	if len(args) != 7 {
-		return nil, fmt.Errorf("NewReducer: wrong number of arguments: got %d, want 7 (stale mr-r binary?): %v", len(args), args)
+	if len(args) != 8 {
+		return nil, fmt.Errorf("NewReducer: wrong number of arguments: got %d, want 8 (stale mr-r binary?): %v", len(args), args)
 	}
 	useGetPut, err := strconv.ParseBool(args[5])
 	if err != nil {
@@ -74,16 +81,21 @@ func NewReducer(sc *sigmaclnt.SigmaClnt, reducef mr.ReduceT, args []string, p *p
 	if err != nil {
 		return nil, fmt.Errorf("Reducer: useCosandbox %v isn't bool", args[6])
 	}
+	getsConcurrency, err := strconv.Atoi(args[7])
+	if err != nil {
+		return nil, fmt.Errorf("Reducer: getsConcurrency %v isn't int", args[7])
+	}
 	r := &Reducer{
-		outlink:      args[2],
-		outputTarget: args[3],
-		reducef:      reducef,
-		SigmaClnt:    sc,
-		perf:         p,
-		uxMnted:      make(map[string]bool),
-		useGetPut:    useGetPut,
-		useCosandbox: useCosandbox,
-		cpu:          cpu,
+		outlink:         args[2],
+		outputTarget:    args[3],
+		reducef:         reducef,
+		SigmaClnt:       sc,
+		perf:            p,
+		uxMnted:         make(map[string]bool),
+		useGetPut:       useGetPut,
+		useCosandbox:    useCosandbox,
+		getsConcurrency: getsConcurrency,
+		cpu:             cpu,
 	}
 	id, err := strconv.Atoi(args[0])
 	if err != nil {
@@ -348,13 +360,16 @@ func (r *Reducer) inputIdx(f string) int {
 }
 
 func (r *Reducer) ReadFiles(rtot *readResult) error {
-	const MAXCONCURRENCY = 1
+	maxConcurrency := r.getsConcurrency
+	if maxConcurrency < 1 {
+		maxConcurrency = 1
+	}
 
 	req := make(chan string, r.nmaptask)
 	rep := make(chan readResult)
 
-	if MAXCONCURRENCY > 1 {
-		go r.readerMgr(req, rep, MAXCONCURRENCY)
+	if maxConcurrency > 1 {
+		go r.readerMgr(req, rep, maxConcurrency)
 	}
 
 	// Random offset to stop reducer procs from all banging on the same ux.
@@ -373,7 +388,7 @@ func (r *Reducer) ReadFiles(rtot *readResult) error {
 	}
 	for i := 0; i < r.nmaptask; i++ {
 		f := (i + randOffset) % r.nmaptask
-		if MAXCONCURRENCY > 1 {
+		if maxConcurrency > 1 {
 			req <- r.input[f].File
 		} else {
 			rr := &readResult{f: r.input[f].File, kvm: rtot.kvm}
@@ -381,7 +396,7 @@ func (r *Reducer) ReadFiles(rtot *readResult) error {
 			rtot.sum(rr)
 		}
 	}
-	if MAXCONCURRENCY > 1 {
+	if maxConcurrency > 1 {
 		close(req)
 		for i := 0; i < r.nmaptask; i++ {
 			rr := <-rep

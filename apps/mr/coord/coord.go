@@ -86,15 +86,16 @@ type Coord struct {
 	// bounds how many run concurrently per node, and the two phases want
 	// different packings (a reducer reads every mapper's shard, so spreading
 	// reducers across nodes matters more than packing them densely).
-	mapperMem  proc.Tmem
-	reducerMem proc.Tmem
-	stat            AStat
-	perf            *perf.Perf
-	useGetPut       bool
-	useCosandbox    bool
+	mapperMem    proc.Tmem
+	reducerMem   proc.Tmem
+	stat         AStat
+	perf         *perf.Perf
+	useGetPut    bool
+	useCosandbox bool
 	// The reducer knobs, independent of the mapper ones above.
-	useGetPutReduce    bool
-	useCosandboxReduce bool
+	useGetPutReduce       bool
+	useCosandboxReduce    bool
+	reduceGetsConcurrency int
 	// Size of a cosandbox reducer's shared-memory segment, from the job
 	// description; 0 means estimate it from what the mappers wrote.
 	reduceShmemMB int
@@ -142,8 +143,8 @@ func (s *AStat) String() string {
 type NewProc func(ftclnt.Task[[]byte]) (*proc.Proc, error)
 
 func NewCoord(args []string) (*Coord, error) {
-	if len(args) != 21 {
-		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 21 (stale mr-coord binary?): %v", len(args), args)
+	if len(args) != 22 {
+		return nil, fmt.Errorf("NewCoord: wrong number of arguments: got %d, want 22 (stale mr-coord binary?): %v", len(args), args)
 	}
 	c := &Coord{}
 	c.jobRoot = args[1]
@@ -192,6 +193,11 @@ func NewCoord(args []string) (*Coord, error) {
 		return nil, fmt.Errorf("NewCoord: reducerMem %v isn't int", args[20])
 	}
 	c.reducerMem = proc.Tmem(mem)
+
+	c.reduceGetsConcurrency, err = strconv.Atoi(args[21])
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: reduceGetsConcurrency %v isn't int", args[21])
+	}
 
 	b, err := c.GetFile(mr.JobOutLink(c.jobRoot, c.job))
 	if err != nil {
@@ -402,7 +408,7 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	outlink := mr.ReduceOut(c.jobRoot, c.job) + data.Task
 	outTarget := mr.ReduceOutTarget(c.outdir, c.job) + data.Task
 	c.stat.Nreduce.Add(1)
-	p := c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.useGetPutReduce), strconv.FormatBool(c.useCosandboxReduce)}, c.reducerMem)
+	p := c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.useGetPutReduce), strconv.FormatBool(c.useCosandboxReduce), strconv.Itoa(c.reduceGetsConcurrency)}, c.reducerMem)
 	if c.useGetPutReduce {
 		// The UX/S3 proxy client RPC channels — and the delegated-RPC path in
 		// particular — are serviced by spproxy.

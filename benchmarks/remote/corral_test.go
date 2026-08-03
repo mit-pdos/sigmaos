@@ -19,12 +19,13 @@ const (
 	tstMaxConc   = 32
 	tstLineLen   = 2 * 1024 * 1024
 	tstLambdaMem = 1769
+	tstRedGets   = 16
 )
 
 func tstCorralConfig(t *testing.T, app string, lambda bool) *CorralConfig {
 	t.Helper()
 	cfg, err := NewCorralConfig(app, tstBranch, tstBucket, tstInput, tstOutput, lambda,
-		tstSplit, tstMapBin, tstRedBin, tstMaxConc, tstLineLen, tstLambdaMem)
+		tstSplit, tstMapBin, tstRedBin, tstMaxConc, tstLineLen, tstLambdaMem, tstRedGets)
 	if err != nil {
 		t.Fatalf("NewCorralConfig(%q): %v", app, err)
 	}
@@ -40,27 +41,27 @@ func TestNewCorralConfig(t *testing.T) {
 	}
 	// An unsupported app, and each required string, is rejected rather than
 	// producing a command that fails on the cluster.
-	if _, err := NewCorralConfig("amplab1", tstBranch, tstBucket, tstInput, tstOutput, true, 0, 0, 0, 0, 0, 0); err == nil {
+	if _, err := NewCorralConfig("amplab1", tstBranch, tstBucket, tstInput, tstOutput, true, 0, 0, 0, 0, 0, 0, tstRedGets); err == nil {
 		t.Errorf("expected an error for an unsupported corral app")
 	}
-	if _, err := NewCorralConfig(CorralGrep, "", tstBucket, tstInput, tstOutput, true, 0, 0, 0, 0, 0, 0); err == nil {
+	if _, err := NewCorralConfig(CorralGrep, "", tstBucket, tstInput, tstOutput, true, 0, 0, 0, 0, 0, 0, tstRedGets); err == nil {
 		t.Errorf("expected an error for an empty branch")
 	}
-	if _, err := NewCorralConfig(CorralGrep, tstBranch, tstBucket, "", tstOutput, true, 0, 0, 0, 0, 0, 0); err == nil {
+	if _, err := NewCorralConfig(CorralGrep, tstBranch, tstBucket, "", tstOutput, true, 0, 0, 0, 0, 0, 0, tstRedGets); err == nil {
 		t.Errorf("expected an error for an empty input")
 	}
 }
 
 func TestCorralTuningFlags(t *testing.T) {
 	cfg := tstCorralConfig(t, CorralWordCount, true)
-	want := "--splitsize 10485760 --mapbinsize 136314880 --reducebinsize 838860800 --maxconcurrency 32 --maxlinelength 2097152 --lambdamemory 1769"
+	want := "--splitsize 10485760 --mapbinsize 136314880 --reducebinsize 838860800 --maxconcurrency 32 --maxlinelength 2097152 --lambdamemory 1769 --reducegetsconcurrency 16"
 	if got := cfg.tuningFlags(); got != want {
 		t.Errorf("tuningFlags = %q want %q", got, want)
 	}
 	// A zero knob is omitted, leaving the corral app's compiled-in default.
 	cfg.MapBinSize = 0
 	cfg.MaxConcurrency = 0
-	want = "--splitsize 10485760 --reducebinsize 838860800 --maxlinelength 2097152 --lambdamemory 1769"
+	want = "--splitsize 10485760 --reducebinsize 838860800 --maxlinelength 2097152 --lambdamemory 1769 --reducegetsconcurrency 16"
 	if got := cfg.tuningFlags(); got != want {
 		t.Errorf("tuningFlags with unset knobs = %q want %q", got, want)
 	}
@@ -78,7 +79,8 @@ func TestCorralCmd(t *testing.T) {
 		"aws s3 rm --profile sigmaos --recursive s3://9ps3/output",
 		"./bin/word_count --lambda --out s3://9ps3/output " +
 			"--splitsize 10485760 --mapbinsize 136314880 --reducebinsize 838860800 " +
-			"--maxconcurrency 32 --maxlinelength 2097152 --lambdamemory 1769 s3://9ps3/wiki-2G/",
+			"--maxconcurrency 32 --maxlinelength 2097152 --lambdamemory 1769 " +
+			"--reducegetsconcurrency 16 s3://9ps3/wiki-2G/",
 	} {
 		if !strings.Contains(cmd, want) {
 			t.Errorf("command missing %q:\n%s", want, cmd)
@@ -102,6 +104,11 @@ func TestCorralCmdLocal(t *testing.T) {
 	// And the memory flag, which only sizes a deployed function, is omitted too.
 	if strings.Contains(cmd, "--lambdamemory") {
 		t.Errorf("local run passes --lambdamemory:\n%s", cmd)
+	}
+	// The reduce-gets knob changes what the reduce phase measures, so it is
+	// recorded in the command whichever way it is set.
+	if !strings.Contains(cmd, "--reducegetsconcurrency 16") {
+		t.Errorf("local run omits --reducegetsconcurrency:\n%s", cmd)
 	}
 	if !strings.Contains(cmd, "./bin/grep  --out") {
 		t.Errorf("unexpected local invocation:\n%s", cmd)

@@ -14,6 +14,13 @@ const (
 	CorralGrep      = "grep"
 )
 
+// warmupRunName is the results subdirectory a discarded warm-up run writes to.
+// Deliberately not of the run-<n> form the measured repetitions use: the graph
+// script averages a configuration's run-* subdirectories, so a name outside that
+// pattern keeps the warm-up's output around to look at without letting it into
+// the numbers.
+const warmupRunName = "warmup"
+
 // CorralConfig describes a run of the Corral baseline: which example app, on
 // what input, with what task-granularity tuning.
 //

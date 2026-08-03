@@ -79,9 +79,14 @@ def run_dirs(dname):
   # directly (the old layout) or one subdirectory per repetition (run-1,
   # run-2, ...), which is what the benchmark writes when it repeats a
   # configuration. Accept both.
+  #
+  # Only run-* is averaged: a configuration's directory can hold other runs that
+  # are deliberately not part of the measurement — the corral benchmark's
+  # discarded "warmup" run, which exists to absorb the Lambda cold start — and
+  # they keep their output here to be looked at, not graphed.
   if bench_out(dname) is not None:
     return [dname]
-  subdirs = sorted(d for d in glob.glob(os.path.join(dname, "*"))
+  subdirs = sorted(d for d in glob.glob(os.path.join(dname, "run-*"))
                    if os.path.isdir(d) and bench_out(d) is not None)
   return subdirs
 

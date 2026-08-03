@@ -471,7 +471,7 @@ func TestCorral(t *testing.T) {
 		// How many times to repeat each experiment. Each repetition lands in its
 		// own run-<n> subdirectory of the experiment's results directory, which
 		// the graph script averages; see the same const in TestMR.
-		numRuns int = 3
+		numRuns int = 5
 	)
 	// One entry per workload: the corral example app, the dataset it reads, and
 	// its task-granularity tuning. Each workload names its own input because the
@@ -542,6 +542,17 @@ func TestCorral(t *testing.T) {
 			}
 			benchName := filepath.Join(benchNameBase, cfg.ResultsDirName(start))
 			db.DPrintf(db.ALWAYS, "Corral config: benchName %v cfg %v nruns %v", benchName, cfg, numRuns)
+			// A warm-start measurement can't be the first run: however little the
+			// deploy changes, this configuration's Lambda containers don't exist
+			// until something invokes them, so the first run pays a cold start on
+			// every one of its mappers. Run the whole configuration once and throw
+			// the result away — it goes to a "warmup" subdirectory rather than a
+			// run-<n> one, which the graph script doesn't average (it looks for
+			// run-*), so the cold-start numbers stay around to look at without
+			// reaching the graph.
+			warmupName := filepath.Join(benchName, warmupRunName)
+			db.DPrintf(db.ALWAYS, "Corral warmup run (discarded): %v", warmupName)
+			ts.RunStandardBenchmark(warmupName, driverVM, GetCorralCmdConstructor(cfg), numNodes, numCoresPerNode, numFullNodes, numProcqOnlyNodes, turboBoost, useGVisor)
 			for run := 1; run <= numRuns; run++ {
 				runName := filepath.Join(benchName, fmt.Sprintf("run-%d", run))
 				db.DPrintf(db.ALWAYS, "Corral run %v/%v: %v", run, numRuns, runName)

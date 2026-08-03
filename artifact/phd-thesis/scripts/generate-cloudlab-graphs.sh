@@ -48,7 +48,8 @@ $GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
   --ux_dir $MR_UX \
   --s3_dir $MR_S3 \
   --s3_cosandbox_both_dir $MR_S3-cosandbox-both \
-  --corral_dir $MR_RES_DIR/corral-wc-wiki10G-warm
+  --corral_dir $MR_RES_DIR/corral-wc-wiki10G-warm \
+  --sys-name "$SYS_NAME"
 #  --ux_cosandbox_both_dir $MR_UX-cosandbox-both \
 #  --ux_getput_mapper_dir $MR_UX-getput-mapper \
 #  --ux_getput_reducer_dir $MR_UX-getput-reducer \
@@ -68,13 +69,14 @@ echo "Done generating MR graph (new)..."
 # word-count one's axes.
 echo "Generating MR vs corral grep graph..."
 GREP_UX=$MR_RES_DIR/mr-grep-wiki2G-bench.json-warm
-GREP_S3=$MR_RES_DIR/mr-grep-wiki2G-bench-s3.json-warm
+GREP_S3=$MR_RES_DIR/mr-grep-wiki2G-granular-bench-s3.json-warm
 $GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
   --out $GRAPH_OUT_DIR/mr_vs_corral_warm_only_grep.pdf \
   --app grep \
   --s3_dir $GREP_S3 \
   --s3_cosandbox_both_dir $GREP_S3-cosandbox-both \
-  --corral_dir $MR_RES_DIR/corral-grep-wiki2G-warm
+  --corral_dir $MR_RES_DIR/corral-grep-wiki2G-warm \
+  --sys-name "$SYS_NAME"
 #  --ux_dir $GREP_UX \
 #  --ux_cosandbox_both_dir $GREP_UX-cosandbox-both \
 echo "Done generating MR vs corral grep graph..."

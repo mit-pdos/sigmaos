@@ -183,9 +183,21 @@ func (msched *MSched) GetCPUShares(ctx fs.CtxI, req proto.GetCPUSharesReq, res *
 	return nil
 }
 
-// Get msched's CPU util.
+// Get msched's CPU util: the realm's share, plus what the whole node is doing.
+//
+// The two differ by more than scheduling noise. Util sums only the cgroups of
+// the realm's procd containers, so it counts the realm's procs, procd itself
+// and its spproxyd — but not the realm's own ux/s3/chunkd servers (one of each
+// per realm; see kernel/srvs.go BootSub), nor anything in the root realm.
+// NodeUtil is what /proc/stat reports for the node, so a caller can see how
+// much CPU a realm's work costs beyond its procd containers.
+//
+// Both are in the same unit: a percentage where 100 means one full core.
+// NodeUtil is a property of the node, not of the requested realm, so a caller
+// polling several realms gets the same figure for each and must not sum them.
 func (msched *MSched) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilReq, res *proto.GetCPUUtilRep) error {
 	res.Util = msched.pmgr.GetCPUUtil(sp.Trealm(req.RealmStr))
+	res.NodeUtil = float64(msched.getCPUUtil()) * float64(linuxsched.GetNCores())
 	return nil
 }
 

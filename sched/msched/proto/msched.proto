@@ -41,7 +41,13 @@ message GetCPUUtilReq {
 }
 
 message GetCPUUtilRep {
+  // CPU used by the realm's procd containers on this node, as a percentage
+  // where 100 means one full core.
   double util = 1;
+  // CPU used by the whole node, in the same unit, regardless of realm: what
+  // /proc/stat says, so it also covers the realm's ux/s3/chunkd servers and
+  // everything in the root realm, none of which is in util.
+  double nodeUtil = 2;
 }
 
 message GetRunningProcsReq {

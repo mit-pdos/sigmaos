@@ -32,11 +32,15 @@ def parse_cpu_util_file(filepath, verbose=False):
             if "Cores utilized:" in line:
                 parts = line.strip().split()
                 if len(parts) >= 2:
-                    # First word is timestamp (HH:MM:SS.microseconds), last word is CPU utilization
+                    # First word is the timestamp (HH:MM:SS.microseconds). The
+                    # field after "utilized:" is the realm's cores; a second,
+                    # comma-separated field (newer runs) is what every cgroup on
+                    # those nodes used, which is not what this graph plots.
                     timestamp_str = parts[0]
-                    cpu_util = float(parts[-1])
 
                     try:
+                        i = parts.index("utilized:")
+                        cpu_util = float(parts[i + 1].rstrip(","))
                         timestamp = parse_timestamp(timestamp_str)
                         timestamps.append(timestamp)
                         cpu_utils.append(cpu_util)

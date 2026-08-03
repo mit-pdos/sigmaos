@@ -72,7 +72,7 @@ func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
 	sdc := mschedclnt.NewMSchedClnt(ts.SigmaClnt.FsLib, sp.NOT_SET)
 	go func() {
 		for {
-			perc, err := sdc.GetCPUUtil(ts.GetRealm())
+			perc, nodePerc, err := sdc.GetCPUUtils(ts.GetRealm())
 			if err != nil {
 				db.DPrintf(db.ALWAYS, "Error GetCPUUtil: %v", err)
 				return
@@ -80,9 +80,18 @@ func monitorCPUUtil(ts *test.RealmTstate, p *perf.Perf) {
 			// Util is returned as a percentage (e.g. 100 = 1 core fully utilized,
 			// 200 = 2 cores, etc.). So, convert no # of cores by dividing by 100.
 			ncores := perc / 100.0
+			// What the nodes are doing in total, in cores. Unlike the realm
+			// figure this counts every cgroup on them — including the realm's own
+			// ux/s3/chunkd servers, which serve the realm's I/O but sit outside
+			// its procd containers — so the two together show how much of a
+			// realm's work is invisible to the realm figure. It is a property of
+			// the cluster, identical for every realm, so it is logged rather than
+			// fed to TptTick, which accumulates per-realm series.
+			nodeNCores := nodePerc / 100.0
 			// Total CPU utilized by this realm (in cores).
 			p.TptTick(ncores)
-			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v", ts.GetRealm(), ncores)
+			// "<realm's cores>, <every cgroup on those nodes>".
+			db.DPrintf(db.BENCH, "[%v] Cores utilized: %v, %v", ts.GetRealm(), ncores, nodeNCores)
 			time.Sleep(CPU_MONITOR_INTERVAL)
 		}
 	}()

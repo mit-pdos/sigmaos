@@ -278,13 +278,30 @@ func (mc *MSchedClnt) MonitorMSchedStats(realm sp.Trealm, period time.Duration) 
 }
 
 func (mc *MSchedClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
-	// Total CPU utilization by this sceddclnt's realm.
+	util, _, err := mc.GetCPUUtils(realm)
+	return util, err
+}
+
+// GetCPUUtils returns the CPU used by realm across the cluster, and the CPU
+// used by those same nodes in total, both as a percentage where 100 means one
+// full core.
+//
+// The second figure is not realm-specific and is the same whichever realm is
+// asked about, so a caller polling several realms must report it once rather
+// than summing it. It is worth having next to the first because the first
+// counts only the realm's procd containers: it excludes the realm's own
+// ux/s3/chunkd servers and everything in the root realm, which for an
+// I/O-heavy or spawn-heavy job is a large share of the work done on the
+// realm's behalf.
+func (mc *MSchedClnt) GetCPUUtils(realm sp.Trealm) (float64, float64, error) {
+	// Total CPU utilization by this sceddclnt's realm, and by the whole cluster.
 	var total float64 = 0
+	var nodeTotal float64 = 0
 	// Get list of mscheds
 	sds, err := mc.rpcdc.GetEntries()
 	if err != nil {
 		db.DPrintf(db.MSCHEDCLNT_ERR, "Error getMScheds: %v", err)
-		return 0, err
+		return 0, 0, err
 	}
 	for _, sd := range sds {
 		// Get the CPU shares on this msched.
@@ -293,17 +310,18 @@ func (mc *MSchedClnt) GetCPUUtil(realm sp.Trealm) (float64, error) {
 		sclnt, err := mc.GetRPCClnt(sd)
 		if err != nil {
 			db.DPrintf(db.MSCHEDCLNT_ERR, "Error GetCPUUtil GetMSchedClnt: %v", err)
-			return 0, err
+			return 0, 0, err
 		}
 		err = sclnt.RPC("MSched.GetCPUUtil", req, res)
 		if err != nil {
 			db.DPrintf(db.MSCHEDCLNT_ERR, "Error GetCPUUtil: %v", err)
-			return 0, err
+			return 0, 0, err
 		}
-		db.DPrintf(db.CPU_UTIL, "MSched %v CPU util %v", sd, res.Util)
+		db.DPrintf(db.CPU_UTIL, "MSched %v CPU util %v node util %v", sd, res.Util, res.NodeUtil)
 		total += res.Util
+		nodeTotal += res.NodeUtil
 	}
-	return total, nil
+	return total, nodeTotal, nil
 }
 
 func (mc *MSchedClnt) StopWatching() {

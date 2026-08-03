@@ -42,10 +42,11 @@ type CorralConfig struct {
 	// per-worker mem request. Zero leaves corral's own default.
 	LambdaMemoryMB int64
 
-	// How many intermediate files a reducer fetches at once. Corral's reducer
-	// reads its files in a loop, so at 1 the reduce phase is the sum of every
-	// file's fetch latency — the same knob MR has
-	// (mr.Job.ReduceGetsConcurrency), so the two stay comparable.
+	// How many of its intermediate files a reducer reads, decodes and combines at
+	// once. At 1 the reduce phase is the sum of every file's fetch latency plus
+	// its decode; above 1 corral's reducer runs that many readers, each combining
+	// its own file into its own map, the same design MR's reducer has, under the
+	// same knob (mr.Job.ReduceGetsConcurrency), so the two stay comparable.
 	ReduceGetsConcurrency int
 }
 

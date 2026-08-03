@@ -416,7 +416,10 @@ func (r *Reducer) emit(key []byte, value string) error {
 	return err
 }
 
-func (r *Reducer) DoReduce() *proc.Status {
+// start is when this proc began its work, from RunReducer: it is what MsInner
+// reports, so that the reducer's inner time covers its setup exactly as the
+// mapper's does.
+func (r *Reducer) DoReduce(start time.Time) *proc.Status {
 	db.DPrintf(db.ALWAYS, "DoReduce in %v out %v nmap %v\n", len(r.input), r.outlink, r.nmaptask)
 	rtot := readResult{
 		kvm:        kvmap.NewKVMap(chunkreader.MINCAP, chunkreader.MAXCAP),
@@ -439,7 +442,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 	ms := rtot.d.Milliseconds()
 	db.DPrintf(db.MR, "DoReduce: Readfiles %v: in %s %vms (%s)\n", len(r.input), humanize.Bytes(uint64(rtot.n)), ms, tput.TputStr(rtot.n, ms))
 
-	start := time.Now()
+	emitStart := time.Now()
 
 	if err := rtot.kvm.Emit(r.reducef, r.emit); err != nil {
 		db.DPrintf(db.ALWAYS, "DoReduce: emit err %v", err)
@@ -460,8 +463,9 @@ func (r *Reducer) DoReduce() *proc.Status {
 	// uploaded here.
 	r.cpu.Mark("Reducer.closeWrt")
 
-	// Include time spent writing output.
-	rtot.d += time.Since(start)
+	// Include time spent writing output, so the debug figure above covers the
+	// whole reduce; MsInner is measured from the proc's start instead.
+	rtot.d += time.Since(emitStart)
 
 	// Create symlink atomically. Retry on version issues
 	linkStart := time.Now()
@@ -485,7 +489,7 @@ func (r *Reducer) DoReduce() *proc.Status {
 			In:       rtot.n,
 			Out:      nbyte,
 			OutBin:   Bin{},
-			MsInner:  rtot.d.Milliseconds(),
+			MsInner:  time.Since(start).Milliseconds(),
 			MsGet:    r.gets.dur().Milliseconds(),
 			NGet:     r.gets.count(),
 			KernelID: r.ProcEnv().GetKernelID(),
@@ -497,6 +501,11 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	// Split the reducer's CPU into setup (sigmaclnt, reading its task, opening
 	// its output) and the reduce itself, to compare with the mapper's split.
 	cpu := perf.NewCPUPhases(pe)
+	// The window Result.MsInner reports: everything this proc does, from before
+	// its setup (the sigmaclnt, reading its task, creating the S3 client, opening
+	// its output) through the end of the reduce — the same span the mapper's
+	// MsInner covers, so the two are comparable.
+	start := time.Now()
 	p, err := perf.NewPerf(pe, perf.MRREDUCER)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
@@ -528,7 +537,7 @@ func RunReducer(reducef mr.ReduceT, args []string) {
 	})
 	// Whatever setup is left: installing the crash failers.
 	cpu.Mark("Reducer.setupTail")
-	status := r.DoReduce()
+	status := r.DoReduce(start)
 	// Whatever is left between DoReduce returning and ClntExit (which reports
 	// Proc.exit.CPU, i.e. the total).
 	cpu.Mark("Reducer.postDoReduce")

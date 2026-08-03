@@ -19,8 +19,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"sigmaos/apps/mr"
-	mrcoord "sigmaos/apps/mr/coord"
 	"sigmaos/apps/mr/chunkreader"
+	mrcoord "sigmaos/apps/mr/coord"
 	api "sigmaos/apps/mr/mr"
 	mrscanner "sigmaos/apps/mr/scanner"
 	db "sigmaos/debug"
@@ -446,11 +446,12 @@ func TestMapperReducer(t *testing.T) {
 		outlink := mr.ReduceOut(ts.jobRoot, ts.job) + rt.Data.Task
 		outTarget := mr.ReduceOutTarget(job.Output, ts.job) + rt.Data.Task
 
-		// The trailing bools are the reducer's getput/cosandbox knobs: this
-		// test exercises the fslib path, as the NewMapper call above does.
-		r, err := mr.NewReducer(sc, reducer, []string{strconv.Itoa(int(rt.Id)), string(ts.tasks.Rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(nmap), "false", "false"}, p, nil)
+		// The trailing args are the reducer's getput/cosandbox knobs and its
+		// reduce-fetch concurrency: this test exercises the fslib path one shard
+		// at a time, as the NewMapper call above does.
+		r, err := mr.NewReducer(sc, reducer, []string{strconv.Itoa(int(rt.Id)), string(ts.tasks.Rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(nmap), "false", "false", "1"}, p, nil)
 		assert.Nil(t, err)
-		status := r.DoReduce()
+		status := r.DoReduce(time.Now())
 		assert.True(t, status.IsStatusOK(), "status %v", status)
 		res, err := mr.NewResult(status.Data())
 		assert.Nil(t, err)

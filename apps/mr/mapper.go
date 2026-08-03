@@ -540,6 +540,7 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	cpu := perf.NewCPUPhases(pe)
 
 	init := time.Now()
+	start := time.Now()
 	p, err := perf.NewPerf(pe, perf.MRMAPPER)
 	if err != nil {
 		db.DFatalf("NewPerf err %v\n", err)
@@ -553,7 +554,6 @@ func RunMapper(mapf mr.MapT, combinef mr.ReduceT, args []string) {
 	// Whatever setup is left after Started: installing the crash failers.
 	m.cpu.Mark("Mapper.setupTail")
 	db.DPrintf(db.MR, "Mapper [%v] init time: %v", args[2], time.Since(init))
-	start := time.Now()
 	nin, nout, outbin, err := m.DoMap()
 	db.DPrintf(db.MR_TPT, "%s: in %s out %v tot %v %vms (%s)\n", "map", humanize.Bytes(uint64(nin)), humanize.Bytes(uint64(nout)), tput.Mbyte(nin+nout), time.Since(start).Milliseconds(), tput.TputStr(nin+nout, time.Since(start).Milliseconds()))
 	// Whatever is left between DoMap returning and ClntExit (which reports

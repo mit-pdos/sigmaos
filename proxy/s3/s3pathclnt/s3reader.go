@@ -56,6 +56,39 @@ func (s3r *s3Reader) readChunk(off sp.Toffset, len int) (io.ReadCloser, error) {
 	return r, nil
 }
 
+// fillBuf reads from r into b until b is full, r reports EOF, or r errors,
+// returning how many bytes landed in b.
+//
+// The subtlety it exists for: io.Reader is allowed to return bytes *together
+// with* io.EOF in one call, and an HTTP response body does exactly that when
+// the whole body fits in the buffer — which is every ranged GET of an object
+// smaller than the caller's buffer. Breaking out of the loop on EOF without
+// counting those bytes first silently discards the entire object and reports a
+// clean 0-byte read: MR reducers reading small intermediate shards then found
+// every shard empty, produced no output, and every task still exited OK.
+//
+// Bytes already in b are reported even alongside an error, so a partial read
+// isn't silently turned into nothing.
+func fillBuf(r io.Reader, b []byte) (int, error) {
+	i := 0
+	for i < len(b) {
+		n, err := r.Read(b[i:])
+		i += n
+		if err == io.EOF {
+			return i, nil
+		}
+		if err != nil {
+			return i, err
+		}
+		// A Reader may return (0, nil); keep going rather than spinning on it
+		// forever is the caller's problem, but a well-behaved body won't.
+		if n == 0 {
+			return i, nil
+		}
+	}
+	return i, nil
+}
+
 func (s3r *s3Reader) read(off sp.Toffset, b []byte) (int, error) {
 	// db.DPrintf(db.S3CLNT, "s3.Read off %d len %d", off, len(b))
 	if off >= sp.Toffset(s3r.sz) {
@@ -65,19 +98,12 @@ func (s3r *s3Reader) read(off sp.Toffset, b []byte) (int, error) {
 		db.DPrintf(db.S3CLNT, "readChunk err %v", err)
 		return 0, err
 	} else {
-		i := 0
-		l := len(b)
-		for i < l {
-			n, err := chunk.Read(b[i:l])
-			if err != nil && err != io.EOF {
-				return 0, err
-			} else if err == io.EOF {
-				break;
-			}
-			i += n
-		}
+		i, err := fillBuf(chunk, b)
 		db.DPrintf(db.S3CLNT, "s3.Read off %d end %d buflen %d n %d err %v", off, s3r.sz, len(b), i, err)
 		chunk.Close()
+		if err != nil {
+			return i, err
+		}
 		return i, nil
 	}
 }

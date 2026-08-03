@@ -187,6 +187,11 @@ def collect(args):
     # source, so that a directory list naming everything can be reused as-is.
     if args.source is not None and source not in args.source:
       continue
+    # The mechanism's name is a presentation choice, so it comes from the
+    # command line rather than being baked into CONFIGS: --sys-name initscript
+    # relabels every co-sandbox bar without touching the keys the results
+    # directories are named after.
+    label = label.replace("co-sandbox", args.sys_name)
     dirs = run_dirs(dname)
     ts = scrape_times(dname, kind == "sigma")
     if len(ts) == 0:
@@ -217,22 +222,26 @@ def graph_data(args):
 
   x = np.arange(len(bars))
   times = [ t for _, _, t, _, _ in bars ]
-  errs = [ e for _, _, _, e, _ in bars ]
+  # Spread across runs is only drawn when asked for: on a figure with this many
+  # bars the caps and the ± in every label are a lot of ink, and for a
+  # single-run configuration there is nothing to show.
+  errs = [ e for _, _, _, e, _ in bars ] if args.error_bars else [ 0.0 ] * len(bars)
   colors = bar_colors([ f for _, f, _, _, _ in bars ])
-  plt.bar(x, times, width=0.7, color=colors, yerr=errs, capsize=3,
+  plt.bar(x, times, width=0.7, color=colors,
+          yerr=(errs if args.error_bars else None), capsize=3,
           error_kw={"ecolor": "black", "elinewidth": 1})
   top = max(t + e for t, e in zip(times, errs))
   for i, (_, _, v, e, n) in enumerate(bars):
-    txt = str(round(v, 2)) if n < 2 else "%.2f±%.2f" % (v, e)
-    plt.text(x[i], v + e + top * 0.02, txt, ha="center", fontsize=8)
+    txt = "%.2f±%.2f" % (v, e) if args.error_bars and n > 1 else str(round(v, 2))
+    plt.text(x[i], v + (e if args.error_bars else 0) + top * 0.02, txt, ha="center", fontsize=8)
   # No x ticks: the bars are named in the legend, one entry each, in bar order.
   ax.set_xticks([])
   ax.set_ylim(bottom=0, top=top * 1.25)
 
   nruns = set(n for _, _, _, _, n in bars)
   if nruns != {1}:
-    ax.set_ylabel("Execution Time (seconds)\nmean of %s runs, ±1 s.d." %
-                  ("/".join(str(n) for n in sorted(nruns))))
+    ylabel = "Execution Time (seconds)"
+    ax.set_ylabel(ylabel)
 
   handles = [ matplotlib.patches.Patch(color=c, label=l)
               for c, (l, _, _, _, _) in zip(colors, bars) ]
@@ -261,6 +270,13 @@ if __name__ == "__main__":
   parser.add_argument("--source", type=str, action="append", choices=SOURCES, default=None,
                       help="Only graph configurations reading from this input source. "
                            "Repeatable; omit to graph every supplied configuration.")
+  parser.add_argument("--sys-name", default="co-sandbox",
+                      help="Label to use in place of 'co-sandbox' in the bar labels "
+                           "(default: co-sandbox)")
+  parser.add_argument("--error_bars", action="store_true", default=False,
+                      help="Draw ±1 s.d. across the runs of each configuration, as error bars "
+                           "and in the value labels. Off by default: the spread is always "
+                           "printed per configuration on stdout regardless.")
   parser.add_argument("--app", type=str, default="wc")
   parser.add_argument("--title", type=str, default=None)
   parser.add_argument("--out", type=str, required=True)

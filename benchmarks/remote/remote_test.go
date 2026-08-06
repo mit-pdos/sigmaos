@@ -333,8 +333,7 @@ func TestMR(t *testing.T) {
 		// A run with this set is not comparable on phase time to one without —
 		// withdrawing machines costs mapper capacity — so it belongs in its own
 		// results directory. What it measures is how much CPU serving the job's data
-		// actually takes, in isolation from the mappers that read it. See
-		// claude-slop/DEDICATED_UX_MACHINES.md.
+		// actually takes, in isolation from the mappers that read it.
 		nDedicatedUxNodes int
 	}
 	// How a job's tasks move their data. A cosandbox prefetches through the
@@ -1161,8 +1160,7 @@ func TestBEMRMultiplexing(t *testing.T) {
 	// servers while running none of its mappers or reducers. util/memblock takes
 	// them out of the pool by occupying their scheduler's memory budget, and the
 	// coordinator round-robins its mappers over them, so that the CPU spent serving
-	// the job's data is separated from the CPU the mappers use. See
-	// claude-slop/DEDICATED_UX_MACHINES.md.
+	// the job's data is separated from the CPU the mappers use.
 	const nDedicatedUxNodes int = 8
 	// Cluster configuration parameters.
 	//

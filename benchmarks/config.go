@@ -147,8 +147,7 @@ type MRBenchConfig struct {
 	//
 	// Withdrawing machines costs mapper capacity, so a run with this set is not
 	// comparable to one without on phase time; what it isolates is how much CPU
-	// serving the job's data actually takes. See
-	// claude-slop/DEDICATED_UX_MACHINES.md.
+	// serving the job's data actually takes.
 	NDedicatedUxNodes int `json:"n_dedicated_ux_nodes"`
 	// Mapper knobs (kept under their original names so existing results stay
 	// comparable); the reducer ones follow.

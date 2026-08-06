@@ -22,8 +22,7 @@ const minTailProbe = 4096
 // what lets the mapper's CONCURRENCY chunk readers overlap fetching with
 // mapping, and what puts several ranged gets in flight per split rather than
 // one. Fetching the whole window up front instead cost ~210ms of dead time per
-// split and left four of the five chunk readers idle (see
-// claude-slop/GET_PUT_SLOW.md).
+// split and left four of the five chunk readers idle.
 //
 // Delegated: a cosandbox prefetched the whole window under this split's rpcIdx
 // (the store holds exactly one reply per idx, so the fetch cannot be

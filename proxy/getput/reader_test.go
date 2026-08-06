@@ -175,7 +175,7 @@ func TestReaderFinalChunkTail(t *testing.T) {
 // tiled into sz/offinc chunks, each fetched on its own, so that the mapper's
 // concurrent chunk readers overlap fetching with mapping and put several ranged
 // gets in flight per split. Serving the whole window as one chunk instead left
-// four of the five chunk readers idle (claude-slop/GET_PUT_SLOW.md).
+// four of the five chunk readers idle.
 func TestReaderTilesWindow(t *testing.T) {
 	const (
 		sz     = 64 // what the mapper passes: cap(ckr.buf) = linesz + wordsz

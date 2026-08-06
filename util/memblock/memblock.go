@@ -2,8 +2,8 @@
 // procs, by occupying their scheduler's memory budget with a proc of its own.
 //
 // Written for the MR experiment that dedicates machines to hosting the job's
-// input in their fsuxd servers (claude-slop/DEDICATED_UX_MACHINES.md): those
-// machines must serve reads and writes but run no mappers or reducers. Nothing
+// input in their fsuxd servers: those machines must serve reads and writes but
+// run no mappers or reducers (see MRJobInstance.DedicateUxNodes). Nothing
 // here is MR-specific — it is "make these nodes refuse work" — so it is also what
 // to reach for to isolate any server from the procs that would otherwise share
 // its machine.

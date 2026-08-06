@@ -501,6 +501,105 @@ func (x *GetCPUUtilRep) GetNodeUtil() float64 {
 	return 0
 }
 
+type GetMemReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *GetMemReq) Reset() {
+	*x = GetMemReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sched_msched_proto_msched_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetMemReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMemReq) ProtoMessage() {}
+
+func (x *GetMemReq) ProtoReflect() protoreflect.Message {
+	mi := &file_sched_msched_proto_msched_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMemReq.ProtoReflect.Descriptor instead.
+func (*GetMemReq) Descriptor() ([]byte, []int) {
+	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{10}
+}
+
+type GetMemRep struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Memory (MB) this msched will still admit procs against. What besched
+	// filters candidate nodes on, so a caller wanting to stop procs from landing
+	// on this node has to drive this below the smallest mem request it cares
+	// about.
+	MemFree uint32 `protobuf:"varint,1,opt,name=memFree,proto3" json:"memFree,omitempty"`
+	// The machine's total memory (MB), for context: memFree is a budget, not a
+	// measurement of what is in use.
+	MemTotal uint32 `protobuf:"varint,2,opt,name=memTotal,proto3" json:"memTotal,omitempty"`
+}
+
+func (x *GetMemRep) Reset() {
+	*x = GetMemRep{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sched_msched_proto_msched_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetMemRep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMemRep) ProtoMessage() {}
+
+func (x *GetMemRep) ProtoReflect() protoreflect.Message {
+	mi := &file_sched_msched_proto_msched_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMemRep.ProtoReflect.Descriptor instead.
+func (*GetMemRep) Descriptor() ([]byte, []int) {
+	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetMemRep) GetMemFree() uint32 {
+	if x != nil {
+		return x.MemFree
+	}
+	return 0
+}
+
+func (x *GetMemRep) GetMemTotal() uint32 {
+	if x != nil {
+		return x.MemTotal
+	}
+	return 0
+}
+
 type GetRunningProcsReq struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -510,7 +609,7 @@ type GetRunningProcsReq struct {
 func (x *GetRunningProcsReq) Reset() {
 	*x = GetRunningProcsReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sched_msched_proto_msched_proto_msgTypes[10]
+		mi := &file_sched_msched_proto_msched_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -523,7 +622,7 @@ func (x *GetRunningProcsReq) String() string {
 func (*GetRunningProcsReq) ProtoMessage() {}
 
 func (x *GetRunningProcsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_sched_msched_proto_msched_proto_msgTypes[10]
+	mi := &file_sched_msched_proto_msched_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -536,7 +635,7 @@ func (x *GetRunningProcsReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRunningProcsReq.ProtoReflect.Descriptor instead.
 func (*GetRunningProcsReq) Descriptor() ([]byte, []int) {
-	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{10}
+	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{12}
 }
 
 type GetRunningProcsRep struct {
@@ -550,7 +649,7 @@ type GetRunningProcsRep struct {
 func (x *GetRunningProcsRep) Reset() {
 	*x = GetRunningProcsRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sched_msched_proto_msched_proto_msgTypes[11]
+		mi := &file_sched_msched_proto_msched_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -563,7 +662,7 @@ func (x *GetRunningProcsRep) String() string {
 func (*GetRunningProcsRep) ProtoMessage() {}
 
 func (x *GetRunningProcsRep) ProtoReflect() protoreflect.Message {
-	mi := &file_sched_msched_proto_msched_proto_msgTypes[11]
+	mi := &file_sched_msched_proto_msched_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -576,7 +675,7 @@ func (x *GetRunningProcsRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRunningProcsRep.ProtoReflect.Descriptor instead.
 func (*GetRunningProcsRep) Descriptor() ([]byte, []int) {
-	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{11}
+	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetRunningProcsRep) GetProcProtos() []*proc.ProcProto {
@@ -601,7 +700,7 @@ type WarmCacheBinReq struct {
 func (x *WarmCacheBinReq) Reset() {
 	*x = WarmCacheBinReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sched_msched_proto_msched_proto_msgTypes[12]
+		mi := &file_sched_msched_proto_msched_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -614,7 +713,7 @@ func (x *WarmCacheBinReq) String() string {
 func (*WarmCacheBinReq) ProtoMessage() {}
 
 func (x *WarmCacheBinReq) ProtoReflect() protoreflect.Message {
-	mi := &file_sched_msched_proto_msched_proto_msgTypes[12]
+	mi := &file_sched_msched_proto_msched_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +726,7 @@ func (x *WarmCacheBinReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WarmCacheBinReq.ProtoReflect.Descriptor instead.
 func (*WarmCacheBinReq) Descriptor() ([]byte, []int) {
-	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{12}
+	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *WarmCacheBinReq) GetPidStr() string {
@@ -676,7 +775,7 @@ type WarmCacheBinRep struct {
 func (x *WarmCacheBinRep) Reset() {
 	*x = WarmCacheBinRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sched_msched_proto_msched_proto_msgTypes[13]
+		mi := &file_sched_msched_proto_msched_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -689,7 +788,7 @@ func (x *WarmCacheBinRep) String() string {
 func (*WarmCacheBinRep) ProtoMessage() {}
 
 func (x *WarmCacheBinRep) ProtoReflect() protoreflect.Message {
-	mi := &file_sched_msched_proto_msched_proto_msgTypes[13]
+	mi := &file_sched_msched_proto_msched_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -702,7 +801,7 @@ func (x *WarmCacheBinRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WarmCacheBinRep.ProtoReflect.Descriptor instead.
 func (*WarmCacheBinRep) Descriptor() ([]byte, []int) {
-	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{13}
+	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *WarmCacheBinRep) GetOK() bool {
@@ -725,7 +824,7 @@ type RealmStats struct {
 func (x *RealmStats) Reset() {
 	*x = RealmStats{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sched_msched_proto_msched_proto_msgTypes[14]
+		mi := &file_sched_msched_proto_msched_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -738,7 +837,7 @@ func (x *RealmStats) String() string {
 func (*RealmStats) ProtoMessage() {}
 
 func (x *RealmStats) ProtoReflect() protoreflect.Message {
-	mi := &file_sched_msched_proto_msched_proto_msgTypes[14]
+	mi := &file_sched_msched_proto_msched_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -751,7 +850,7 @@ func (x *RealmStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RealmStats.ProtoReflect.Descriptor instead.
 func (*RealmStats) Descriptor() ([]byte, []int) {
-	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{14}
+	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RealmStats) GetRunning() int64 {
@@ -784,7 +883,7 @@ type GetMSchedStatsReq struct {
 func (x *GetMSchedStatsReq) Reset() {
 	*x = GetMSchedStatsReq{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sched_msched_proto_msched_proto_msgTypes[15]
+		mi := &file_sched_msched_proto_msched_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -797,7 +896,7 @@ func (x *GetMSchedStatsReq) String() string {
 func (*GetMSchedStatsReq) ProtoMessage() {}
 
 func (x *GetMSchedStatsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_sched_msched_proto_msched_proto_msgTypes[15]
+	mi := &file_sched_msched_proto_msched_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -810,7 +909,7 @@ func (x *GetMSchedStatsReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMSchedStatsReq.ProtoReflect.Descriptor instead.
 func (*GetMSchedStatsReq) Descriptor() ([]byte, []int) {
-	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{15}
+	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{17}
 }
 
 type GetMSchedStatsRep struct {
@@ -824,7 +923,7 @@ type GetMSchedStatsRep struct {
 func (x *GetMSchedStatsRep) Reset() {
 	*x = GetMSchedStatsRep{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sched_msched_proto_msched_proto_msgTypes[16]
+		mi := &file_sched_msched_proto_msched_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -837,7 +936,7 @@ func (x *GetMSchedStatsRep) String() string {
 func (*GetMSchedStatsRep) ProtoMessage() {}
 
 func (x *GetMSchedStatsRep) ProtoReflect() protoreflect.Message {
-	mi := &file_sched_msched_proto_msched_proto_msgTypes[16]
+	mi := &file_sched_msched_proto_msched_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -850,7 +949,7 @@ func (x *GetMSchedStatsRep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMSchedStatsRep.ProtoReflect.Descriptor instead.
 func (*GetMSchedStatsRep) Descriptor() ([]byte, []int) {
-	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{16}
+	return file_sched_msched_proto_msched_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetMSchedStatsRep) GetMSchedStats() map[string]*RealmStats {
@@ -901,7 +1000,12 @@ var file_sched_msched_proto_msched_proto_rawDesc = []byte{
 	0x6c, 0x52, 0x65, 0x70, 0x12, 0x12, 0x0a, 0x04, 0x75, 0x74, 0x69, 0x6c, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x01, 0x52, 0x04, 0x75, 0x74, 0x69, 0x6c, 0x12, 0x1a, 0x0a, 0x08, 0x6e, 0x6f, 0x64, 0x65,
 	0x55, 0x74, 0x69, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x01, 0x52, 0x08, 0x6e, 0x6f, 0x64, 0x65,
-	0x55, 0x74, 0x69, 0x6c, 0x22, 0x14, 0x0a, 0x12, 0x47, 0x65, 0x74, 0x52, 0x75, 0x6e, 0x6e, 0x69,
+	0x55, 0x74, 0x69, 0x6c, 0x22, 0x0b, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x4d, 0x65, 0x6d, 0x52, 0x65,
+	0x71, 0x22, 0x41, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x4d, 0x65, 0x6d, 0x52, 0x65, 0x70, 0x12, 0x18,
+	0x0a, 0x07, 0x6d, 0x65, 0x6d, 0x46, 0x72, 0x65, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52,
+	0x07, 0x6d, 0x65, 0x6d, 0x46, 0x72, 0x65, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6d, 0x65, 0x6d, 0x54,
+	0x6f, 0x74, 0x61, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08, 0x6d, 0x65, 0x6d, 0x54,
+	0x6f, 0x74, 0x61, 0x6c, 0x22, 0x14, 0x0a, 0x12, 0x47, 0x65, 0x74, 0x52, 0x75, 0x6e, 0x6e, 0x69,
 	0x6e, 0x67, 0x50, 0x72, 0x6f, 0x63, 0x73, 0x52, 0x65, 0x71, 0x22, 0x40, 0x0a, 0x12, 0x47, 0x65,
 	0x74, 0x52, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x50, 0x72, 0x6f, 0x63, 0x73, 0x52, 0x65, 0x70,
 	0x12, 0x2a, 0x0a, 0x0a, 0x70, 0x72, 0x6f, 0x63, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x18, 0x01,
@@ -953,7 +1057,7 @@ func file_sched_msched_proto_msched_proto_rawDescGZIP() []byte {
 	return file_sched_msched_proto_msched_proto_rawDescData
 }
 
-var file_sched_msched_proto_msched_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_sched_msched_proto_msched_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_sched_msched_proto_msched_proto_goTypes = []interface{}{
 	(*ForceRunReq)(nil),        // 0: ForceRunReq
 	(*ForceRunRep)(nil),        // 1: ForceRunRep
@@ -965,25 +1069,27 @@ var file_sched_msched_proto_msched_proto_goTypes = []interface{}{
 	(*GetCPUSharesRep)(nil),    // 7: GetCPUSharesRep
 	(*GetCPUUtilReq)(nil),      // 8: GetCPUUtilReq
 	(*GetCPUUtilRep)(nil),      // 9: GetCPUUtilRep
-	(*GetRunningProcsReq)(nil), // 10: GetRunningProcsReq
-	(*GetRunningProcsRep)(nil), // 11: GetRunningProcsRep
-	(*WarmCacheBinReq)(nil),    // 12: WarmCacheBinReq
-	(*WarmCacheBinRep)(nil),    // 13: WarmCacheBinRep
-	(*RealmStats)(nil),         // 14: RealmStats
-	(*GetMSchedStatsReq)(nil),  // 15: GetMSchedStatsReq
-	(*GetMSchedStatsRep)(nil),  // 16: GetMSchedStatsRep
-	nil,                        // 17: GetCPUSharesRep.SharesEntry
-	nil,                        // 18: GetMSchedStatsRep.MSchedStatsEntry
-	(*proc.ProcProto)(nil),     // 19: ProcProto
-	(*proc.ProcSeqno)(nil),     // 20: ProcSeqno
+	(*GetMemReq)(nil),          // 10: GetMemReq
+	(*GetMemRep)(nil),          // 11: GetMemRep
+	(*GetRunningProcsReq)(nil), // 12: GetRunningProcsReq
+	(*GetRunningProcsRep)(nil), // 13: GetRunningProcsRep
+	(*WarmCacheBinReq)(nil),    // 14: WarmCacheBinReq
+	(*WarmCacheBinRep)(nil),    // 15: WarmCacheBinRep
+	(*RealmStats)(nil),         // 16: RealmStats
+	(*GetMSchedStatsReq)(nil),  // 17: GetMSchedStatsReq
+	(*GetMSchedStatsRep)(nil),  // 18: GetMSchedStatsRep
+	nil,                        // 19: GetCPUSharesRep.SharesEntry
+	nil,                        // 20: GetMSchedStatsRep.MSchedStatsEntry
+	(*proc.ProcProto)(nil),     // 21: ProcProto
+	(*proc.ProcSeqno)(nil),     // 22: ProcSeqno
 }
 var file_sched_msched_proto_msched_proto_depIdxs = []int32{
-	19, // 0: ForceRunReq.procProto:type_name -> ProcProto
-	20, // 1: WaitReq.procSeqno:type_name -> ProcSeqno
-	17, // 2: GetCPUSharesRep.shares:type_name -> GetCPUSharesRep.SharesEntry
-	19, // 3: GetRunningProcsRep.procProtos:type_name -> ProcProto
-	18, // 4: GetMSchedStatsRep.mSchedStats:type_name -> GetMSchedStatsRep.MSchedStatsEntry
-	14, // 5: GetMSchedStatsRep.MSchedStatsEntry.value:type_name -> RealmStats
+	21, // 0: ForceRunReq.procProto:type_name -> ProcProto
+	22, // 1: WaitReq.procSeqno:type_name -> ProcSeqno
+	19, // 2: GetCPUSharesRep.shares:type_name -> GetCPUSharesRep.SharesEntry
+	21, // 3: GetRunningProcsRep.procProtos:type_name -> ProcProto
+	20, // 4: GetMSchedStatsRep.mSchedStats:type_name -> GetMSchedStatsRep.MSchedStatsEntry
+	16, // 5: GetMSchedStatsRep.MSchedStatsEntry.value:type_name -> RealmStats
 	6,  // [6:6] is the sub-list for method output_type
 	6,  // [6:6] is the sub-list for method input_type
 	6,  // [6:6] is the sub-list for extension type_name
@@ -1118,7 +1224,7 @@ func file_sched_msched_proto_msched_proto_init() {
 			}
 		}
 		file_sched_msched_proto_msched_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetRunningProcsReq); i {
+			switch v := v.(*GetMemReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1130,7 +1236,7 @@ func file_sched_msched_proto_msched_proto_init() {
 			}
 		}
 		file_sched_msched_proto_msched_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetRunningProcsRep); i {
+			switch v := v.(*GetMemRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1142,7 +1248,7 @@ func file_sched_msched_proto_msched_proto_init() {
 			}
 		}
 		file_sched_msched_proto_msched_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WarmCacheBinReq); i {
+			switch v := v.(*GetRunningProcsReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1154,7 +1260,7 @@ func file_sched_msched_proto_msched_proto_init() {
 			}
 		}
 		file_sched_msched_proto_msched_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WarmCacheBinRep); i {
+			switch v := v.(*GetRunningProcsRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1166,7 +1272,7 @@ func file_sched_msched_proto_msched_proto_init() {
 			}
 		}
 		file_sched_msched_proto_msched_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RealmStats); i {
+			switch v := v.(*WarmCacheBinReq); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1178,7 +1284,7 @@ func file_sched_msched_proto_msched_proto_init() {
 			}
 		}
 		file_sched_msched_proto_msched_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetMSchedStatsReq); i {
+			switch v := v.(*WarmCacheBinRep); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1190,6 +1296,30 @@ func file_sched_msched_proto_msched_proto_init() {
 			}
 		}
 		file_sched_msched_proto_msched_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RealmStats); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sched_msched_proto_msched_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetMSchedStatsReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sched_msched_proto_msched_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetMSchedStatsRep); i {
 			case 0:
 				return &v.state
@@ -1208,7 +1338,7 @@ func file_sched_msched_proto_msched_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sched_msched_proto_msched_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

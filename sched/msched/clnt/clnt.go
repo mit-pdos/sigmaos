@@ -324,6 +324,28 @@ func (mc *MSchedClnt) GetCPUUtils(realm sp.Trealm) (float64, float64, error) {
 	return total, nodeTotal, nil
 }
 
+// GetMem returns the memory budget the msched on kernelID admits procs against,
+// and the machine's total memory, both in MB.
+//
+// Per-node rather than aggregated, unlike GetCPUUtils: a caller asking this is
+// reasoning about whether a particular node will accept a particular proc, which
+// a cluster-wide sum can't answer.
+func (mc *MSchedClnt) GetMem(kernelID string) (proc.Tmem, proc.Tmem, error) {
+	sclnt, err := mc.GetRPCClnt(kernelID)
+	if err != nil {
+		db.DPrintf(db.MSCHEDCLNT_ERR, "Error GetMem GetRPCClnt %v: %v", kernelID, err)
+		return 0, 0, err
+	}
+	req := &proto.GetMemReq{}
+	res := &proto.GetMemRep{}
+	if err := sclnt.RPC("MSched.GetMem", req, res); err != nil {
+		db.DPrintf(db.MSCHEDCLNT_ERR, "Error GetMem %v: %v", kernelID, err)
+		return 0, 0, err
+	}
+	db.DPrintf(db.MSCHEDCLNT, "MSched %v memFree %v memTotal %v", kernelID, res.MemFree, res.MemTotal)
+	return proc.Tmem(res.MemFree), proc.Tmem(res.MemTotal), nil
+}
+
 func (mc *MSchedClnt) StopWatching() {
 	mc.rpcdc.StopWatching()
 }

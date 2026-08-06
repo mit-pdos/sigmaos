@@ -201,6 +201,20 @@ func (msched *MSched) GetCPUUtil(ctx fs.CtxI, req proto.GetCPUUtilReq, res *prot
 	return nil
 }
 
+// GetMem reports the memory budget this msched admits procs against, and the
+// machine's total memory for context.
+//
+// MemFree is the figure besched filters candidate nodes on, not a measurement of
+// memory in use: it is what remains after the procs msched has already taken. A
+// caller that wants to stop procs from being placed here — by occupying the
+// budget with a proc of its own — needs this both to decide how much to occupy
+// and to check afterwards that it worked.
+func (msched *MSched) GetMem(ctx fs.CtxI, req proto.GetMemReq, res *proto.GetMemRep) error {
+	res.MemFree = uint32(msched.getFreeMem())
+	res.MemTotal = uint32(mem.GetTotalMem())
+	return nil
+}
+
 // Get realm utilization information.
 func (msched *MSched) GetRunningProcs(ctx fs.CtxI, req proto.GetRunningProcsReq, res *proto.GetRunningProcsRep) error {
 	ps := msched.pmgr.GetRunningProcs()

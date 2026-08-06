@@ -50,6 +50,20 @@ message GetCPUUtilRep {
   double nodeUtil = 2;
 }
 
+message GetMemReq {
+}
+
+message GetMemRep {
+  // Memory (MB) this msched will still admit procs against. What besched
+  // filters candidate nodes on, so a caller wanting to stop procs from landing
+  // on this node has to drive this below the smallest mem request it cares
+  // about.
+  uint32 memFree = 1;
+  // The machine's total memory (MB), for context: memFree is a budget, not a
+  // measurement of what is in use.
+  uint32 memTotal = 2;
+}
+
 message GetRunningProcsReq {
 }
 

@@ -50,9 +50,12 @@ func runMemHog(ts *test.Tstate, c chan error, id, delay, mem, dur string, nthrea
 	c <- nil
 }
 
-func runMemBlock(ts *test.Tstate, mem string) *proc.Proc {
-	db.DPrintf(db.TEST, "Spawning memblock for %v of memory", mem)
-	p := proc.NewProc("memblock", []string{mem})
+func runMemBlock(ts *test.Tstate, mem proc.Tmem) *proc.Proc {
+	db.DPrintf(db.TEST, "Spawning memblock to claim %vMB of the node's budget", mem)
+	// memblock allocates nothing: what it holds is the scheduler's reservation,
+	// which is what keeps other procs off the node.
+	p := proc.NewProc("memblock", nil)
+	p.SetMem(mem)
 	p.SetType(proc.T_LC)
 	err := ts.Spawn(p)
 	assert.Nil(ts.T, err, "Error spawn: %v", err)
@@ -111,7 +114,7 @@ func TestMemBlock(t *testing.T) {
 	memt := mem.GetTotalMem()
 	mema := mem.GetAvailableMem()
 	assert.True(ts.T, mema > memt/2, "Too little mem available")
-	p := runMemBlock(ts, fmt.Sprintf("%dMB", memt*5/8))
+	p := runMemBlock(ts, proc.Tmem(memt*5/8))
 	mema2 := mem.GetAvailableMem()
 	assert.True(ts.T, mema2 < memt/2, "Too much memory available")
 	evictMemBlock(ts, p)
@@ -128,8 +131,8 @@ func TestMemBlockMany(t *testing.T) {
 	memt := mem.GetTotalMem()
 	mema := mem.GetAvailableMem()
 	assert.True(ts.T, mema > memt/2, "Too little mem available")
-	p1 := runMemBlock(ts, fmt.Sprintf("%dMB", memt*5/16))
-	p2 := runMemBlock(ts, fmt.Sprintf("%dMB", memt*5/16))
+	p1 := runMemBlock(ts, proc.Tmem(memt*5/16))
+	p2 := runMemBlock(ts, proc.Tmem(memt*5/16))
 	mema2 := mem.GetAvailableMem()
 	assert.True(ts.T, mema2 < memt/2, "Too much memory available")
 	evictMemBlock(ts, p1)
@@ -145,10 +148,10 @@ func TestMemBlockManyFail(t *testing.T) {
 	memt := mem.GetTotalMem()
 	mema := mem.GetAvailableMem()
 	assert.True(ts.T, mema > memt/2, "Too little mem available")
-	p1 := runMemBlock(ts, fmt.Sprintf("%dMB", memt*5/16))
+	p1 := runMemBlock(ts, proc.Tmem(memt*5/16))
 	// Give it time to start up.
 	time.Sleep(5 * time.Second)
-	p2 := runMemBlock(ts, fmt.Sprintf("%dMB", memt*5/16))
+	p2 := runMemBlock(ts, proc.Tmem(memt*5/16))
 	evictMemBlock(ts, p1)
 	status, err := ts.WaitExit(p2.GetPid())
 	assert.Nil(ts.T, err, "Err waitexit: %v", err)

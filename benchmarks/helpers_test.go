@@ -165,14 +165,12 @@ func countClusterCores(rootts *test.Tstate) int {
 	return ncores
 }
 
-// blockMem takes mem (e.g. "3000MB") of memory out of every machine, both from
-// the scheduler's budget and physically, so that a benchmark can be run against
-// nodes with less memory than they have. nil, and no blocking, for "0MB".
+// blockMem claims mem (e.g. "3000MB") of every machine's scheduler memory budget,
+// so that a benchmark runs against nodes that appear to have less memory than they
+// do. nil, and no blocking, for "0MB".
 //
-// The physical allocation is the point here, unlike when machines are dedicated to
-// serving a job's data (MRJobInstance.DedicateUxNodes), where taking the budget is
-// enough and touching the memory would only evict the page cache the dedicated
-// server reads through.
+// The memory is not consumed, only claimed: what a packing sweep is varying is how
+// many procs msched will admit per node, which is an accounting question.
 func blockMem(rootts *test.Tstate, mem string) *memblock.Blocker {
 	if mem == "0MB" {
 		db.DPrintf(db.TEST, "No mem blocking")
@@ -183,7 +181,7 @@ func blockMem(rootts *test.Tstate, mem string) *memblock.Blocker {
 		db.DFatalf("blockMem: parse %v: %v", mem, err)
 	}
 	m := proc.Tmem(b / uint64(sp.MBYTE))
-	blocker := memblock.NewBlocker(rootts.SigmaClnt, memblock.WithAllocMem(m))
+	blocker := memblock.NewBlocker(rootts.SigmaClnt)
 	kids, err := blocker.Kernels(0)
 	if err != nil {
 		db.DFatalf("blockMem: get kernels: %v", err)

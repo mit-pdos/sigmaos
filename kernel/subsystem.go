@@ -117,6 +117,19 @@ func (ss *KernelSubsystem) GetCPUUtil() (float64, error) {
 	return ss.container.GetCPUUtil()
 }
 
+// cgroupPath is the cgroup holding this subsystem, and whether it has one at
+// all: a subsystem the kernel started as a plain Linux process (proc.HLINUX) has
+// no container, so there is nothing to read its CPU from. The CPU monitor asks
+// for this rather than calling GetCPUUtil, both to keep its own delta state and
+// because it must not assume every Subsystem implementation can be measured —
+// SPProxySrvCmd's GetCPUUtil is a DFatalf.
+func (ss *KernelSubsystem) cgroupPath() (string, bool) {
+	if ss.container == nil {
+		return "", false
+	}
+	return ss.container.CgroupPath(), true
+}
+
 // Send SIGTERM to a system.
 func (s *KernelSubsystem) Terminate() error {
 	db.DPrintf(db.KERNEL, "Terminate %v %v\n", s.cmd.Process.Pid, s.cmd)

@@ -186,6 +186,13 @@ func StartDockerContainer(p *proc.Proc, kernelId, user, netmode string, useGViso
 	return c, nil
 }
 
+// CgroupPath is the cgroup this container's processes are in, for a caller that
+// wants to read its statistics with delta state of its own rather than through
+// GetCPUUtil (whose state is shared with every other caller of it).
+func (c *DContainer) CgroupPath() string {
+	return c.cgroupPath
+}
+
 func (c *DContainer) GetCPUUtil() (float64, error) {
 	st, err := c.cmgr.GetCPUStats(c.cgroupPath)
 	if err != nil {

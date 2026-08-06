@@ -25,6 +25,12 @@ const (
 	REMOTE_BENCH   Tselector = "REMOTE_BENCH"
 )
 
+// Where a node's CPU goes: periodic per-kernel-service accounting, from the
+// kernel's CPU monitor (kernel/cpumon.go).
+const (
+	CPU_MON Tselector = "CPU_MON"
+)
+
 // Latency break-down.
 const (
 	SPAWN_LAT         Tselector = "SPAWN_LAT"

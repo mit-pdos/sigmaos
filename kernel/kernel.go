@@ -78,6 +78,9 @@ func NewKernel(p *Param, pe *proc.ProcEnv) (*Kernel, error) {
 		db.DPrintf(db.ALWAYS, "Error startSrvs %v", err)
 		return nil, err
 	}
+	// Started after the kernel's services, but it re-reads them every round, so
+	// the ones a realm adds later (its ux, s3 and chunkd) are picked up too.
+	k.startCPUMon()
 	// Eagerly remove kernel's proc dir if this is just a spproxyd kernel
 	// since it isn't needed (and otherwise will slow down shutdown)
 	if k.IsPurelySPProxydKernel() {

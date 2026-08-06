@@ -84,6 +84,14 @@ func (k *Kernel) startCPUMon() {
 }
 
 func (k *Kernel) cpuMon() {
+	// Checked again here, not only in startCPUMon: everything this monitor does —
+	// the cgroup reads, the /proc scan of every process on the node ten times a
+	// second — is unconditional once this function is entered, so the selector
+	// that turns it on belongs to the function that does the work rather than to
+	// whoever calls it.
+	if !db.WillBePrinted(db.CPU_MON) {
+		return
+	}
 	// Delta state of our own, deliberately not the CgroupMonitor each DContainer
 	// keeps: GetCPUStats reports the CPU used since its own last call for a
 	// cgroup, so sharing state with the realm-utilization path

@@ -231,12 +231,62 @@ func JobLocalToAny(j *Job, input, intermediate, output bool) *Job {
 	return job
 }
 
+// uxInputRelPath is the job's input path relative to a UX server's root: the
+// path with the UX mount prefix and the server selector (~local, or a kernel ID)
+// stripped off, so that it can be joined onto a particular server.
+func uxInputRelPath(input string) (string, error) {
+	p := strings.SplitN(strings.TrimPrefix(input, sp.UX), "/", 2)
+	if len(p) != 2 || p[1] == "" {
+		return "", fmt.Errorf("no input dir in UX input path %v", input)
+	}
+	return p[1], nil
+}
+
+// CheckInputOnUxSrvs reports whether the job's input is present and non-empty on
+// each of the named UX servers.
+//
+// Called when machines have been dedicated to hosting the input: a mapper sent to
+// a server that hasn't got the data fails with a file-not-found deep in a proc,
+// or — worse, when the input happens to be staged everywhere — quietly reads it
+// from somewhere else and the experiment measures nothing. Checking up front turns
+// both into one clear error before any task runs.
+func CheckInputOnUxSrvs(fsl *fslib.FsLib, input string, kernelIDs []string) error {
+	if !strings.HasPrefix(input, sp.UX) {
+		// An S3 (or other) input isn't served by these machines, so there is
+		// nothing to check.
+		return nil
+	}
+	rel, err := uxInputRelPath(input)
+	if err != nil {
+		return err
+	}
+	for _, kid := range kernelIDs {
+		pn := filepath.Join(sp.UX, kid, rel)
+		sts, err := fsl.GetDir(pn)
+		if err != nil {
+			return fmt.Errorf("input %v missing on dedicated UX server %v: %v", pn, kid, err)
+		}
+		if len(sts) == 0 {
+			return fmt.Errorf("input %v is empty on dedicated UX server %v", pn, kid)
+		}
+		db.DPrintf(db.MR, "CheckInputOnUxSrvs %v: %d files", pn, len(sts))
+	}
+	return nil
+}
+
 // If the job specifies an S3 input source, copy the job's input files from
-// S3 to the job's input directory on every UX server, so mappers can read
-// their input from UX. Files which already exist on a UX server (with the
-// expected length) are not copied again (e.g., if they were already copied
-// for another realm's job).
-func CopyS3InputToUx(fsl *fslib.FsLib, j *Job) error {
+// S3 to the job's input directory on the UX servers mappers will read from, so
+// they can read their input from UX. Files which already exist on a UX server
+// (with the expected length) are not copied again (e.g., if they were already
+// copied for another realm's job).
+//
+// srvs are the servers to copy to. Empty means every UX server, which is what an
+// ordinary run wants, since a mapper reads from its own node. When machines have
+// been dedicated to hosting the input, only they need it — and staging it only
+// there is worth doing for more than the setup time it saves: a mapper whose path
+// wasn't rewritten to a dedicated server then fails outright instead of silently
+// reading a local copy, which is the bug the rewriting can introduce.
+func CopyS3InputToUx(fsl *fslib.FsLib, j *Job, srvs []string) error {
 	if j.S3Input == "" {
 		return nil
 	}
@@ -245,15 +295,17 @@ func CopyS3InputToUx(fsl *fslib.FsLib, j *Job) error {
 	}
 	// Strip the UX mount prefix and server selector (e.g., ~local) off of the
 	// input path, to get the input path relative to each UX server's root
-	p := strings.SplitN(strings.TrimPrefix(j.Input, sp.UX), "/", 2)
-	if len(p) != 2 || p[1] == "" {
-		return fmt.Errorf("no input dir in UX input path %v", j.Input)
-	}
-	inputRelPath := p[1]
-	srvs, err := fsl.GetDir(sp.UX)
+	inputRelPath, err := uxInputRelPath(j.Input)
 	if err != nil {
-		db.DPrintf(db.ERROR, "GetDir %v err %v", sp.UX, err)
 		return err
+	}
+	if len(srvs) == 0 {
+		sts, err := fsl.GetDir(sp.UX)
+		if err != nil {
+			db.DPrintf(db.ERROR, "GetDir %v err %v", sp.UX, err)
+			return err
+		}
+		srvs = sp.Names(sts)
 	}
 	inputs, err := fsl.GetDir(j.S3Input)
 	if err != nil {
@@ -263,7 +315,7 @@ func CopyS3InputToUx(fsl *fslib.FsLib, j *Job) error {
 	db.DPrintf(db.MR, "Copy S3 input %v to %v on %d UX srvs", j.S3Input, j.Input, len(srvs))
 	defer db.DPrintf(db.MR, "Done copy S3 input %v to %v on %d UX srvs", j.S3Input, j.Input, len(srvs))
 	errc := make(chan error, len(srvs))
-	for _, srv := range sp.Names(srvs) {
+	for _, srv := range srvs {
 		go func(srv string) {
 			errc <- copyS3InputToUxSrv(fsl, j.S3Input, inputs, filepath.Join(sp.UX, srv), inputRelPath)
 		}(srv)
@@ -300,9 +352,13 @@ func copyS3InputToUxSrv(fsl *fslib.FsLib, s3Input string, inputs []*sp.Tstat, ux
 	return nil
 }
 
-// CreateIntOutDirsUx creates the job's intermediate output directory on every
-// UX server, once, before any mapper runs. Called from job preparation
-// (coord.PrepareJob), alongside the equivalent for S3 intermediate output.
+// CreateIntOutDirsUx creates the job's intermediate output directory on the UX
+// servers mappers will write to, once, before any mapper runs. Called from job
+// preparation (coord.PrepareJob), alongside the equivalent for S3 intermediate
+// output.
+//
+// srvs are the servers to create it on; empty means every UX server, which is
+// what a ~local intermediate path means in an ordinary run.
 //
 // Mappers used to each create it themselves (CreateMapperIntOutDirUx below),
 // which costs two namespace round trips per mapper to learn that the directory
@@ -312,7 +368,7 @@ func copyS3InputToUxSrv(fsl *fslib.FsLib, s3Input string, inputs []*sp.Tstat, ux
 // once per server per job instead makes it ~free.
 //
 // Idempotent, so concurrent coordinators (or a re-run job) are fine.
-func CreateIntOutDirsUx(fsl *fslib.FsLib, job, intOutput string) error {
+func CreateIntOutDirsUx(fsl *fslib.FsLib, job, intOutput string, srvs []string) error {
 	if !strings.Contains(intOutput, "/ux/") {
 		// S3 intermediate output: PrepareJob creates those directories once.
 		return nil
@@ -322,12 +378,19 @@ func CreateIntOutDirsUx(fsl *fslib.FsLib, job, intOutput string) error {
 	if !sp.HasLocal(intOutput) {
 		return mkDirsIntOut(fsl, job, intOutput)
 	}
-	sts, err := fsl.GetDir(sp.UX)
-	if err != nil {
-		db.DPrintf(db.ERROR, "CreateIntOutDirsUx GetDir %v err %v", sp.UX, err)
-		return err
+	// Unless machines were dedicated to hosting the job's data, in which case the
+	// coordinator sends every mapper's output to one of those, and they are the
+	// only servers that need the directory. It must cover all of them: a mapper
+	// whose server was missed creates it itself, at the cost of the two round trips
+	// per mapper this function exists to remove.
+	if len(srvs) == 0 {
+		sts, err := fsl.GetDir(sp.UX)
+		if err != nil {
+			db.DPrintf(db.ERROR, "CreateIntOutDirsUx GetDir %v err %v", sp.UX, err)
+			return err
+		}
+		srvs = sp.Names(sts)
 	}
-	srvs := sp.Names(sts)
 	db.DPrintf(db.MR, "CreateIntOutDirsUx %v on %d UX srvs", intOutput, len(srvs))
 	errc := make(chan error, len(srvs))
 	for _, srv := range srvs {

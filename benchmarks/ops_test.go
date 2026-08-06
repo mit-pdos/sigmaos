@@ -143,6 +143,19 @@ func invokeWaitStartOneLambda(ts *test.RealmTstate, i interface{}) (time.Duratio
 
 func runMR(ts *test.RealmTstate, i interface{}) (time.Duration, float64) {
 	ji := i.(*MRJobInstance)
+	// Set aside the machines that will host this job's data, before preparing the
+	// job: the input is staged on them and the bins are listed from one of them.
+	//
+	// Per job, which is right for a benchmark that runs one — including
+	// TestRealmBalanceMRMR at --nrealm 1, which is how the BE/MR multiplexing
+	// benchmark drives it. With more than one realm the jobs would each dedicate
+	// the same machines; the blocking itself is harmless the second time (it is
+	// driven by what the node will still admit, so the second job spawns nothing),
+	// but the first job to finish releases the machines while the others are still
+	// running, and their later mappers can land there. Dedicating around the whole
+	// set of jobs rather than around each is what that would need.
+	ji.DedicateUxNodes()
+	defer ji.ReleaseUxNodes()
 	ji.PrepareMRJob()
 	ji.ready <- true
 	<-ji.ready

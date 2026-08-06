@@ -324,6 +324,18 @@ func TestMR(t *testing.T) {
 		// per mapper and wants them all in flight (grep on 2G is 205 mappers, so
 		// 205), which is also what corral's reducer is given for the same job.
 		reduceGetsConcurrency int
+		// How many of the cluster's machines host this job's input and intermediate
+		// data in their fsuxd servers while running none of its mappers or reducers
+		// (util/memblock takes them out of the pool; the coordinator round-robins
+		// its mappers over them). 0 is an ordinary run, where every node serves its
+		// own mappers.
+		//
+		// A run with this set is not comparable on phase time to one without —
+		// withdrawing machines costs mapper capacity — so it belongs in its own
+		// results directory. What it measures is how much CPU serving the job's data
+		// actually takes, in isolation from the mappers that read it. See
+		// claude-slop/DEDICATED_UX_MACHINES.md.
+		nDedicatedUxNodes int
 	}
 	// How a job's tasks move their data. A cosandbox prefetches through the
 	// get/put API, so cosandboxes imply get/put on the same side; the mapper and
@@ -347,12 +359,18 @@ func TestMR(t *testing.T) {
 		// corral's reducer for the same job.
 		grepReduceGets int = 205
 	)
+	// How many machines host the job's data without running its tasks; see
+	// MRExperimentConfig above. noDedicatedUx is an ordinary run, where a mapper
+	// reads from the node it runs on.
+	const (
+		noDedicatedUx int = 0
+	)
 	// Variable MR benchmark configuration parameters
 	var (
 		mrApps []*MRExperimentConfig = []*MRExperimentConfig{
-			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 2, 7000, 7000, grepReduceGets},
-			{"mr-wc-wiki10G-bench.json", 17, 2, 7000, 10000, defaultReduceGets},
-			{"mr-wc-wiki10G-bench-s3.json", 17, 2, 7000, 10000, defaultReduceGets},
+			{"mr-grep-wiki2G-granular-bench-s3.json", 54, 2, 7000, 7000, grepReduceGets, noDedicatedUx},
+			{"mr-wc-wiki10G-bench.json", 17, 2, 7000, 10000, defaultReduceGets, noDedicatedUx},
+			{"mr-wc-wiki10G-bench-s3.json", 17, 2, 7000, 10000, defaultReduceGets, noDedicatedUx},
 		}
 		// Each entry is a full run (a cluster boot plus the job), per app, so
 		// trim this list rather than the apps when a sweep is too long.
@@ -409,6 +427,13 @@ func TestMR(t *testing.T) {
 						benchName += "-perf"
 					}
 					benchName += dp.nameSuffix
+					// Its own results directory: a run whose data is served by
+					// machines that run no tasks has fewer machines running tasks,
+					// so its phase times don't belong in the same average as a
+					// run without them.
+					if mrEP.nDedicatedUxNodes > 0 {
+						benchName += fmt.Sprintf("-dedicatedux%d", mrEP.nDedicatedUxNodes)
+					}
 					data := benchmarks.MRDataPathCfg{
 						MapGetPut:             dp.useGetPut,
 						MapCosandboxes:        dp.useCosandboxes,
@@ -416,7 +441,7 @@ func TestMR(t *testing.T) {
 						ReduceCosandboxes:     dp.useCosandboxesReduce,
 						ReduceGetsConcurrency: mrEP.reduceGetsConcurrency,
 					}
-					mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.mapperMem, mrEP.reducerMem, data)
+					mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, mrEP.benchName, mrEP.mapperMem, mrEP.reducerMem, mrEP.nDedicatedUxNodes, data)
 					if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 						return
 					}
@@ -1132,10 +1157,24 @@ func TestBEMRMultiplexing(t *testing.T) {
 	const (
 		benchNameBase string = "be_mr_multiplexing"
 	)
-	// Cluster configuration parameters
+	// How many machines host the job's input and intermediate data in their fsuxd
+	// servers while running none of its mappers or reducers. util/memblock takes
+	// them out of the pool by occupying their scheduler's memory budget, and the
+	// coordinator round-robins its mappers over them, so that the CPU spent serving
+	// the job's data is separated from the CPU the mappers use. See
+	// claude-slop/DEDICATED_UX_MACHINES.md.
+	const nDedicatedUxNodes int = 8
+	// Cluster configuration parameters.
+	//
+	// The node count carries the dedicated machines on top of the ones running
+	// tasks: 42 - 2 besched-only = 40 full nodes, of which 8 are dedicated, leaving
+	// the same 32 nodes running mappers and reducers as before this knob existed.
+	// Sized this way rather than by taking 8 of the existing 32 so that a run is
+	// comparable to the earlier ones on the phase times, which are set by how many
+	// machines run tasks.
 	const (
-		driverVM          int  = 36
-		numNodes          int  = 34
+		driverVM          int  = 44
+		numNodes          int  = 42
 		numCoresPerNode   uint = 4
 		numProcqOnlyNodes int  = 2
 		numFullNodes      int  = numNodes - numProcqOnlyNodes
@@ -1200,7 +1239,10 @@ func TestBEMRMultiplexing(t *testing.T) {
 			ReduceCosandboxes:     useCosandboxesReduce,
 			ReduceGetsConcurrency: reduceGetsConcurrency,
 		}
-		mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker, memPerWorker, data)
+		if nDedicatedUxNodes > 0 {
+			benchName = fmt.Sprintf("%s_dedicatedux%d", benchName, nDedicatedUxNodes)
+		}
+		mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, benchConfig, memPerWorker, memPerWorker, nDedicatedUxNodes, data)
 		if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 			return
 		}
@@ -1525,7 +1567,7 @@ func TestLCBEHotelMRMultiplexing(t *testing.T) {
 		},
 		CosSimBenchCfg: nil,
 	}
-	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000), proc.Tmem(7000), benchmarks.MRDataPathCfg{ReduceGetsConcurrency: 16})
+	mrCfg, err := benchmarks.NewMRBenchConfig(mrJobDescriptionsDir, "mr-grep-wiki2G-bench-s3.json", proc.Tmem(7000), proc.Tmem(7000), 0, benchmarks.MRDataPathCfg{ReduceGetsConcurrency: 16})
 	if !assert.Nil(ts.t, err, "Reading MR job config: %v", err) {
 		return
 	}

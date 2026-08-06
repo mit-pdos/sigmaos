@@ -138,6 +138,18 @@ type MRBenchConfig struct {
 	// contends for CPU and network with whatever shares its node.
 	MapperMem  proc.Tmem `json:"mapper_mem"`
 	ReducerMem proc.Tmem `json:"reducer_mem"`
+	// How many machines to set aside to host the job's input and intermediate
+	// data in their fsuxd servers, running no mappers or reducers themselves.
+	// They are taken out of the pool by occupying their scheduler's memory
+	// budget (util/memblock), and the coordinator sends every mapper's reads and
+	// writes to one of them. 0 is an ordinary run: every node serves its own
+	// mappers.
+	//
+	// Withdrawing machines costs mapper capacity, so a run with this set is not
+	// comparable to one without on phase time; what it isolates is how much CPU
+	// serving the job's data actually takes. See
+	// claude-slop/DEDICATED_UX_MACHINES.md.
+	NDedicatedUxNodes int `json:"n_dedicated_ux_nodes"`
 	// Mapper knobs (kept under their original names so existing results stay
 	// comparable); the reducer ones follow.
 	UseGetPut             bool    `json:"use_getput"`              // Mappers use the UX/S3 proxy Get/Put client API
@@ -152,7 +164,7 @@ type MRBenchConfig struct {
 // description named app from jobDir on the local file system. data overrides
 // the corresponding job-description fields, so one job description serves all
 // variants.
-func NewMRBenchConfig(jobDir, app string, mapperMem, reducerMem proc.Tmem, data MRDataPathCfg) (*MRBenchConfig, error) {
+func NewMRBenchConfig(jobDir, app string, mapperMem, reducerMem proc.Tmem, nDedicatedUxNodes int, data MRDataPathCfg) (*MRBenchConfig, error) {
 	jobCfg, err := mr.ReadJobConfig(filepath.Join(jobDir, app))
 	if err != nil {
 		return nil, err
@@ -172,6 +184,7 @@ func NewMRBenchConfig(jobDir, app string, mapperMem, reducerMem proc.Tmem, data 
 		App:                   app,
 		MapperMem:             mapperMem,
 		ReducerMem:            reducerMem,
+		NDedicatedUxNodes:     nDedicatedUxNodes,
 		UseGetPut:             data.MapGetPut,
 		UseCosandboxes:        data.MapCosandboxes,
 		UseGetPutReduce:       data.ReduceGetPut,
@@ -182,7 +195,7 @@ func NewMRBenchConfig(jobDir, app string, mapperMem, reducerMem proc.Tmem, data 
 }
 
 func (cfg *MRBenchConfig) String() string {
-	return fmt.Sprintf("&{ App:%v MapperMem:%v ReducerMem:%v JobCfg:%v }", cfg.App, cfg.MapperMem, cfg.ReducerMem, cfg.JobCfg)
+	return fmt.Sprintf("&{ App:%v MapperMem:%v ReducerMem:%v NDedicatedUxNodes:%v JobCfg:%v }", cfg.App, cfg.MapperMem, cfg.ReducerMem, cfg.NDedicatedUxNodes, cfg.JobCfg)
 }
 
 func (cfg *MRBenchConfig) GetJobConfig() *mr.Job {

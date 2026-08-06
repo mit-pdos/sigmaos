@@ -175,14 +175,22 @@ func NewResult(data interface{}) (*Result, error) {
 
 // Each bin has a slice of splits.  Assign splits of files to a bin
 // until the bin is full
-func NewBins(fsl *fslib.FsLib, inputDir string, swapLocalForAny bool, maxbinsz, splitsz sp.Tlength) ([]Bin, error) {
+//
+// listElem is the union element to list the input through when inputDir names one
+// (~local): sp.ANY to let named pick a server, a kernel ID to list a particular
+// one, or "" to list inputDir as given. It affects only the listing — the splits
+// keep inputDir's own path, so a ~local input stays ~local and each consumer
+// resolves it for itself. Listing a specific server matters when the input isn't
+// on every node: ~any would then likely answer from one that has none of it, and
+// the result is an empty bin list rather than an error.
+func NewBins(fsl *fslib.FsLib, inputDir string, listElem string, maxbinsz, splitsz sp.Tlength) ([]Bin, error) {
 	bins := make([]Bin, 0)
 	binsz := uint64(0)
 	bin := Bin{}
 
 	dir := inputDir
-	if swapLocalForAny {
-		dir, _ = sp.SubstLocal(dir, sp.ANY)
+	if listElem != "" {
+		dir, _ = sp.SubstLocal(dir, listElem)
 	}
 	sts, err := fsl.GetDir(dir)
 	if err != nil {

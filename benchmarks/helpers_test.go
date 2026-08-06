@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/assert"
 
 	cachegrpclnt "sigmaos/apps/cache/cachegrp/clnt"
@@ -17,7 +18,6 @@ import (
 	"sigmaos/benchmarks"
 	db "sigmaos/debug"
 	"sigmaos/proc"
-	mschedclnt "sigmaos/sched/msched/clnt"
 	"sigmaos/serr"
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib/dirwatcher"
@@ -25,6 +25,7 @@ import (
 	"sigmaos/test"
 	"sigmaos/util/coordination/semaphore"
 	linuxsched "sigmaos/util/linux/sched"
+	"sigmaos/util/memblock"
 	"sigmaos/util/perf"
 	"sigmaos/util/rand"
 )
@@ -164,48 +165,43 @@ func countClusterCores(rootts *test.Tstate) int {
 	return ncores
 }
 
-// Block off physical memory on every machine
-func blockMem(rootts *test.Tstate, mem string) []*proc.Proc {
+// blockMem takes mem (e.g. "3000MB") of memory out of every machine, both from
+// the scheduler's budget and physically, so that a benchmark can be run against
+// nodes with less memory than they have. nil, and no blocking, for "0MB".
+//
+// The physical allocation is the point here, unlike when machines are dedicated to
+// serving a job's data (MRJobInstance.DedicateUxNodes), where taking the budget is
+// enough and touching the memory would only evict the page cache the dedicated
+// server reads through.
+func blockMem(rootts *test.Tstate, mem string) *memblock.Blocker {
 	if mem == "0MB" {
 		db.DPrintf(db.TEST, "No mem blocking")
 		return nil
 	}
-	sdc := mschedclnt.NewMSchedClnt(rootts.SigmaClnt.FsLib, sp.NOT_SET)
-	// Get the number of mscheds.
-	n, err := sdc.NMSched()
+	b, err := humanize.ParseBytes(mem)
 	if err != nil {
-		db.DFatalf("Can't count nmsched: %v", err)
+		db.DFatalf("blockMem: parse %v: %v", mem, err)
 	}
-	db.DFatalf("Memory blocking deprecated")
-	ps := make([]*proc.Proc, 0, n)
-	for i := 0; i < n; i++ {
-		db.DPrintf(db.TEST, "Spawning memblock %v for %v of memory", i, mem)
-		p := proc.NewProc("memblock", []string{mem})
-		// Make it LC so it doesn't get swapped.
-		p.SetType(proc.T_LC)
-		err := rootts.Spawn(p)
-		if !assert.Nil(rootts.T, err, "Error spawn: %v", err) {
-			db.DFatalf("Can't spawn blockers: %v", err)
-		}
-		err = rootts.WaitStart(p.GetPid())
-		assert.Nil(rootts.T, err, "Error waitstart: %v", err)
-		if err != nil {
-			db.DFatalf("Error waitstart blocker: %v", err)
-		}
-		ps = append(ps, p)
+	m := proc.Tmem(b / uint64(sp.MBYTE))
+	blocker := memblock.NewBlocker(rootts.SigmaClnt, memblock.WithAllocMem(m))
+	kids, err := blocker.Kernels(0)
+	if err != nil {
+		db.DFatalf("blockMem: get kernels: %v", err)
+	}
+	db.DPrintf(db.TEST, "Blocking %v of memory on %v machines", mem, len(kids))
+	if err := blocker.BlockAmount(kids, m); err != nil {
+		db.DFatalf("blockMem: %v", err)
 	}
 	db.DPrintf(db.TEST, "Done spawning memblockers")
-	return ps
+	return blocker
 }
 
-func evictMemBlockers(ts *test.Tstate, ps []*proc.Proc) {
-	for _, p := range ps {
-		err := ts.Evict(p.GetPid())
-		assert.Nil(ts.T, err, "Evict: %v", err)
-		status, err := ts.WaitExit(p.GetPid())
-		if err != nil || !status.IsStatusEvicted() {
-			db.DFatalf("Err waitexit blockers: status %v err %v", status, err)
-		}
+func evictMemBlockers(ts *test.Tstate, b *memblock.Blocker) {
+	if b == nil {
+		return
+	}
+	if err := b.Evict(); err != nil {
+		db.DFatalf("Err evict memblockers: %v", err)
 	}
 }
 
@@ -237,11 +233,11 @@ func newNSemaphores(ts *test.RealmTstate, n int) ([]*semaphore.Semaphore, []inte
 
 // ========== MR Helpers ========
 
-func newNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string, jobCfg *mr.Job, jobRoot string, mapperMem, reducerMem proc.Tmem) ([]*MRJobInstance, []interface{}) {
+func newNMRJobs(ts *test.RealmTstate, p *perf.Perf, n int, app string, jobCfg *mr.Job, jobRoot string, mapperMem, reducerMem proc.Tmem, nDedicatedUx int) ([]*MRJobInstance, []interface{}) {
 	ms := make([]*MRJobInstance, 0, n)
 	is := make([]interface{}, 0, n)
 	for i := 0; i < n; i++ {
-		i := NewMRJobInstance(ts, p, app, jobCfg, jobRoot, app+"-mr-"+rand.String(3)+"-"+ts.GetRealm().String(), mapperMem, reducerMem)
+		i := NewMRJobInstance(ts, p, app, jobCfg, jobRoot, app+"-mr-"+rand.String(3)+"-"+ts.GetRealm().String(), mapperMem, reducerMem, nDedicatedUx)
 		ms = append(ms, i)
 		is = append(is, i)
 	}

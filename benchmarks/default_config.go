@@ -122,6 +122,8 @@ var DefaultMRBenchConfig = &MRBenchConfig{
 	App:        "mr-grep-wiki2G-bench-s3.json",
 	MapperMem:  proc.Tmem(7000),
 	ReducerMem: proc.Tmem(7000),
+	// Every node serves its own mappers, as it always has.
+	NDedicatedUxNodes: 0,
 	// Default job description, mirroring mr-grep-wiki2G-bench-s3.json
 	JobCfg: &mr.Job{
 		App:          "grep",

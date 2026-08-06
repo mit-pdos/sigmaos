@@ -31,6 +31,7 @@ import (
 	"sigmaos/sigmaclnt/procclnt"
 	sp "sigmaos/sigmap"
 	"sigmaos/util/crash"
+	"sigmaos/util/memblock"
 	"sigmaos/util/perf"
 	"sigmaos/util/rand"
 	"sigmaos/util/spstats"
@@ -116,6 +117,15 @@ type Coord struct {
 	mapPhaseMs       int64
 	reducePhaseMs    int64
 	mapPhaseDone     bool
+	// Machines set aside to host this job's input and intermediate data in their
+	// fsuxd servers, and which run no mappers or reducers. Empty in an ordinary
+	// run, which is what makes this transparent: no dedicated machines means the
+	// ~local paths reach each mapper unrewritten, i.e. its own node's server.
+	// See dedicatedUx below.
+	dedicatedUx []string
+	// Which dedicated server the next mapper gets. Round robin, so a job's mappers
+	// spread over the dedicated machines rather than all reading from one.
+	nextUx atomic.Uint64
 }
 
 type AStat struct {
@@ -291,7 +301,58 @@ func NewCoord(args []string) (*Coord, error) {
 		c.s3EPs = c.newSrvEPCache(sp.S3)
 	}
 
+	// Which machines, if any, were set aside to host this job's data. Read from
+	// the directory memblock procs register themselves in, so no argument has to
+	// be threaded down here from the benchmark; if the two concepts ever need
+	// separating, an explicit coord argument is the escape hatch.
+	dedicated, err := memblock.Blocked(c.FsLib)
+	if err != nil {
+		return nil, fmt.Errorf("NewCoord: read dedicated UX machines err %v", err)
+	}
+	c.dedicatedUx = dedicated
+	db.DPrintf(db.ALWAYS, "Dedicated UX machines: %v", c.dedicatedUx)
+
 	return c, nil
+}
+
+// rewriteForDedicatedUx points a mapper's splits and its intermediate output at
+// one of the machines dedicated to hosting the job's data, so that it reads from
+// and writes to the same dedicated server rather than to the node it happens to
+// run on. Returns the bin and the intermediate directory the mapper should be
+// given; with no dedicated machines both come back as they were, keeping ~local,
+// which is each mapper's own node.
+//
+// UX paths only. An S3 path has a ~local of its own (name/s3/~local/...) selecting
+// the local S3 proxy, and replacing that with a UX server's kernel ID would name a
+// proxy that doesn't exist — so a job reading from or writing to S3 is untouched
+// by this, and dedicating machines does nothing for it.
+func (c *Coord) rewriteForDedicatedUx(bin mr.Bin) (mr.Bin, string) {
+	intOutdir := c.intOutdir
+	kid, ok := c.uxKernelFor()
+	if !ok {
+		return bin, intOutdir
+	}
+	for i := range bin {
+		if strings.HasPrefix(bin[i].File, sp.UX) {
+			bin[i].File, _ = sp.SubstLocal(bin[i].File, kid)
+		}
+	}
+	if !c.intOutS3 {
+		intOutdir, _ = sp.SubstLocal(intOutdir, kid)
+	}
+	db.DPrintf(db.MR_COORD, "rewriteForDedicatedUx %v: intOutdir %v bin[0] %v", kid, intOutdir, bin[0].File)
+	return bin, intOutdir
+}
+
+// uxKernelFor returns the dedicated UX machine the next mapper should read from
+// and write to, and whether there is one. Round robin over the dedicated set;
+// with no dedicated machines there is nothing to rewrite and paths keep ~local.
+func (c *Coord) uxKernelFor() (string, bool) {
+	if len(c.dedicatedUx) == 0 {
+		return "", false
+	}
+	i := c.nextUx.Add(1) - 1
+	return c.dedicatedUx[int(i%uint64(len(c.dedicatedUx)))], true
 }
 
 // Create an endpoint cache for the servers under unionpn and warm it here,
@@ -358,11 +419,13 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	}
 	c.stat.Nmap.Add(1)
 
+	bin, intOutdir := c.rewriteForDedicatedUx(bin)
+
 	b, err := json.Marshal(bin)
 	if err != nil {
 		db.DFatalf("mapperProc: %v err %v", bin, err)
 	}
-	p := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), c.intOutdir, c.linesz, c.wordsz, strconv.FormatBool(c.useGetPut), strconv.FormatBool(c.useCosandbox), strconv.Itoa(c.tailProbeSz)}, c.mapperMem)
+	p := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), intOutdir, c.linesz, c.wordsz, strconv.FormatBool(c.useGetPut), strconv.FormatBool(c.useCosandbox), strconv.Itoa(c.tailProbeSz)}, c.mapperMem)
 	if c.mapperGOMAXPROCS > 0 {
 		// Bound the mapper's Go runtime instead of letting it size itself to
 		// the whole machine, which every proc sharing the machine otherwise

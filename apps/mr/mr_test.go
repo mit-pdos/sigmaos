@@ -343,7 +343,7 @@ func TestSplits(t *testing.T) {
 
 	job, err1 = mr.ReadJobConfig(filepath.Join("job-descriptions", app))
 	assert.Nil(t, err1, "Error ReadJobConfig: %v", err1)
-	bins, err := mr.NewBins(mrts.GetRealm(test.REALM1).FsLib, job.Input, true, sp.Tlength(job.Binsz), sp.Tlength(job.Splitsz))
+	bins, err := mr.NewBins(mrts.GetRealm(test.REALM1).FsLib, job.Input, sp.ANY, sp.Tlength(job.Binsz), sp.Tlength(job.Splitsz))
 	assert.Nil(t, err)
 	sum := sp.Tlength(0)
 	for _, b := range bins {

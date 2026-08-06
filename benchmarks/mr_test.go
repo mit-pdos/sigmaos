@@ -14,6 +14,7 @@ import (
 	"sigmaos/proc"
 	sp "sigmaos/sigmap"
 	"sigmaos/test"
+	"sigmaos/util/memblock"
 	"sigmaos/util/perf"
 	"sigmaos/util/spstats"
 )
@@ -29,13 +30,17 @@ type MRJobInstance struct {
 	// Memory each mapper and each reducer reserves; see mrcoord.StartMRJob.
 	mapperMem  proc.Tmem
 	reducerMem proc.Tmem
-	job     *mr.Job
-	cm      *procgroupmgr.ProcGroupMgr
-	mftid   fttask.FtTaskSvcId
-	rftid   fttask.FtTaskSvcId
+	job        *mr.Job
+	cm         *procgroupmgr.ProcGroupMgr
+	mftid      fttask.FtTaskSvcId
+	rftid      fttask.FtTaskSvcId
+	// How many machines to dedicate to hosting the job's data, and the blocker
+	// holding them out of the pool once they have been.
+	nDedicatedUx int
+	blocker      *memblock.Blocker
 }
 
-func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app string, jobCfg *mr.Job, jobRoot, jobname string, mapperMem, reducerMem proc.Tmem) *MRJobInstance {
+func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app string, jobCfg *mr.Job, jobRoot, jobname string, mapperMem, reducerMem proc.Tmem, nDedicatedUx int) *MRJobInstance {
 	ji := &MRJobInstance{}
 	ji.RealmTstate = ts
 	ji.p = p
@@ -46,17 +51,71 @@ func NewMRJobInstance(ts *test.RealmTstate, p *perf.Perf, app string, jobCfg *mr
 	ji.jobname = jobname
 	ji.mapperMem = mapperMem
 	ji.reducerMem = reducerMem
+	ji.nDedicatedUx = nDedicatedUx
 	return ji
+}
+
+// DedicateUxNodes takes nDedicatedUx machines out of the pool of nodes that will
+// accept procs, so that they serve this job's input and intermediate data without
+// running any of its mappers or reducers. Returns the kernel IDs it set aside.
+//
+// Called before PrepareMRJob, and this order matters twice over: the input has to
+// be staged on those machines and the bins listed from one of them, and both the
+// coordinator and PrepareJob find the dedicated set by reading the directory the
+// blockers register in — so the blockers must be up first. Their realm's fsuxd is
+// already running by now, since a realm boots one per node when it is created,
+// which is why blocking a node's memory doesn't stop it from serving.
+func (ji *MRJobInstance) DedicateUxNodes() []string {
+	if ji.nDedicatedUx <= 0 {
+		return nil
+	}
+	ji.blocker = memblock.NewBlocker(ji.SigmaClnt)
+	kids, err := ji.blocker.Kernels(ji.nDedicatedUx)
+	if !assert.Nil(ji.Ts.T, err, "Error select kernels to dedicate: %v", err) {
+		return nil
+	}
+	db.DPrintf(db.ALWAYS, "Dedicating %v machines to hosting MR input: %v", len(kids), kids)
+	// Block against the larger of the two requests: a reducer must be kept off
+	// these machines as firmly as a mapper.
+	reject := ji.mapperMem
+	if ji.reducerMem > reject {
+		reject = ji.reducerMem
+	}
+	err = ji.blocker.BlockKernels(kids, reject)
+	assert.Nil(ji.Ts.T, err, "Error dedicate UX machines: %v", err)
+	// The set the coordinator will read must be the set we chose: if it isn't,
+	// something else has blocked memory too and the job would send its data to a
+	// machine we know nothing about.
+	blocked, err := memblock.Blocked(ji.FsLib)
+	assert.Nil(ji.Ts.T, err, "Error read blocked kernels: %v", err)
+	assert.Equal(ji.Ts.T, kids, blocked, "Blocked kernels aren't the ones dedicated")
+	return kids
+}
+
+// ReleaseUxNodes gives the dedicated machines back to the cluster. Safe to call
+// when none were dedicated.
+func (ji *MRJobInstance) ReleaseUxNodes() {
+	if ji.blocker == nil {
+		return
+	}
+	err := ji.blocker.Evict()
+	assert.Nil(ji.Ts.T, err, "Error release dedicated UX machines: %v", err)
+	ji.blocker = nil
 }
 
 func (ji *MRJobInstance) PrepareMRJob() {
 	assert.NotNil(ji.Ts.T, ji.job, "No MR job description supplied for app %v", ji.app)
 	db.DPrintf(db.TEST, "MR job description: %v", ji.job)
-	// If the job specifies an S3 input source, copy the input to every UX
-	// server before setting up the job (which computes the input bins)
+	// If the job specifies an S3 input source, copy the input to the UX servers
+	// mappers will read from before setting up the job (which computes the input
+	// bins): every server ordinarily, or only the dedicated machines when there
+	// are any — staging it only there is what makes a mapper whose path wasn't
+	// rewritten fail loudly instead of quietly reading a local copy.
 	if ji.job.S3Input != "" {
-		db.DPrintf(db.TEST, "Copy MR job input from S3 %v to UX %v", ji.job.S3Input, ji.job.Input)
-		err := mr.CopyS3InputToUx(ji.FsLib, ji.job)
+		dedicated, err := memblock.Blocked(ji.FsLib)
+		assert.Nil(ji.Ts.T, err, "Error read dedicated UX machines: %v", err)
+		db.DPrintf(db.TEST, "Copy MR job input from S3 %v to UX %v (srvs %v)", ji.job.S3Input, ji.job.Input, dedicated)
+		err = mr.CopyS3InputToUx(ji.FsLib, ji.job, dedicated)
 		assert.Nil(ji.Ts.T, err, "Error copy S3 input to UX: %v", err)
 		db.DPrintf(db.TEST, "Done copy MR job input from S3 %v to UX %v", ji.job.S3Input, ji.job.Input)
 	}

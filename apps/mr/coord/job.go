@@ -15,6 +15,7 @@ import (
 	"sigmaos/sigmaclnt"
 	"sigmaos/sigmaclnt/fslib"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/memblock"
 )
 
 // Job setup: creating the fttask services a job's tasks live in, submitting
@@ -100,6 +101,19 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *mr.Job)
 		return 0, err
 	}
 
+	// Machines set aside to host this job's data, if any: read here because it
+	// decides which UX servers need the intermediate directory, which servers the
+	// S3 input is staged to, and which server the input is listed from. Read from
+	// the directory memblock procs register themselves in, so nothing has to be
+	// threaded in from the caller.
+	dedicated, err := memblock.Blocked(fsl)
+	if err != nil {
+		return 0, fmt.Errorf("PrepareJob: read dedicated UX machines err %v", err)
+	}
+	if len(dedicated) > 0 {
+		db.DPrintf(db.ALWAYS, "PrepareJob: dedicated UX machines %v", dedicated)
+	}
+
 	// Create the intermediate output directory before any mapper runs. In S3
 	// that is one directory; in UX it is one per server, since each mapper
 	// writes its shards to its own. Doing it here keeps mappers from each
@@ -112,7 +126,7 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *mr.Job)
 	// Best-effort for UX: on a cold start the UX servers may not be up or known
 	// yet, and one may restart during a crash test, so a mapper still creates
 	// the directory itself if its server wasn't covered.
-	if err := mr.CreateIntOutDirsUx(fsl, jobName, job.Intermediate); err != nil {
+	if err := mr.CreateIntOutDirsUx(fsl, jobName, job.Intermediate, dedicated); err != nil {
 		db.DPrintf(db.ALWAYS, "CreateIntOutDirsUx %v err %v; mappers will create it themselves", job.Intermediate, err)
 	}
 
@@ -121,7 +135,21 @@ func PrepareJob(fsl *fslib.FsLib, ts *Tasks, jobRoot, jobName string, j *mr.Job)
 		return 0, err
 	}
 
-	bins, err := mr.NewBins(fsl, job.Input, true, sp.Tlength(job.Binsz), sp.Tlength(job.Splitsz))
+	// With dedicated machines the input has to be listed from one of them: it may
+	// exist only there, and ~any would land on whichever server named answered,
+	// most likely one with nothing in it — an empty bin list, which reads as "the
+	// dataset was never staged". Only the *listing* names a dedicated machine; the
+	// splits keep ~local, so the coordinator can hand each mapper a different
+	// dedicated server (see Coord.mapperProc).
+	listElem := sp.ANY
+	if len(dedicated) > 0 {
+		if err := mr.CheckInputOnUxSrvs(fsl, job.Input, dedicated); err != nil {
+			return 0, err
+		}
+		listElem = dedicated[0]
+	}
+
+	bins, err := mr.NewBins(fsl, job.Input, listElem, sp.Tlength(job.Binsz), sp.Tlength(job.Splitsz))
 	if err != nil || len(bins) == 0 {
 		if strings.Contains(job.Input, sp.INPUT_DATA_REL) {
 			// The job reads pre-staged input, which start-kernel.sh bind-mounts

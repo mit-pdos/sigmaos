@@ -10,6 +10,7 @@ import (
 	"sigmaos/path"
 	"sigmaos/serr"
 	sp "sigmaos/sigmap"
+	"sigmaos/util/perf"
 	"sigmaos/util/spstats"
 )
 
@@ -57,7 +58,15 @@ func (mc *MntClnt) getNamedEndpointRealm(realm sp.Trealm) (*sp.Tendpoint, *serr.
 }
 
 // Get named enpoint directly
+//
+// On the spawn path this is what makes every proc talk to etcd before it can
+// resolve anything through named, so it is logged as a spawn-latency step: a proc
+// that never uses named (a mapper doesn't — its bin, its endpoints and its output
+// directory all arrive without a named lookup) pays this only because the mount is
+// eager.
 func (mc *MntClnt) getNamedEndpointDirect(realm sp.Trealm) (*sp.Tendpoint, *serr.Err) {
+	start := time.Now()
+	defer perf.LogSpawnLatency("MntClnt.getNamedEndpointDirect [%v]", mc.pe.GetPID(), perf.TIME_NOT_SET, start, realm)
 	// If this is the root realm, then get the root named.
 	if realm == sp.ROOTREALM {
 		s := time.Now()

@@ -13,7 +13,8 @@ import (
 // what mapperProc runs rather than a copy of it that can drift.
 func rewriteBin(bin mr.Bin, intOutdir, kid string, intOutS3 bool) (mr.Bin, string) {
 	c := &Coord{dedicatedUx: []string{kid}, intOutdir: intOutdir, intOutS3: intOutS3}
-	return c.rewriteForDedicatedUx(bin)
+	b, io, _ := c.rewriteForDedicatedUx(bin)
+	return b, io
 }
 
 // With no machines dedicated to hosting the job's data, nothing is rewritten and

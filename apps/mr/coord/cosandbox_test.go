@@ -107,7 +107,8 @@ func TestMapperShmemMB(t *testing.T) {
 func TestMapperBootInputWindow(t *testing.T) {
 	const linesz, probesz = 32768, 4096
 	s := mrapi.Split{File: "name/ux/~local/wiki/f0", Offset: 1024, Length: 2048}
-	input, err := mapperBootInput(mr.Bin{s}, linesz, probesz)
+	// No dedicated UX machine, so the boot script fetches from its own node.
+	input, err := mapperBootInput(mr.Bin{s}, linesz, probesz, "")
 	if err != nil {
 		t.Fatalf("mapperBootInput: %v", err)
 	}

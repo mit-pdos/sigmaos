@@ -326,11 +326,13 @@ func NewCoord(args []string) (*Coord, error) {
 // the local S3 proxy, and replacing that with a UX server's kernel ID would name a
 // proxy that doesn't exist — so a job reading from or writing to S3 is untouched
 // by this, and dedicating machines does nothing for it.
-func (c *Coord) rewriteForDedicatedUx(bin mr.Bin) (mr.Bin, string) {
+// Also returns the kernel it chose, empty when nothing was rewritten: a cosandbox
+// prefetching this mapper's splits has to be told the same server the splits name.
+func (c *Coord) rewriteForDedicatedUx(bin mr.Bin) (mr.Bin, string, string) {
 	intOutdir := c.intOutdir
 	kid, ok := c.uxKernelFor()
 	if !ok {
-		return bin, intOutdir
+		return bin, intOutdir, ""
 	}
 	for i := range bin {
 		if strings.HasPrefix(bin[i].File, sp.UX) {
@@ -341,7 +343,7 @@ func (c *Coord) rewriteForDedicatedUx(bin mr.Bin) (mr.Bin, string) {
 		intOutdir, _ = sp.SubstLocal(intOutdir, kid)
 	}
 	db.DPrintf(db.MR_COORD, "rewriteForDedicatedUx %v: intOutdir %v bin[0] %v", kid, intOutdir, bin[0].File)
-	return bin, intOutdir
+	return bin, intOutdir, kid
 }
 
 // uxKernelFor returns the dedicated UX machine the next mapper should read from
@@ -419,7 +421,7 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	}
 	c.stat.Nmap.Add(1)
 
-	bin, intOutdir := c.rewriteForDedicatedUx(bin)
+	bin, intOutdir, uxKid := c.rewriteForDedicatedUx(bin)
 
 	b, err := json.Marshal(bin)
 	if err != nil {
@@ -432,13 +434,23 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		// does independently.
 		p.AppendEnv("GOMAXPROCS", strconv.Itoa(c.mapperGOMAXPROCS))
 	}
+	// A mapper never resolves a path through named: its splits and its intermediate
+	// directory are concrete paths, and the servers it talks to are mounted from the
+	// endpoints cached above. So it pays the eager named mount — an attach and a
+	// connection — for nothing. Skipping it leaves the endpoint in its ProcEnv, and
+	// mntclnt seeds its cache from that, so a mapper that does walk a named path
+	// still mounts it without a trip to etcd.
+	//
+	// Verify with Proc.exit.pathstats: NgetNamedOK/NmntNamedOK must stay 0, and
+	// Nsession drops from 3 to 2.
+	p.GetProcEnv().LazyNamed = true
 	if c.useGetPut {
 		// The UX/S3 proxy client RPC channels — and the delegated-RPC path
 		// in particular — are serviced by spproxy.
 		p.GetProcEnv().UseSPProxy = true
 	}
 	if c.useCosandbox {
-		input, err := mapperBootInput(bin, c.lineszInt, c.tailProbeSz)
+		input, err := mapperBootInput(bin, c.lineszInt, c.tailProbeSz, uxKid)
 		if err != nil {
 			return nil, err
 		}

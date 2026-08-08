@@ -61,9 +61,18 @@ func shmemMB(need uint64) proc.Tmem {
 // index — the same order (and, via mr.SplitReadWindow, the same window)
 // the mapper's GetPutReader uses to retrieve them. If the two ever
 // diverge, the mapper hangs (missing rpcIdx) or maps corrupted boundaries.
-func mapperBootInput(bin mr.Bin, linesz, probesz int) ([]byte, error) {
+// uxKid is the UX server the gets go to: a dedicated machine's kernel ID when the
+// coordinator has pointed this mapper at one, or "" for the cosandbox's own node.
+// It has to match what the splits name, or the boot script fetches from a server
+// that hasn't got the file — the input is staged only on the dedicated machines,
+// so "fetch this path from your local server" finds nothing there.
+func mapperBootInput(bin mr.Bin, linesz, probesz int, uxKid string) ([]byte, error) {
+	kid := uxKid
+	if kid == "" {
+		kid = sp.LOCAL
+	}
 	strs := make([]string, 0, 1+5*len(bin))
-	strs = append(strs, sp.LOCAL)
+	strs = append(strs, kid)
 	for i := range bin {
 		s := &bin[i]
 		tgt, err := getput.ClassifyPath(s.File)

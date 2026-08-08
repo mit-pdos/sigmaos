@@ -52,6 +52,13 @@ message ProcEnvProto {
   bool useSPProxyProcClnt = 32;
   string debugProcs = 33;
   ProcContainerType containerType = 34;
+  // Don't mount named when the proc starts; wait until something resolves a path
+  // through it. For a proc that never does — an MR mapper gets its input paths,
+  // its server endpoints and its output directory without a named lookup — the
+  // eager mount is an attach and a connection it never uses. The endpoint is still
+  // supplied, so a proc that turns out to need named mounts it from that rather
+  // than going to etcd for it.
+  bool lazyNamed = 35;
 }
 
 enum ProcContainerType {

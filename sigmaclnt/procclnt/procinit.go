@@ -40,6 +40,16 @@ func NewProcClnt(fsl *fslib.FsLib) (*ProcClnt, error) {
 	}()
 	namedC := make(chan error)
 	go func() {
+		// A proc that asked not to be given named up front resolves it on first use
+		// instead (mntclnt.getNamedEndpointRealm), which for one that never walks a
+		// named path — an MR mapper doesn't — means never. The endpoint stays in the
+		// ProcEnv, so if it does turn out to need named it mounts it from there
+		// rather than paying getNamedEndpointDirect's trip to etcd.
+		if fsl.ProcEnv().GetLazyNamed() {
+			db.DPrintf(db.PROCCLNT, "Skip eager named mount: lazyNamed")
+			namedC <- nil
+			return
+		}
 		if ep, ok := fsl.ProcEnv().GetNamedEndpoint(); ok {
 			start := time.Now()
 			err := fsl.MountTree(ep, "", sp.NAMED)

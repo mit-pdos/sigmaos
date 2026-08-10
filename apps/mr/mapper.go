@@ -52,7 +52,12 @@ type Mapper struct {
 	useGetPut    bool
 	useCosandbox bool
 	tailProbeSz  int
-	clnts        *getput.Clnts
+	// The UX machine this mapper's splits and intermediate output were rewritten
+	// to, when the job dedicated machines to hosting its data; empty otherwise,
+	// in which case both are on this mapper's own node (~local). See
+	// Coord.rewriteForDedicatedUx.
+	uxKid string
+	clnts *getput.Clnts
 	// Attributes this proc's CPU to its phases; see perf.CPUPhases.
 	cpu *perf.CPUPhases
 	// Time spent fetching input; see getStats.
@@ -79,7 +84,7 @@ func (r *timedSplitReader) GetChunkReader(sz, offinc int) (io.ReadCloser, sp.Tof
 
 // cpu, if non-nil, is the proc's CPU-phase chain (see perf.CPUPhases); the
 // mapper marks its setup steps on it. Callers that don't care (tests) pass nil.
-func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string, useGetPut, useCosandbox bool, tailprobesz int, cpu *perf.CPUPhases) (*Mapper, error) {
+func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRoot, job string, p *perf.Perf, nr, lsz, wsz int, input string, intOutput string, useGetPut, useCosandbox bool, tailprobesz int, uxKid string, cpu *perf.CPUPhases) (*Mapper, error) {
 	// Decode the input bin up front: DoMap works from it, and so does the
 	// decision of which servers to mount below.
 	getInputStart := time.Now()
@@ -108,6 +113,7 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 		useGetPut:    useGetPut,
 		useCosandbox: useCosandbox,
 		tailProbeSz:  tailprobesz,
+		uxKid:        uxKid,
 		cpu:          cpu,
 	}
 	for i := 0; i < CONCURRENCY; i++ {
@@ -155,17 +161,32 @@ func NewMapper(sc *sigmaclnt.SigmaClnt, mapf mr.MapT, combinef mr.ReduceT, jobRo
 	return m, nil
 }
 
-// Mount the local instance of each service this mapper will actually touch,
-// from the endpoint the coordinator cached for it, so that neither
-// initOutput's MkDir/Create nor the getput RPC channels have to find the
-// server through named. Inline rather than in a goroutine: initOutput needs
-// the mount, and the mount replaces work initOutput would otherwise do.
+// Mount each service this mapper will actually touch, from the endpoint the
+// coordinator cached for it, so that neither initOutput's MkDir/Create nor the
+// getput RPC channels have to find the server through named. Inline rather than
+// in a goroutine: initOutput needs the mount, and the mount replaces work
+// initOutput would otherwise do.
 // Best-effort — a service we can't mount here is found by walking, as before.
+//
+// Which instance depends on where this mapper's data is. Normally it is the one
+// on this node, which both its splits and its intermediate output name as
+// ~local. When the job dedicated machines to hosting its data, the coordinator
+// rewrote both to one of those (the same machine for each, so this is one mount,
+// not two), and mounting ~local would mount a server this mapper never touches
+// while leaving the one it does touch to be resolved through named: an endpoint
+// lookup and an extra session per mapper, which measured as ~40ms of the 45ms
+// initOutput cost on a 10k-mapper job.
 func (m *Mapper) mountLocalSrvs() {
 	for _, unionpn := range m.srvsUsed() {
+		kid := m.ProcEnv().GetKernelID()
+		// The UX rewrite doesn't touch S3 paths (an S3 ~local names the local
+		// proxy), so only UX follows the dedicated machine.
+		if m.uxKid != "" && unionpn == sp.UX {
+			kid = m.uxKid
+		}
 		start := time.Now()
-		if ok, err := procclnt.MountCachedLocalSrv(m.FsLib, unionpn); err != nil {
-			db.DPrintf(db.MR, "Mapper MountCachedLocalSrv %v err %v", unionpn, err)
+		if ok, err := procclnt.MountCachedSrv(m.FsLib, unionpn, kid); err != nil {
+			db.DPrintf(db.MR, "Mapper MountCachedSrv %v %v err %v", unionpn, kid, err)
 		} else if ok {
 			perf.LogSpawnLatency("Mapper.MountCachedLocalSrv."+unionpn, m.ProcEnv().GetPID(), m.ProcEnv().GetSpawnTime(), start)
 		}
@@ -207,8 +228,8 @@ func (m *Mapper) inputUsesSrv(unionpn string) bool {
 }
 
 func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf, cpu *perf.CPUPhases) (*Mapper, error) {
-	if len(args) != 10 {
-		return nil, fmt.Errorf("NewMapper: wrong number of arguments: got %d, want 10 (stale mr-m binary?): %v", len(args), args)
+	if len(args) != 11 {
+		return nil, fmt.Errorf("NewMapper: wrong number of arguments: got %d, want 11 (stale mr-m binary?): %v", len(args), args)
 	}
 	nr, err := strconv.Atoi(args[2])
 	if err != nil {
@@ -241,7 +262,8 @@ func newMapper(mapf mr.MapT, reducef mr.ReduceT, args []string, p *perf.Perf, cp
 	// Building the SigmaClnt: parsing the ProcEnv, and mounting named and
 	// msched (in parallel) from the endpoints procd cached for us.
 	cpu.Mark("Mapper.NewSigmaClnt")
-	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4], useGetPut, useCosandbox, tailprobesz, cpu)
+	// args[10] is the dedicated UX machine, empty when none were dedicated.
+	m, err := NewMapper(sc, mapf, reducef, args[0], args[1], p, nr, lsz, wsz, args[3], args[4], useGetPut, useCosandbox, tailprobesz, args[10], cpu)
 	if err != nil {
 		return nil, fmt.Errorf("NewMapper failed %v", err)
 	}

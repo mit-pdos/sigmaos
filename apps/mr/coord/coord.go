@@ -427,7 +427,10 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	if err != nil {
 		db.DFatalf("mapperProc: %v err %v", bin, err)
 	}
-	p := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), intOutdir, c.linesz, c.wordsz, strconv.FormatBool(c.useGetPut), strconv.FormatBool(c.useCosandbox), strconv.Itoa(c.tailProbeSz)}, c.mapperMem)
+	// uxKid, empty unless machines were dedicated: it names the UX server both
+	// the splits and intOutdir were just rewritten to, which the mapper mounts
+	// from its cached endpoints rather than resolving through named.
+	p := c.newTask(mapperbin, []string{c.jobRoot, c.job, strconv.Itoa(c.nreducetask), string(b), intOutdir, c.linesz, c.wordsz, strconv.FormatBool(c.useGetPut), strconv.FormatBool(c.useCosandbox), strconv.Itoa(c.tailProbeSz), uxKid}, c.mapperMem)
 	if c.mapperGOMAXPROCS > 0 {
 		// Bound the mapper's Go runtime instead of letting it size itself to
 		// the whole machine, which every proc sharing the machine otherwise

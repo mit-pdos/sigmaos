@@ -703,6 +703,7 @@ class ProcEnvProto final :
     kShmemMBIntFieldNumber = 31,
     kShmemEnabledFieldNumber = 30,
     kUseSPProxyProcClntFieldNumber = 32,
+    kLazyNamedFieldNumber = 35,
     kContainerTypeFieldNumber = 34,
   };
   // map<string, .TendpointProto> etcdEndpoints = 7;
@@ -1164,6 +1165,15 @@ class ProcEnvProto final :
   void _internal_set_usespproxyprocclnt(bool value);
   public:
 
+  // bool lazyNamed = 35;
+  void clear_lazynamed();
+  bool lazynamed() const;
+  void set_lazynamed(bool value);
+  private:
+  bool _internal_lazynamed() const;
+  void _internal_set_lazynamed(bool value);
+  public:
+
   // .ProcContainerType containerType = 34;
   void clear_containertype();
   ::ProcContainerType containertype() const;
@@ -1226,6 +1236,7 @@ class ProcEnvProto final :
     uint64_t shmemmbint_;
     bool shmemenabled_;
     bool usespproxyprocclnt_;
+    bool lazynamed_;
     int containertype_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
@@ -3487,6 +3498,26 @@ inline void ProcEnvProto::_internal_set_containertype(::ProcContainerType value)
 inline void ProcEnvProto::set_containertype(::ProcContainerType value) {
   _internal_set_containertype(value);
   // @@protoc_insertion_point(field_set:ProcEnvProto.containerType)
+}
+
+// bool lazyNamed = 35;
+inline void ProcEnvProto::clear_lazynamed() {
+  _impl_.lazynamed_ = false;
+}
+inline bool ProcEnvProto::_internal_lazynamed() const {
+  return _impl_.lazynamed_;
+}
+inline bool ProcEnvProto::lazynamed() const {
+  // @@protoc_insertion_point(field_get:ProcEnvProto.lazyNamed)
+  return _internal_lazynamed();
+}
+inline void ProcEnvProto::_internal_set_lazynamed(bool value) {
+  
+  _impl_.lazynamed_ = value;
+}
+inline void ProcEnvProto::set_lazynamed(bool value) {
+  _internal_set_lazynamed(value);
+  // @@protoc_insertion_point(field_set:ProcEnvProto.lazyNamed)
 }
 
 // -------------------------------------------------------------------

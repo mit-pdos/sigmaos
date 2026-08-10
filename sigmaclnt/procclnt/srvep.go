@@ -281,18 +281,34 @@ func MountCachedEndpoint(fsl *fslib.FsLib, pn string) (bool, error) {
 // at both <unionpn>/<kernelID> and <unionpn>/~local, so that either spelling
 // is served by the mount table. Reports whether an endpoint was cached.
 func MountCachedLocalSrv(fsl *fslib.FsLib, unionpn string) (bool, error) {
-	kid := fsl.ProcEnv().GetKernelID()
+	return MountCachedSrv(fsl, unionpn, fsl.ProcEnv().GetKernelID())
+}
+
+// MountCachedSrv mounts kid's instance of the union-dir'd service unionpn from
+// the endpoint the parent cached for it, at <unionpn>/<kid>. Reports whether an
+// endpoint was cached.
+//
+// kid need not be this proc's own kernel: a parent caches the endpoints of every
+// server under unionpn (SrvEPCache.CacheEndpoints), so a proc pointed at another
+// node's instance — an MR mapper whose paths were rewritten to a dedicated UX
+// machine, say — can mount it here rather than resolving it through named.
+func MountCachedSrv(fsl *fslib.FsLib, unionpn, kid string) (bool, error) {
 	if kid == sp.NOT_SET || kid == "" {
 		return false, nil
 	}
 	pn := filepath.Join(unionpn, kid)
 	ep, ok := fsl.ProcEnv().GetCachedEndpoint(pn)
 	if !ok {
-		db.DPrintf(db.PROCCLNT_EPCACHE, "MountCachedLocalSrv %v: no cached EP", pn)
+		db.DPrintf(db.PROCCLNT_EPCACHE, "MountCachedSrv %v: no cached EP", pn)
 		return false, nil
 	}
 	if err := mountSrvRoot(fsl, ep, pn); err != nil {
 		return true, err
+	}
+	if kid != fsl.ProcEnv().GetKernelID() {
+		// ~local names the instance on *this* kernel, so aliasing it to another
+		// node's server would silently send every ~local path there.
+		return true, nil
 	}
 	// Mount the same server under ~local too: ~local names the instance on
 	// this kernel, which is exactly what we just mounted, and the mount table

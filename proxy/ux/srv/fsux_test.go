@@ -179,7 +179,7 @@ func TestMapperZeroOutputShardRace(t *testing.T) {
 			break
 		}
 		job := fmt.Sprintf("mr-uxrace-%d", i)
-		m, err := mr.NewMapper(sc, zeroMap, nil, "name/mr/", job, p, NREDUCE, 8192, 40, string(bin), "name/ux/~local/mr-intermediate", false, false, 0, nil)
+		m, err := mr.NewMapper(sc, zeroMap, nil, "name/mr/", job, p, NREDUCE, 8192, 40, string(bin), "name/ux/~local/mr-intermediate", false, false, 0, "", nil)
 		if !assert.Nil(t, err, "NewMapper: %v", err) {
 			break
 		}

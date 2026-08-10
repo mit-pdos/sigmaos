@@ -19,6 +19,9 @@ message WarmBinReq {
   repeated string sigmaPath = 4;
   SecretProto s3Secret = 5;
   TendpointProto NamedEndpointProto = 6;
+  // Sigma pathname of a co-sandbox binary to fetch alongside the program.
+  // Empty warms the program only.
+  string coSandboxPath = 7;
 }
 
 message WarmBinRep {

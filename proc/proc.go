@@ -450,7 +450,12 @@ func (p *Proc) GetNamedEndpoint() *sp.TendpointProto {
 	return ep.GetProto()
 }
 
+// GetCoSandbox is the co-sandbox carried inline by SetCoSandbox, and nil for a
+// proc that named one instead (GetCoSandboxPath).
 func (p *Proc) GetCoSandbox() []byte {
+	if p.Blob == nil || len(p.Blob.Iov) == 0 {
+		return nil
+	}
 	return p.Blob.Iov[0]
 }
 
@@ -458,11 +463,39 @@ func (p *Proc) GetCoSandboxInput() []byte {
 	return p.CoSandboxInput
 }
 
+// SetCoSandbox attaches a co-sandbox to this proc by value: the bytes travel
+// with it on every hop of the spawn path. Fine for a proc spawned once, and the
+// only option for a co-sandbox that was never uploaded (a test building one on
+// the fly); prefer SetCoSandboxPath when spawning many procs with the same
+// co-sandbox.
 func (p *Proc) SetCoSandbox(b []byte, input []byte) {
 	p.Blob = &rpcproto.Blob{
 		Iov: [][]byte{b},
 	}
 	p.CoSandboxInput = input
+}
+
+// SetCoSandboxPath attaches a co-sandbox to this proc by name: procd fetches it
+// through chunksrv and caches it, so N procs sharing a co-sandbox transfer it
+// once per node instead of once per proc. pn is a sigma pathname; build it with
+// wasmer.CoSandboxPath so the spawner and procd agree.
+func (p *Proc) SetCoSandboxPath(pn string, input []byte) {
+	p.CoSandboxPath = pn
+	p.CoSandboxInput = input
+}
+
+func (p *Proc) GetCoSandboxPath() string {
+	return p.CoSandboxPath
+}
+
+// SetCoSandboxLocalPath records where procd put the binary it fetched, in the
+// filesystem procd and spproxyd share. Set by procd only.
+func (p *Proc) SetCoSandboxLocalPath(pn string) {
+	p.CoSandboxLocalPath = pn
+}
+
+func (p *Proc) GetCoSandboxLocalPath() string {
+	return p.CoSandboxLocalPath
 }
 
 func (p *Proc) SetRunCoSandbox(run bool) {

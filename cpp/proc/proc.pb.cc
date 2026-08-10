@@ -161,6 +161,8 @@ PROTOBUF_CONSTEXPR ProcProto::ProcProto(
   , /*decltype(_impl_.addedbins_)*/{}
   , /*decltype(_impl_.env_)*/{::_pbi::ConstantInitialized()}
   , /*decltype(_impl_.cosandboxinput_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.cosandboxpath_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.cosandboxlocalpath_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.procenvproto_)*/nullptr
   , /*decltype(_impl_.blob_)*/nullptr
   , /*decltype(_impl_.resourceres_)*/nullptr
@@ -315,6 +317,8 @@ const uint32_t TableStruct_proc_2fproc_2eproto::offsets[] PROTOBUF_SECTION_VARIA
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.measurepssdelayms_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.cosandboxbufmbint_),
   PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.wasmbufmbint_),
+  PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.cosandboxpath_),
+  PROTOBUF_FIELD_OFFSET(::ProcProto, _impl_.cosandboxlocalpath_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::ProcSeqno)},
@@ -375,7 +379,7 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "to:\0028\001\032G\n\024CachedEndpointsEntry\022\013\n\003key\030\001 "
   "\001(\t\022\036\n\005value\030\002 \001(\0132\017.TendpointProto:\0028\001\""
   "4\n\rAddedBinProto\022\017\n\007program\030\001 \001(\t\022\022\n\ncom"
-  "pressed\030\002 \001(\010\"\362\003\n\tProcProto\022#\n\014procEnvPr"
+  "pressed\030\002 \001(\010\"\245\004\n\tProcProto\022#\n\014procEnvPr"
   "oto\030\001 \001(\0132\r.ProcEnvProto\022\014\n\004args\030\002 \003(\t\022!"
   "\n\taddedBins\030\003 \003(\0132\016.AddedBinProto\022 \n\003env"
   "\030\004 \003(\0132\023.ProcProto.EnvEntry\022\023\n\004blob\030\005 \001("
@@ -386,11 +390,12 @@ const char descriptor_table_protodef_proc_2fproc_2eproto[] PROTOBUF_SECTION_VARI
   "\024coSandboxResourceRes\030\013 \001(\0132\031.ResourceRe"
   "servationProto\022\022\n\nmeasurePSS\030\014 \001(\010\022\031\n\021me"
   "asurePSSDelayMS\030\r \001(\004\022\031\n\021cosandboxBufMBI"
-  "nt\030\016 \001(\004\022\024\n\014wasmBufMBInt\030\017 \001(\004\032*\n\010EnvEnt"
-  "ry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001*P\n\021Pr"
-  "ocContainerType\022\023\n\017PROC_CTR_NATIVE\020\000\022\021\n\r"
-  "PROC_CTR_WASM\020\001\022\023\n\017PROC_CTR_PYTHON\020\002B\016Z\014"
-  "sigmaos/procb\006proto3"
+  "nt\030\016 \001(\004\022\024\n\014wasmBufMBInt\030\017 \001(\004\022\025\n\rcoSand"
+  "boxPath\030\020 \001(\t\022\032\n\022coSandboxLocalPath\030\021 \001("
+  "\t\032*\n\010EnvEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001("
+  "\t:\0028\001*P\n\021ProcContainerType\022\023\n\017PROC_CTR_N"
+  "ATIVE\020\000\022\021\n\rPROC_CTR_WASM\020\001\022\023\n\017PROC_CTR_P"
+  "YTHON\020\002B\016Z\014sigmaos/procb\006proto3"
   ;
 static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto_deps[3] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
@@ -399,7 +404,7 @@ static const ::_pbi::DescriptorTable* const descriptor_table_proc_2fproc_2eproto
 };
 static ::_pbi::once_flag descriptor_table_proc_2fproc_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_proc_2fproc_2eproto = {
-    false, false, 1980, descriptor_table_protodef_proc_2fproc_2eproto,
+    false, false, 2031, descriptor_table_protodef_proc_2fproc_2eproto,
     "proc/proc.proto",
     &descriptor_table_proc_2fproc_2eproto_once, descriptor_table_proc_2fproc_2eproto_deps, 3, 9,
     schemas, file_default_instances, TableStruct_proc_2fproc_2eproto::offsets,
@@ -2958,6 +2963,8 @@ ProcProto::ProcProto(const ProcProto& from)
     , decltype(_impl_.addedbins_){from._impl_.addedbins_}
     , /*decltype(_impl_.env_)*/{}
     , decltype(_impl_.cosandboxinput_){}
+    , decltype(_impl_.cosandboxpath_){}
+    , decltype(_impl_.cosandboxlocalpath_){}
     , decltype(_impl_.procenvproto_){nullptr}
     , decltype(_impl_.blob_){nullptr}
     , decltype(_impl_.resourceres_){nullptr}
@@ -2979,6 +2986,22 @@ ProcProto::ProcProto(const ProcProto& from)
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_cosandboxinput().empty()) {
     _this->_impl_.cosandboxinput_.Set(from._internal_cosandboxinput(), 
+      _this->GetArenaForAllocation());
+  }
+  _impl_.cosandboxpath_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.cosandboxpath_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_cosandboxpath().empty()) {
+    _this->_impl_.cosandboxpath_.Set(from._internal_cosandboxpath(), 
+      _this->GetArenaForAllocation());
+  }
+  _impl_.cosandboxlocalpath_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.cosandboxlocalpath_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (!from._internal_cosandboxlocalpath().empty()) {
+    _this->_impl_.cosandboxlocalpath_.Set(from._internal_cosandboxlocalpath(), 
       _this->GetArenaForAllocation());
   }
   if (from._internal_has_procenvproto()) {
@@ -3008,6 +3031,8 @@ inline void ProcProto::SharedCtor(
     , decltype(_impl_.addedbins_){arena}
     , /*decltype(_impl_.env_)*/{::_pbi::ArenaInitialized(), arena}
     , decltype(_impl_.cosandboxinput_){}
+    , decltype(_impl_.cosandboxpath_){}
+    , decltype(_impl_.cosandboxlocalpath_){}
     , decltype(_impl_.procenvproto_){nullptr}
     , decltype(_impl_.blob_){nullptr}
     , decltype(_impl_.resourceres_){nullptr}
@@ -3024,6 +3049,14 @@ inline void ProcProto::SharedCtor(
   _impl_.cosandboxinput_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
     _impl_.cosandboxinput_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.cosandboxpath_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.cosandboxpath_.Set("", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  _impl_.cosandboxlocalpath_.InitDefault();
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    _impl_.cosandboxlocalpath_.Set("", GetArenaForAllocation());
   #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
@@ -3044,6 +3077,8 @@ inline void ProcProto::SharedDtor() {
   _impl_.env_.Destruct();
   _impl_.env_.~MapField();
   _impl_.cosandboxinput_.Destroy();
+  _impl_.cosandboxpath_.Destroy();
+  _impl_.cosandboxlocalpath_.Destroy();
   if (this != internal_default_instance()) delete _impl_.procenvproto_;
   if (this != internal_default_instance()) delete _impl_.blob_;
   if (this != internal_default_instance()) delete _impl_.resourceres_;
@@ -3068,6 +3103,8 @@ void ProcProto::Clear() {
   _impl_.addedbins_.Clear();
   _impl_.env_.Clear();
   _impl_.cosandboxinput_.ClearToEmpty();
+  _impl_.cosandboxpath_.ClearToEmpty();
+  _impl_.cosandboxlocalpath_.ClearToEmpty();
   if (GetArenaForAllocation() == nullptr && _impl_.procenvproto_ != nullptr) {
     delete _impl_.procenvproto_;
   }
@@ -3234,6 +3271,26 @@ const char* ProcProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
         } else
           goto handle_unusual;
         continue;
+      // string coSandboxPath = 16;
+      case 16:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 130)) {
+          auto str = _internal_mutable_cosandboxpath();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "ProcProto.coSandboxPath"));
+        } else
+          goto handle_unusual;
+        continue;
+      // string coSandboxLocalPath = 17;
+      case 17:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 138)) {
+          auto str = _internal_mutable_cosandboxlocalpath();
+          ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+          CHK_(::_pbi::VerifyUTF8(str, "ProcProto.coSandboxLocalPath"));
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -3387,6 +3444,26 @@ uint8_t* ProcProto::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(15, this->_internal_wasmbufmbint(), target);
   }
 
+  // string coSandboxPath = 16;
+  if (!this->_internal_cosandboxpath().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_cosandboxpath().data(), static_cast<int>(this->_internal_cosandboxpath().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "ProcProto.coSandboxPath");
+    target = stream->WriteStringMaybeAliased(
+        16, this->_internal_cosandboxpath(), target);
+  }
+
+  // string coSandboxLocalPath = 17;
+  if (!this->_internal_cosandboxlocalpath().empty()) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_cosandboxlocalpath().data(), static_cast<int>(this->_internal_cosandboxlocalpath().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "ProcProto.coSandboxLocalPath");
+    target = stream->WriteStringMaybeAliased(
+        17, this->_internal_cosandboxlocalpath(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -3432,6 +3509,20 @@ size_t ProcProto::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
         this->_internal_cosandboxinput());
+  }
+
+  // string coSandboxPath = 16;
+  if (!this->_internal_cosandboxpath().empty()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_cosandboxpath());
+  }
+
+  // string coSandboxLocalPath = 17;
+  if (!this->_internal_cosandboxlocalpath().empty()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+        this->_internal_cosandboxlocalpath());
   }
 
   // .ProcEnvProto procEnvProto = 1;
@@ -3521,6 +3612,12 @@ void ProcProto::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROT
   if (!from._internal_cosandboxinput().empty()) {
     _this->_internal_set_cosandboxinput(from._internal_cosandboxinput());
   }
+  if (!from._internal_cosandboxpath().empty()) {
+    _this->_internal_set_cosandboxpath(from._internal_cosandboxpath());
+  }
+  if (!from._internal_cosandboxlocalpath().empty()) {
+    _this->_internal_set_cosandboxlocalpath(from._internal_cosandboxlocalpath());
+  }
   if (from._internal_has_procenvproto()) {
     _this->_internal_mutable_procenvproto()->::ProcEnvProto::MergeFrom(
         from._internal_procenvproto());
@@ -3583,6 +3680,14 @@ void ProcProto::InternalSwap(ProcProto* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.cosandboxinput_, lhs_arena,
       &other->_impl_.cosandboxinput_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.cosandboxpath_, lhs_arena,
+      &other->_impl_.cosandboxpath_, rhs_arena
+  );
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
+      &_impl_.cosandboxlocalpath_, lhs_arena,
+      &other->_impl_.cosandboxlocalpath_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(ProcProto, _impl_.wasmbufmbint_)

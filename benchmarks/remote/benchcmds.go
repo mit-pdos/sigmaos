@@ -215,7 +215,8 @@ func GetBEMRMultiplexingCmdConstructor(nRealm int, sleep time.Duration, prewarmR
 			// cached UX endpoints to mount, which is on the path being
 			// measured — log it so a problem there can't be mistaken for
 			// spawn-latency noise.
-			debugSelectors string = "\"TEST;BENCH;MR_COORD;MR;SPAWN_LAT;PROCCLNT_EPCACHE;PROCCLNT_EPCACHE_ERR;CPU_MON;\""
+			//			debugSelectors string = "\"TEST;BENCH;MR_COORD;MR;SPAWN_LAT;CPU_MON;\""
+			debugSelectors string = "\"TEST;BENCH;\""
 			// CPU_PHASE_BREAKDOWN: attribute each mapper's and reducer's CPU
 			// across its phases (see perf.CPUPhases), which is how the setup
 			// cost of a fine-grained task is read against its actual work. Off

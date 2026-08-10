@@ -77,6 +77,9 @@ message WarmCacheBinReq {
   string program = 3;
   repeated string SigmaPath = 4;
   int32 procType = 5;
+  // Sigma pathname of a co-sandbox binary to fetch alongside the program.
+  // Empty warms the program only.
+  string coSandboxPath = 6;
 }
 
 message WarmCacheBinRep {

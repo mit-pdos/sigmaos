@@ -98,6 +98,18 @@ func PathBinProc() string {
 	return BINPROC
 }
 
+// PathBinContainer is where a binary chunksrv cached for a realm can be read
+// from inside uprocsrv's container: the same host directory chunksrv writes
+// through ROOTBINCACHE, mounted at ROOTBINCONTAINER.
+//
+// Distinct from PathBinProc(), which is the bind mount uprocsrv sets up for the
+// procs it runs: this one holds from the moment the fetch completes, and needs
+// no mount to have happened first, so it is what uprocsrv hands to a reader of
+// its own (spproxyd, for a co-sandbox).
+func PathBinContainer(realm sp.Trealm, prog string) string {
+	return filepath.Join(pathBinRealm(realm), prog)
+}
+
 type ckclntEntry struct {
 	mu     sync.Mutex
 	ckclnt *chunkclnt.ChunkClnt

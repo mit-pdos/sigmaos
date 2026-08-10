@@ -60,7 +60,9 @@ func (clnt *ProcClnt) RunProc(uproc *proc.Proc) (uprocErr error, childErr error)
 	}
 }
 
-func (clnt *ProcClnt) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, s3secret *sp.SecretProto, namedEP *sp.Tendpoint, path []string) (uprocErr error, childErr error) {
+// coSandboxPath is a sigma pathname to warm alongside prog, or empty to warm
+// the program only.
+func (clnt *ProcClnt) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, s3secret *sp.SecretProto, namedEP *sp.Tendpoint, path []string, coSandboxPath string) (uprocErr error, childErr error) {
 	req := &proto.WarmBinReq{
 		RealmStr:           realm.String(),
 		Program:            prog,
@@ -68,6 +70,7 @@ func (clnt *ProcClnt) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, s3sec
 		PidStr:             pid.String(),
 		S3Secret:           s3secret,
 		NamedEndpointProto: namedEP.GetProto(),
+		CoSandboxPath:      coSandboxPath,
 	}
 	res := &proto.RunRep{}
 	if err := clnt.RPC("ProcRPCSrv.WarmProcd", req, res); serr.IsErrorSession(err) {

@@ -76,7 +76,7 @@ func NewSebsStartLatencyJob(ts *test.RealmTstate, cfg *benchmarks.SebsBenchConfi
 	}
 	for _, bin := range bins {
 		db.DPrintf(db.TEST, "Prewarming kernel %v with bin %v", ji.warmSrvKID, bin)
-		err = ji.msc.WarmProcd(ji.warmSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), bin, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC)
+		err = ji.msc.WarmProcd(ji.warmSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), bin, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC, "")
 		if !assert.Nil(ts.Ts.T, err, "Err prewarming with bin %v: %v", bin, err) {
 			return ji
 		}

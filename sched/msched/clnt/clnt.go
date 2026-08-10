@@ -69,17 +69,20 @@ func (mc *MSchedClnt) Nprocs(procdir string) (int, error) {
 	return len(sts), nil
 }
 
-func (mc *MSchedClnt) WarmProcd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
+// coSandboxPath is a sigma pathname to warm alongside prog, or empty to warm
+// the program only. Build it with wasmer.CoSandboxPath.
+func (mc *MSchedClnt) WarmProcd(kernelID string, pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype, coSandboxPath string) error {
 	rpcc, err := mc.GetRPCClnt(kernelID)
 	if err != nil {
 		return err
 	}
 	req := &proto.WarmCacheBinReq{
-		PidStr:    pid.String(),
-		RealmStr:  realm.String(),
-		Program:   prog,
-		SigmaPath: path,
-		ProcType:  int32(ptype),
+		PidStr:        pid.String(),
+		RealmStr:      realm.String(),
+		Program:       prog,
+		SigmaPath:     path,
+		ProcType:      int32(ptype),
+		CoSandboxPath: coSandboxPath,
 	}
 	res := &proto.WarmCacheBinRep{}
 	if err := rpcc.RPC("MSched.WarmProcd", req, res); err != nil {

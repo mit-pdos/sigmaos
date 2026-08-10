@@ -36,6 +36,33 @@ func projectRootPath() string {
 	return filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(b)))))
 }
 
+// CoSandboxProg is the filename of a co-sandbox binary, which is also the name
+// procd hands chunksrv and therefore the key of procd's cache. upload.sh copies
+// bin/wasm wholesale to s3://<buildTag>/wasm, so the name carries no build tag
+// and the tag lives in the directory instead (CoSandboxDir).
+//
+// The consequence is that chunksrv's cache — keyed on the name alone,
+// PathBinCache(realm, prog) — cannot tell two builds of the same co-sandbox
+// apart. Harmless for a benchmark run, which boots a fresh cluster; on a
+// long-lived cluster spanning two builds, a procd would keep serving the first
+// one. Clear /tmp/sigmaos-bin/<kernelid> (or restart the kernel) if that ever
+// bites.
+func CoSandboxProg(scriptName string) string {
+	return scriptName + ".wasm"
+}
+
+// CoSandboxDir is the directory holding a build's co-sandbox binaries, which is
+// what procd passes chunksrv as the (single-element) search path.
+func CoSandboxDir(buildTag string) string {
+	return filepath.Join(sp.S3, sp.ANY, buildTag, "wasm")
+}
+
+// CoSandboxPath is the full sigma pathname of a co-sandbox binary: what goes in
+// the proc, and what ReadCoSandboxRemote reads directly.
+func CoSandboxPath(buildTag, scriptName string) string {
+	return filepath.Join(CoSandboxDir(buildTag), CoSandboxProg(scriptName))
+}
+
 func UploadCoSandboxRemote(sc *sigmaclnt.SigmaClnt, scriptName string) error {
 	pn := filepath.Join(
 		projectRootPath(),
@@ -43,7 +70,7 @@ func UploadCoSandboxRemote(sc *sigmaclnt.SigmaClnt, scriptName string) error {
 		scriptName+".wasm",
 	)
 	db.DPrintf(db.ALWAYS, "CoSandbox path: %v", pn)
-	pnRemote := filepath.Join(sp.S3, sp.ANY, sc.ProcEnv().BuildTag, "wasm", scriptName+".wasm")
+	pnRemote := CoSandboxPath(sc.ProcEnv().BuildTag, scriptName)
 	if err := sc.UploadFile(pn, pnRemote); err != nil {
 		db.DPrintf(db.ERROR, "Err upload boot script (%v -> %v): %v", pn, pnRemote, err)
 		return err
@@ -52,7 +79,7 @@ func UploadCoSandboxRemote(sc *sigmaclnt.SigmaClnt, scriptName string) error {
 }
 
 func ReadCoSandboxRemote(sc *sigmaclnt.SigmaClnt, scriptName string) ([]byte, error) {
-	pn := filepath.Join(sp.S3, sp.ANY, sc.ProcEnv().BuildTag, "wasm", scriptName+".wasm")
+	pn := CoSandboxPath(sc.ProcEnv().BuildTag, scriptName)
 	rdr, err := sc.OpenReader(pn)
 	if err != nil {
 		db.DPrintf(db.ERROR, "Err open boot script remote (%v): %v", pn, err)

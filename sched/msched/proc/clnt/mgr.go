@@ -227,7 +227,7 @@ func (pdm *ProcdMgr) RunUProc(uproc *proc.Proc) (uprocErr error, childErr error)
 	}
 }
 
-func (pdm *ProcdMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) (uprocErr error, childErr error) {
+func (pdm *ProcdMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype, coSandboxPath string) (uprocErr error, childErr error) {
 	db.DPrintf(db.PROCDMGR, "[WarmUproc %v] warm uproc %v", prog)
 	rpcc, err := pdm.lookupClnt(realm, ptype)
 	if err != nil {
@@ -238,7 +238,7 @@ func (pdm *ProcdMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path [
 		db.DPrintf(db.ERROR, "Error get realm named EP in WarmProcd: %v", err)
 		return err, nil
 	}
-	return rpcc.WarmProcd(pid, realm, prog, pdm.fsl.ProcEnv().GetSecrets()["s3"], ep, path)
+	return rpcc.WarmProcd(pid, realm, prog, pdm.fsl.ProcEnv().GetSecrets()["s3"], ep, path, coSandboxPath)
 }
 
 func (pdm *ProcdMgr) String() string {

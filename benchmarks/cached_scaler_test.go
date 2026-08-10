@@ -169,7 +169,7 @@ func NewCachedScalerJob(ts *test.RealmTstate, jobName string, cacheCfg *benchmar
 	if ji.cacheCfg.CPP {
 		binBase = "cached-srv-cpp-v"
 	}
-	err = ji.msc.WarmProcd(ji.warmCachedSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), binBase+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC)
+	err = ji.msc.WarmProcd(ji.warmCachedSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), binBase+sp.Version, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC, "")
 	if !assert.Nil(ts.Ts.T, err, "Err warming with cached-scaler bin: %v", err) {
 		return ji
 	}

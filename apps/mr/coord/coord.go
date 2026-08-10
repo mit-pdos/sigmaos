@@ -106,7 +106,12 @@ type Coord struct {
 	// Reducers are only spawned once every mapper is done, so by then this is
 	// the job's whole intermediate size — which is how the reducers' shared
 	// memory is sized.
-	mapOutBytes      atomic.Int64
+	mapOutBytes atomic.Int64
+	// The co-sandboxes the job's tasks run, as either a sigma pathname procd
+	// fetches (the usual case) or inline bytes (local builds, which have nothing
+	// uploaded to fetch). Exactly one of each pair is set. See loadCoSandboxes.
+	mrBootPath       string
+	mrReduceBootPath string
 	mrBootWASM       []byte
 	mrReduceBootWASM []byte
 	uxEPs            *procclnt.SrvEPCache
@@ -268,23 +273,27 @@ func NewCoord(args []string) (*Coord, error) {
 		return nil, fmt.Errorf("NewCoord: reduceShmemMB %v isn't int", args[19])
 	}
 
-	if c.useCosandbox {
-		// Read and precompile the mapper boot script once; every mapper
-		// proc gets the same compiled WASM with a per-bin manifest.
-		c.mrBootWASM, err = wasmer.ReadCoSandbox(c.SigmaClnt, "mr_mapper_boot")
-		if err != nil {
-			return nil, fmt.Errorf("NewCoord: ReadCoSandbox mr_mapper_boot err %v", err)
-		}
-		db.DPrintf(db.ALWAYS, "Mapper cosandbox size: %v", len(c.mrBootWASM))
+	// A co-sandbox prefetches its task's input over the get/put path and hands
+	// it over through shared memory, so it is only meaningful alongside get/put:
+	// without it the task reads its input itself and the co-sandbox has nothing
+	// to do. It also needs spproxy, which is what get/put implies and what
+	// actually runs the co-sandbox. NewMRBenchConfig rejects the combination too
+	// (benchmarks/config.go), but a coordinator can be spawned by other means,
+	// and this is where the flags are used.
+	if c.useCosandbox && !c.useGetPut {
+		return nil, fmt.Errorf("NewCoord: useCosandbox requires useGetPut")
 	}
-	if c.useCosandboxReduce {
-		// The reducer's boot script is a separate one: its gets are whole-file
-		// and each names its own kernel (see rs/wasm/mr_reducer_boot).
-		c.mrReduceBootWASM, err = wasmer.ReadCoSandbox(c.SigmaClnt, "mr_reducer_boot")
-		if err != nil {
-			return nil, fmt.Errorf("NewCoord: ReadCoSandbox mr_reducer_boot err %v", err)
-		}
-		db.DPrintf(db.ALWAYS, "Reducer cosandbox size: %v", len(c.mrReduceBootWASM))
+	if c.useCosandboxReduce && !c.useGetPutReduce {
+		return nil, fmt.Errorf("NewCoord: useCosandboxReduce requires useGetPutReduce")
+	}
+
+	// Name the boot scripts rather than carrying them: a job spawns thousands of
+	// tasks with the same co-sandbox, and inline bytes would be marshalled and
+	// sent with each of them (114KB x 10240 mappers on the granular grep job).
+	// procd fetches each one once per node through chunksrv and caches it, and
+	// spproxyd compiles it once per node. loadCoSandboxes fills these in.
+	if err := c.loadCoSandboxes(); err != nil {
+		return nil, err
 	}
 
 	// Learn the endpoints of the servers this job's procs will use, once
@@ -313,6 +322,54 @@ func NewCoord(args []string) (*Coord, error) {
 	db.DPrintf(db.ALWAYS, "Dedicated UX machines: %v", c.dedicatedUx)
 
 	return c, nil
+}
+
+// loadCoSandboxes works out how each of the job's co-sandboxes reaches its
+// tasks: by name, which is what procd caches, or by value for a local build.
+//
+// A local build has nothing in S3 to fetch — ReadCoSandbox reads bin/wasm off
+// the developer's filesystem, which no procd can see — so those runs keep
+// carrying the bytes in the proc. A cluster run names them.
+func (c *Coord) loadCoSandboxes() error {
+	local := c.ProcEnv().BuildTag == sp.LOCAL_BUILD
+	load := func(name string, pathOut *string, wasmOut *[]byte) error {
+		if !local {
+			*pathOut = wasmer.CoSandboxPath(c.ProcEnv().BuildTag, name)
+			db.DPrintf(db.ALWAYS, "Cosandbox %v: %v", name, *pathOut)
+			return nil
+		}
+		b, err := wasmer.ReadCoSandbox(c.SigmaClnt, name)
+		if err != nil {
+			return fmt.Errorf("NewCoord: ReadCoSandbox %v err %v", name, err)
+		}
+		*wasmOut = b
+		db.DPrintf(db.ALWAYS, "Cosandbox %v: %v bytes inline (local build)", name, len(b))
+		return nil
+	}
+	if c.useCosandbox {
+		if err := load("mr_mapper_boot", &c.mrBootPath, &c.mrBootWASM); err != nil {
+			return err
+		}
+	}
+	if c.useCosandboxReduce {
+		// The reducer's boot script is a separate one: its gets are whole-file
+		// and each names its own kernel (see rs/wasm/mr_reducer_boot).
+		if err := load("mr_reducer_boot", &c.mrReduceBootPath, &c.mrReduceBootWASM); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// setCoSandbox attaches the job's co-sandbox to a task, by name when there is
+// one and by value on a local build. input is the task's own manifest, which is
+// per-proc either way.
+func setCoSandbox(p *proc.Proc, pn string, wasm []byte, input []byte) {
+	if pn != "" {
+		p.SetCoSandboxPath(pn, input)
+		return
+	}
+	p.SetCoSandbox(wasm, input)
 }
 
 // rewriteForDedicatedUx points a mapper's splits and its intermediate output at
@@ -447,9 +504,14 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	// Verify with Proc.exit.pathstats: NgetNamedOK/NmntNamedOK must stay 0, and
 	// Nsession drops from 3 to 2.
 	p.GetProcEnv().LazyNamed = true
-	if c.useGetPut {
+	if c.useGetPut || c.useCosandbox {
 		// The UX/S3 proxy client RPC channels — and the delegated-RPC path
-		// in particular — are serviced by spproxy.
+		// in particular — are serviced by spproxy. So is the co-sandbox itself
+		// (procState.startCoSandboxL), which is why a cosandbox mapper needs
+		// spproxy whether or not it uses get/put: every benchmark configuration
+		// happens to set the two together, but nothing enforces it, and a
+		// cosandbox proc without spproxy would silently never run its
+		// co-sandbox.
 		p.GetProcEnv().UseSPProxy = true
 	}
 	if c.useCosandbox {
@@ -462,7 +524,7 @@ func (c *Coord) mapperProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		shmemMB := mapperShmemMB(c.binsz, len(bin), c.lineszInt, c.tailProbeSz)
 		p.SetShmemMB(shmemMB)
 		db.DPrintf(db.MR_COORD, "mapperProc %v cosandbox shmem %vMB (binsz %v nsplit %v)", p.GetPid(), shmemMB, c.binsz, len(bin))
-		p.SetCoSandbox(c.mrBootWASM, input)
+		setCoSandbox(p, c.mrBootPath, c.mrBootWASM, input)
 		p.SetRunCoSandbox(true)
 		// Deliberately no SetRunAfterCoSandbox(true): DelegatedRPC blocks
 		// until the reply for each rpcIdx materializes, so the mapper
@@ -487,9 +549,10 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 	outTarget := mr.ReduceOutTarget(c.outdir, c.job) + data.Task
 	c.stat.Nreduce.Add(1)
 	p := c.newTask(c.reducerbin, []string{strconv.Itoa(int(t.Id)), string(c.rftclnt.ServiceId()), outlink, outTarget, strconv.Itoa(c.nmaptask), strconv.FormatBool(c.useGetPutReduce), strconv.FormatBool(c.useCosandboxReduce), strconv.Itoa(c.reduceGetsConcurrency)}, c.reducerMem)
-	if c.useGetPutReduce {
+	if c.useGetPutReduce || c.useCosandboxReduce {
 		// The UX/S3 proxy client RPC channels — and the delegated-RPC path in
-		// particular — are serviced by spproxy.
+		// particular — are serviced by spproxy, as is the co-sandbox itself.
+		// See the same condition in mapperProc.
 		p.GetProcEnv().UseSPProxy = true
 	}
 	if c.useCosandboxReduce {
@@ -502,7 +565,7 @@ func (c *Coord) reducerProc(t ftclnt.Task[[]byte]) (*proc.Proc, error) {
 		shmemMB := reducerShmemMB(c.reduceShmemMB, len(data.Input), c.mapOutBytes.Load(), c.nreducetask)
 		p.SetShmemMB(shmemMB)
 		db.DPrintf(db.MR_COORD, "reducerProc %v cosandbox shmem %vMB (cfg %vMB mapOut %v nreduce %v) nshard %v", p.GetPid(), shmemMB, c.reduceShmemMB, c.mapOutBytes.Load(), c.nreducetask, len(data.Input))
-		p.SetCoSandbox(c.mrReduceBootWASM, input)
+		setCoSandbox(p, c.mrReduceBootPath, c.mrReduceBootWASM, input)
 		p.SetRunCoSandbox(true)
 		// As with mappers, deliberately no SetRunAfterCoSandbox(true):
 		// DelegatedRPC blocks until each shard's reply materializes, so the

@@ -100,6 +100,11 @@ type ProcSrv struct {
 	schedPolicySet  bool
 	procs           *syncmap.SyncMap[int, *procEntry]
 	cachedBins      *syncmap.SyncMap[string, bool]
+	// Co-sandbox binaries already fetched to this node's bin cache, by program
+	// name. A fast path, not a single-flight lock: like cachedBins, concurrent
+	// first-users each issue the fetch RPCs, and chunksrv collapses the work
+	// that actually costs anything (bins.go waitFetch).
+	cachedCoSandboxes *syncmap.SyncMap[string, bool]
 	ckclnt          *chunkclnt.ChunkClnt
 	pq              *ProcQueue
 	nRunning        atomic.Int64
@@ -123,8 +128,9 @@ func RunProcSrv(kernelId string, dialproxy bool, gvisor bool, spproxydPID sp.Tpi
 		wasmdPID:        wasmdPID,
 		realm:           sp.NO_REALM,
 		prefetchedStats: make(map[string]bool),
-		procs:           syncmap.NewSyncMap[int, *procEntry](),
-		cachedBins:      syncmap.NewSyncMap[string, bool](),
+		procs:             syncmap.NewSyncMap[int, *procEntry](),
+		cachedBins:        syncmap.NewSyncMap[string, bool](),
+		cachedCoSandboxes: syncmap.NewSyncMap[string, bool](),
 		pq:              newProcQueue(),
 		gvisor:          gvisor,
 		k8s:             true, // TODO: set from above
@@ -470,6 +476,30 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 	// Prefetch file stats
 	go ps.prefetchProcFileStat(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint())
 	uproc.FinalizeEnv(ps.pe.GetInnerContainerIP(), ps.pe.GetOuterContainerIP(), ps.pe.GetPID())
+	// spproxyd runs the co-sandbox (procState.startCoSandboxL), so a proc with
+	// one that doesn't reach SigmaOS through spproxy would never run it. Fail
+	// loudly rather than silently skipping the co-sandbox, which would show up
+	// only as a performance regression.
+	if uproc.GetRunCoSandbox() && !uproc.GetProcEnv().UseSPProxy {
+		db.DFatalf("Proc %v runs a co-sandbox but doesn't use spproxy", uproc.GetPid())
+	}
+	// Assign this uprocsrv to the realm, if not already assigned.
+	//
+	// Ahead of the co-sandbox fetch and of informing spproxy, both of which
+	// depend on it: assignToRealm mounts the realm's bin directory, which is
+	// what creates the directory chunksrv writes fetched binaries into (nothing
+	// below MkPathBinRealm creates it, and writeChunk does not MkdirAll), and
+	// the local pathname the fetch yields has to be on the proc before spproxyd
+	// is given a copy of it.
+	if err := ps.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {
+		db.DFatalf("Err assign to realm: %v", err)
+	}
+	// Fetch the co-sandbox, if this proc named one instead of carrying it
+	// inline.
+	if err := ps.fetchCoSandbox(uproc); err != nil {
+		db.DPrintf(db.ERROR, "Err fetch co-sandbox for %v: %v", uproc.GetPid(), err)
+		return err
+	}
 	// If this proc uses SPProxy, inform spproxy that there is a proc incoming so
 	// that it can pre-create the proc's sigmaclnt
 	var informedWG sync.WaitGroup
@@ -483,10 +513,6 @@ func (ps *ProcSrv) Run(ctx fs.CtxI, req proto.RunReq, res *proto.RunRep) error {
 			}
 			perf.LogSpawnLatency("ProcSrv.Run spproxy.InformIncomingProc", uproc.GetPid(), uproc.GetSpawnTime(), start)
 		}()
-	}
-	// Assign this uprocsrv to the realm, if not already assigned.
-	if err := ps.assignToRealm(uproc.GetRealm(), uproc.GetPid(), uproc.GetVersionedProgram(), uproc.GetSigmaPath(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint()); err != nil {
-		db.DFatalf("Err assign to realm: %v", err)
 	}
 	// Set this uprocsrv's Linux scheduling policy
 	if err := ps.setSchedPolicy(uproc.GetPid(), uproc.GetType()); err != nil {
@@ -644,6 +670,57 @@ func (ps *ProcSrv) downloadFullBinary(versionedProg string, pid sp.Tpid, realm s
 	return nil
 }
 
+// downloadCoSandbox fetches the co-sandbox binary named by the sigma path pn
+// into this node's bin cache, and returns the pathname it can be read from
+// inside this container. Cached, so only the first proc on a node that wants a
+// given co-sandbox pays for it.
+//
+// Mirrors downloadFullBinary: chunksrv wants a program name and a list of
+// directories to look in, so the sigma path is split into the two.
+func (ps *ProcSrv) downloadCoSandbox(pn string, pid sp.Tpid, realm sp.Trealm, s3secret *sp.SecretProto, ndEP *sp.TendpointProto) (string, error) {
+	dir, prog := filepath.Split(pn)
+	if prog == "" {
+		return "", fmt.Errorf("co-sandbox path %q names no file", pn)
+	}
+	// Strip the trailing separator Split leaves on the directory: chunksrv
+	// rejoins the two with one of its own.
+	dir = filepath.Clean(dir)
+	local := chunksrv.PathBinContainer(realm, prog)
+	if cached, ok := ps.cachedCoSandboxes.Lookup(prog); cached && ok {
+		db.DPrintf(db.PROCD, "Already cached co-sandbox %v", prog)
+		return local, nil
+	}
+	paths := []string{dir}
+	st, _, err := ps.ckclnt.GetFileStat(ps.kernelId, prog, pid, realm, s3secret, paths, ndEP)
+	if err != nil {
+		return "", fmt.Errorf("co-sandbox %v GetFileStat: %v", pn, err)
+	}
+	if _, err := ps.ckclnt.FetchBinary(ps.kernelId, prog, pid, realm, s3secret, st.Tsize(), paths, ndEP); err != nil {
+		return "", fmt.Errorf("co-sandbox %v FetchBinary: %v", pn, err)
+	}
+	ps.cachedCoSandboxes.Insert(prog, true)
+	return local, nil
+}
+
+// fetchCoSandbox resolves a proc's co-sandbox, if it named one, and records
+// where spproxyd can read it. Must run before the proc is handed to spproxyd:
+// spproxyd is given the proc proto, and this is the field it will read.
+func (ps *ProcSrv) fetchCoSandbox(uproc *proc.Proc) error {
+	pn := uproc.GetCoSandboxPath()
+	if pn == "" {
+		// No co-sandbox, or one carried inline in the proc (SetCoSandbox).
+		return nil
+	}
+	start := time.Now()
+	local, err := ps.downloadCoSandbox(pn, uproc.GetPid(), uproc.GetRealm(), uproc.GetSecrets()["s3"], uproc.GetNamedEndpoint())
+	if err != nil {
+		return err
+	}
+	uproc.SetCoSandboxLocalPath(local)
+	perf.LogSpawnLatency("ProcSrv.downloadCoSandbox", uproc.GetPid(), uproc.GetSpawnTime(), start)
+	return nil
+}
+
 func (ps *ProcRPCSrv) WarmProcd(ctx fs.CtxI, req proto.WarmBinReq, res *proto.WarmBinRep) error {
 	return ps.ps.WarmProcd(ctx, req, res)
 }
@@ -658,6 +735,16 @@ func (ps *ProcSrv) WarmProcd(ctx fs.CtxI, req proto.WarmBinReq, res *proto.WarmB
 	}
 	if err := ps.downloadFullBinary(req.Program, pid, r, req.GetS3Secret(), req.SigmaPath, req.GetNamedEndpointProto()); err != nil {
 		return err
+	}
+	// Warm the co-sandbox too, if one was named. Only the fetch: compiling it
+	// happens in spproxyd on first use, and spproxyd has no proc to attribute a
+	// warm-up compile to.
+	if pn := req.GetCoSandboxPath(); pn != "" {
+		start := time.Now()
+		if _, err := ps.downloadCoSandbox(pn, pid, r, req.GetS3Secret(), req.GetNamedEndpointProto()); err != nil {
+			return err
+		}
+		perf.LogSpawnLatency("ProcSrv.warmCoSandbox", pid, perf.TIME_NOT_SET, start)
 	}
 	res.OK = true
 	return nil

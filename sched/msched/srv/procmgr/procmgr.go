@@ -106,7 +106,7 @@ func (mgr *ProcMgr) GetProc(pid sp.Tpid) (*proc.Proc, bool) {
 	return mgr.pstate.getProc(pid)
 }
 
-func (mgr *ProcMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype) error {
+func (mgr *ProcMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []string, ptype proc.Ttype, coSandboxPath string) error {
 	start := time.Now()
 	defer func(start time.Time) {
 		db.DPrintf(db.REALM_GROW_LAT, "[%v.%v] WarmProcd latency: %v", realm, prog, time.Since(start))
@@ -117,7 +117,7 @@ func (mgr *ProcMgr) WarmProcd(pid sp.Tpid, realm sp.Trealm, prog string, path []
 		db.DPrintf(db.ERROR, "WarmStartProcd %v err %v", realm, err)
 		return err
 	}
-	if uprocErr, childErr := mgr.updm.WarmProcd(pid, realm, prog, path, ptype); childErr != nil {
+	if uprocErr, childErr := mgr.updm.WarmProcd(pid, realm, prog, path, ptype, coSandboxPath); childErr != nil {
 		return childErr
 	} else if uprocErr != nil {
 		// Unexpected error with uproc server.

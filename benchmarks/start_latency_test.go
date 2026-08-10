@@ -120,7 +120,7 @@ func NewStartLatencyJob(ts *test.RealmTstate, cfg *benchmarks.StartLatencyBenchC
 	// Warm up the warm server with the proc binaries
 	for _, bin := range bins {
 		db.DPrintf(db.TEST, "Target kernel to run prewarm with %v bin: %v", bin, ji.warmSrvKID)
-		err = ji.msc.WarmProcd(ji.warmSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), bin, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC)
+		err = ji.msc.WarmProcd(ji.warmSrvKID, ts.Ts.ProcEnv().GetPID(), ts.GetRealm(), bin, ts.Ts.ProcEnv().GetSigmaPath(), proc.T_LC, "")
 		if !assert.Nil(ts.Ts.T, err, "Err warming third msched with cossim bin: %v", err) {
 			return ji
 		}

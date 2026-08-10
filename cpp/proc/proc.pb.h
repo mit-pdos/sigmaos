@@ -1565,6 +1565,8 @@ class ProcProto final :
     kAddedBinsFieldNumber = 3,
     kEnvFieldNumber = 4,
     kCoSandboxInputFieldNumber = 6,
+    kCoSandboxPathFieldNumber = 16,
+    kCoSandboxLocalPathFieldNumber = 17,
     kProcEnvProtoFieldNumber = 1,
     kBlobFieldNumber = 5,
     kResourceResFieldNumber = 10,
@@ -1648,6 +1650,34 @@ class ProcProto final :
   const std::string& _internal_cosandboxinput() const;
   inline PROTOBUF_ALWAYS_INLINE void _internal_set_cosandboxinput(const std::string& value);
   std::string* _internal_mutable_cosandboxinput();
+  public:
+
+  // string coSandboxPath = 16;
+  void clear_cosandboxpath();
+  const std::string& cosandboxpath() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_cosandboxpath(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_cosandboxpath();
+  PROTOBUF_NODISCARD std::string* release_cosandboxpath();
+  void set_allocated_cosandboxpath(std::string* cosandboxpath);
+  private:
+  const std::string& _internal_cosandboxpath() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_cosandboxpath(const std::string& value);
+  std::string* _internal_mutable_cosandboxpath();
+  public:
+
+  // string coSandboxLocalPath = 17;
+  void clear_cosandboxlocalpath();
+  const std::string& cosandboxlocalpath() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_cosandboxlocalpath(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_cosandboxlocalpath();
+  PROTOBUF_NODISCARD std::string* release_cosandboxlocalpath();
+  void set_allocated_cosandboxlocalpath(std::string* cosandboxlocalpath);
+  private:
+  const std::string& _internal_cosandboxlocalpath() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_cosandboxlocalpath(const std::string& value);
+  std::string* _internal_mutable_cosandboxlocalpath();
   public:
 
   // .ProcEnvProto procEnvProto = 1;
@@ -1801,6 +1831,8 @@ class ProcProto final :
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING,
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::TYPE_STRING> env_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr cosandboxinput_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr cosandboxpath_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr cosandboxlocalpath_;
     ::ProcEnvProto* procenvproto_;
     ::Blob* blob_;
     ::ResourceReservationProto* resourceres_;
@@ -4287,6 +4319,106 @@ inline void ProcProto::_internal_set_wasmbufmbint(uint64_t value) {
 inline void ProcProto::set_wasmbufmbint(uint64_t value) {
   _internal_set_wasmbufmbint(value);
   // @@protoc_insertion_point(field_set:ProcProto.wasmBufMBInt)
+}
+
+// string coSandboxPath = 16;
+inline void ProcProto::clear_cosandboxpath() {
+  _impl_.cosandboxpath_.ClearToEmpty();
+}
+inline const std::string& ProcProto::cosandboxpath() const {
+  // @@protoc_insertion_point(field_get:ProcProto.coSandboxPath)
+  return _internal_cosandboxpath();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void ProcProto::set_cosandboxpath(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.cosandboxpath_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:ProcProto.coSandboxPath)
+}
+inline std::string* ProcProto::mutable_cosandboxpath() {
+  std::string* _s = _internal_mutable_cosandboxpath();
+  // @@protoc_insertion_point(field_mutable:ProcProto.coSandboxPath)
+  return _s;
+}
+inline const std::string& ProcProto::_internal_cosandboxpath() const {
+  return _impl_.cosandboxpath_.Get();
+}
+inline void ProcProto::_internal_set_cosandboxpath(const std::string& value) {
+  
+  _impl_.cosandboxpath_.Set(value, GetArenaForAllocation());
+}
+inline std::string* ProcProto::_internal_mutable_cosandboxpath() {
+  
+  return _impl_.cosandboxpath_.Mutable(GetArenaForAllocation());
+}
+inline std::string* ProcProto::release_cosandboxpath() {
+  // @@protoc_insertion_point(field_release:ProcProto.coSandboxPath)
+  return _impl_.cosandboxpath_.Release();
+}
+inline void ProcProto::set_allocated_cosandboxpath(std::string* cosandboxpath) {
+  if (cosandboxpath != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.cosandboxpath_.SetAllocated(cosandboxpath, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.cosandboxpath_.IsDefault()) {
+    _impl_.cosandboxpath_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:ProcProto.coSandboxPath)
+}
+
+// string coSandboxLocalPath = 17;
+inline void ProcProto::clear_cosandboxlocalpath() {
+  _impl_.cosandboxlocalpath_.ClearToEmpty();
+}
+inline const std::string& ProcProto::cosandboxlocalpath() const {
+  // @@protoc_insertion_point(field_get:ProcProto.coSandboxLocalPath)
+  return _internal_cosandboxlocalpath();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void ProcProto::set_cosandboxlocalpath(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.cosandboxlocalpath_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:ProcProto.coSandboxLocalPath)
+}
+inline std::string* ProcProto::mutable_cosandboxlocalpath() {
+  std::string* _s = _internal_mutable_cosandboxlocalpath();
+  // @@protoc_insertion_point(field_mutable:ProcProto.coSandboxLocalPath)
+  return _s;
+}
+inline const std::string& ProcProto::_internal_cosandboxlocalpath() const {
+  return _impl_.cosandboxlocalpath_.Get();
+}
+inline void ProcProto::_internal_set_cosandboxlocalpath(const std::string& value) {
+  
+  _impl_.cosandboxlocalpath_.Set(value, GetArenaForAllocation());
+}
+inline std::string* ProcProto::_internal_mutable_cosandboxlocalpath() {
+  
+  return _impl_.cosandboxlocalpath_.Mutable(GetArenaForAllocation());
+}
+inline std::string* ProcProto::release_cosandboxlocalpath() {
+  // @@protoc_insertion_point(field_release:ProcProto.coSandboxLocalPath)
+  return _impl_.cosandboxlocalpath_.Release();
+}
+inline void ProcProto::set_allocated_cosandboxlocalpath(std::string* cosandboxlocalpath) {
+  if (cosandboxlocalpath != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.cosandboxlocalpath_.SetAllocated(cosandboxlocalpath, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.cosandboxlocalpath_.IsDefault()) {
+    _impl_.cosandboxlocalpath_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:ProcProto.coSandboxLocalPath)
 }
 
 #ifdef __GNUC__

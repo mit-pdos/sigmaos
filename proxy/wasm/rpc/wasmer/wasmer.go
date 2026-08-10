@@ -59,8 +59,16 @@ func (wrt *WasmerRuntime) PrecompileModule(wasmBytes []byte) ([]byte, error) {
 	return compiledModule, nil
 }
 
+// RunModule runs a co-sandbox from bytes carried inline in the proc.
+//
+// Those bytes are *precompiled* — PrecompileModule output, produced by whoever
+// called ReadCoSandbox — so this deserializes and never compiles. Do not pass a
+// raw .wasm here; it would fail deserialization rather than being compiled.
+// RunModulePath is the one that takes a .wasm.
+//
+// Each call still deserializes into a store of its own, which is why a proc
+// spawned many times over should name its co-sandbox instead.
 func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, spawnTime time.Time, compiledModule []byte, inputBytes []byte, bufSz int) (wasmrpc.Tstatus, string, error) {
-	wrt.bufSz = int32(bufSz)
 	engine := wasmer.NewEngine()
 	store := wasmer.NewStore(engine)
 	module, err := wasmer.DeserializeModule(store, compiledModule)
@@ -70,6 +78,35 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, spawnTime time.Time, compiledMo
 		return wasmrpc.EXIT_ERR, sp.NOT_SET, err
 	}
 	db.DPrintf(db.WASMRT, "Deserialized compiled WASM module")
+	// Not entered into the module cache: these bytes came with one proc and are
+	// keyed by nothing. The wrapper is just to share runModule's body, and its
+	// lock is uncontended.
+	return wrt.runModule(pid, spawnTime, newCachedModule(store, module), inputBytes, bufSz)
+}
+
+// RunModulePath runs the co-sandbox binary at the local pathname pn, compiling
+// it on first use and reusing the compiled module for every later proc on this
+// node. pn is a .wasm as uploaded, not the precompiled form RunModule takes:
+// the compilation this saves is the whole point of the cache.
+func (wrt *WasmerRuntime) RunModulePath(pid sp.Tpid, spawnTime time.Time, pn string, inputBytes []byte, bufSz int) (wasmrpc.Tstatus, string, error) {
+	cm, err := loadModule(pid, pn)
+	if err != nil {
+		return wasmrpc.EXIT_ERR, sp.NOT_SET, err
+	}
+	return wrt.runModule(pid, spawnTime, cm, inputBytes, bufSz)
+}
+
+// runModule instantiates cm and runs its boot function. The import functions
+// must be created with cm's store, since wasmer requires an instance's imports
+// and module to share one.
+func (wrt *WasmerRuntime) runModule(pid sp.Tpid, spawnTime time.Time, cm *cachedModule, inputBytes []byte, bufSz int) (wasmrpc.Tstatus, string, error) {
+	wrt.bufSz = int32(bufSz)
+	store, module := cm.store, cm.module
+	// Instantiation touches the shared store, which wasmer does not promise is
+	// safe to use from several goroutines at once. Held only across the
+	// instantiation, not across the boot call, which is the long part.
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
 	var buf []byte
 	var instance *wasmer.Instance
 	var wasmBufPtr int32
@@ -91,7 +128,7 @@ func (wrt *WasmerRuntime) RunModule(pid sp.Tpid, spawnTime time.Time, compiledMo
 	)
 	start := time.Now()
 	// Instantiate the module
-	instance, err = wasmer.NewInstance(module, importObject)
+	instance, err := wasmer.NewInstance(module, importObject)
 	if err != nil {
 		db.DPrintf(db.ERROR, "[%v] Err instantiate WASM module: %v", pid, err)
 		db.DPrintf(db.WASMRT_ERR, "[%v] Err instantiate WASM module: %v", pid, err)

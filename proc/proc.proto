@@ -88,4 +88,12 @@ message ProcProto {
   uint64 measurePSSDelayMS = 13;
   uint64 cosandboxBufMBInt = 14;
   uint64 wasmBufMBInt = 15;
+  // Sigma pathname of the co-sandbox binary, for a proc whose co-sandbox procd
+  // fetches and caches rather than carrying inline in blob. Empty means the
+  // co-sandbox (if any) is in blob.
+  string coSandboxPath = 16;
+  // Where procd put the binary it fetched for coSandboxPath, in the filesystem
+  // procd and spproxyd share. Set by procd, not by the spawner: it is a local
+  // pathname, not a sigma one, and nothing upstream of procd can know it.
+  string coSandboxLocalPath = 17;
 }

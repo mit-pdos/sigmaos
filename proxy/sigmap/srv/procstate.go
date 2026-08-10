@@ -358,7 +358,17 @@ func (ps *procState) startCoSandboxL() {
 		if mb := p.GetCoSandboxBufMB(); mb > 0 {
 			bufSz = int(mb) * int(sp.MBYTE)
 		}
-		status, msg, err := wrt.RunModule(p.GetPid(), p.GetSpawnTime(), p.GetCoSandbox(), p.GetCoSandboxInput(), bufSz)
+		var status wasmrpc.Tstatus
+		var msg string
+		var err error
+		// A proc either names its co-sandbox, in which case procd fetched it and
+		// recorded where, or carries it inline. The former compiles once per
+		// node; the latter once per proc.
+		if pn := p.GetCoSandboxLocalPath(); pn != "" {
+			status, msg, err = wrt.RunModulePath(p.GetPid(), p.GetSpawnTime(), pn, p.GetCoSandboxInput(), bufSz)
+		} else {
+			status, msg, err = wrt.RunModule(p.GetPid(), p.GetSpawnTime(), p.GetCoSandbox(), p.GetCoSandboxInput(), bufSz)
+		}
 		// Mark the script as done
 		ps.coSandboxDone(status, msg, err)
 	}()

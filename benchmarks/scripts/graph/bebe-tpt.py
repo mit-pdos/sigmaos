@@ -171,6 +171,19 @@ def finalize_graph(fig, ax, plots, title, out, maxval):
   fig.align_ylabels(ax)
   fig.savefig(out, bbox_inches="tight")
 
+# Y-axis ticks for the core utilization graph, always including total_ncore.
+def get_core_yticks(total_ncore, max_ticks=7):
+  step = 16
+  while total_ncore // step > max_ticks - 1:
+    step = step * 2
+  ticks = [ nc for nc in range(0, total_ncore + 1, step) ]
+  if ticks[-1] != total_ncore:
+    # Avoid crowding the last tick label.
+    if total_ncore - ticks[-1] < step / 2:
+      ticks = ticks[:-1]
+    ticks.append(total_ncore)
+  return ticks
+
 def setup_graph(nplots, units, total_ncore):
   figsize=(6.4, 4.8)
   if nplots == 1:
@@ -195,7 +208,7 @@ def setup_graph(nplots, units, total_ncore):
 #    tptax[idx].set_ylabel(ylabels[idx])
   for ax in coresax:
     ax.set_ylim((0, total_ncore + 5))
-    ax.set_yticks([ nc for nc in [0, 16, 32, 48, 64, 80, 96] if nc <= total_ncore ])
+    ax.set_yticks(get_core_yticks(total_ncore))
     ax.set_ylabel("Cores Utilized")
   return fig, tptax, coresax
 

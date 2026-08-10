@@ -25,17 +25,40 @@ neither is given. For example:
 """
 
 import argparse
+import functools
 import glob
 import os
 import re
 import sys
+from array import array
+from concurrent.futures import ProcessPoolExecutor
 
 
-# Matches "[pid] <logtype> op:<dur> sinceSpawn:<dur>". The log type is captured
-# non-greedily so it stops at the first " op:".
-LINE_RE = re.compile(
-    r"\[(?P<pid>[^\]]+)\]\s+(?P<logtype>.*?)\s+op:(?P<op>\S+)\s+sinceSpawn:(?P<spawn>\S+)"
-)
+# Size of the blocks logs are scanned in. Scanning whole blocks (rather than
+# line by line) keeps the search loop inside the regex engine, which matters a
+# lot when the logs are gigabytes of mostly-irrelevant lines.
+CHUNK_SIZE = 8 << 20
+
+
+def line_re(program):
+    """Regex matching "[<program-pid>] <logtype> op:<dur> sinceSpawn:<dur>".
+
+    The program is baked into the pattern so non-matching pids are rejected by
+    the regex engine's literal-prefix scan instead of by Python code. The pid
+    matches the program exactly or as a "program-<suffix>" prefix. The log type
+    is captured non-greedily so it stops at the first " op:".
+
+    Every piece of the pattern is newline-free, so a match stays within a single
+    line even though whole blocks of log (not individual lines) are scanned. In
+    particular the separators must be horizontal whitespace: plain "\\s+" would
+    let a line ending in "[<pid>]" join with the " op:...sinceSpawn:..." of a
+    later line, capturing the log text in between as a bogus log type.
+    """
+    return re.compile(
+        r"\[" + re.escape(program) + r"(?:-[^\]\n]*)?\]"
+        r"[^\S\n]+(?P<logtype>[^\n]*?)"
+        r"[^\S\n]+op:(?P<op>\S+)[^\S\n]+sinceSpawn:(?P<spawn>\S+)"
+    )
 
 # Matches one (value, unit) component of a Go duration string, e.g. the "1m",
 # "2.5s" in "1m2.5s". Longer units ("ms", "ns", "µs", "us") come before the
@@ -54,10 +77,12 @@ UNIT_TO_MS = {
 }
 
 
+@functools.lru_cache(maxsize=1 << 16)
 def parse_duration_ms(s):
     """Parse a Go duration string (e.g. "1m2.5s", "234.5µs", "0s") into ms.
 
-    Returns None if no duration component is found.
+    Returns None if no duration component is found. Memoized, since the same
+    duration strings recur often across log lines.
     """
     components = DUR_COMPONENT_RE.findall(s)
     if not components:
@@ -68,13 +93,8 @@ def parse_duration_ms(s):
     return total
 
 
-def matches_program(pid, program):
-    """True if pid belongs to program: pid == program or pid starts with 'program-'."""
-    return pid == program or pid.startswith(program + "-")
-
-
-def iter_lines(files, dir_path):
-    """Yield log lines from the given files, from dir_path (recursively), or stdin."""
+def input_paths(files, dir_path):
+    """The log files to read: the given files plus dir_path scanned recursively."""
     paths = list(files)
     if dir_path:
         if not os.path.isdir(dir_path):
@@ -86,41 +106,88 @@ def iter_lines(files, dir_path):
         for path in sorted(glob.glob(os.path.join(root, "**", "*"), recursive=True)):
             if os.path.isfile(path):
                 paths.append(path)
-
-    if not paths:
-        for line in sys.stdin:
-            yield line
-        return
-
-    for path in paths:
-        try:
-            with open(path, "r", errors="replace") as f:
-                for line in f:
-                    yield line
-        except Exception as e:
-            print(f"Warning: could not read {path}: {e}", file=sys.stderr)
+    return paths
 
 
-def collect(lines, program):
+def iter_chunks(f):
+    """Yield the contents of f in newline-aligned chunks."""
+    tail = ""
+    while True:
+        buf = f.read(CHUNK_SIZE)
+        if not buf:
+            if tail:
+                yield tail
+            return
+        buf = tail + buf
+        end = buf.rfind("\n")
+        if end == -1:
+            # No newline in sight (e.g. a binary file); flush to bound memory.
+            yield buf
+            tail = ""
+            continue
+        yield buf[: end + 1]
+        tail = buf[end + 1 :]
+
+
+def collect_chunks(chunks, program, stats=None):
     """Group op/sinceSpawn durations (in ms) by log type for the given program.
 
-    Returns a dict: logtype -> {"op": [ms...], "spawn": [ms...]}.
+    Returns a dict: logtype -> {"op": array(ms...), "spawn": array(ms...)}.
     """
+    if stats is None:
+        stats = {}
+    regex = line_re(program)
+    for chunk in chunks:
+        for m in regex.finditer(chunk):
+            logtype = m.group("logtype")
+            op_ms = parse_duration_ms(m.group("op"))
+            spawn_ms = parse_duration_ms(m.group("spawn"))
+            entry = stats.get(logtype)
+            if entry is None:
+                entry = stats[logtype] = {"op": array("d"), "spawn": array("d")}
+            if op_ms is not None:
+                entry["op"].append(op_ms)
+            if spawn_ms is not None:
+                entry["spawn"].append(spawn_ms)
+    return stats
+
+
+def collect_path(args):
+    """Collect stats from a single log file. Top-level so it can be pickled."""
+    path, program = args
+    try:
+        with open(path, "r", errors="replace") as f:
+            return collect_chunks(iter_chunks(f), program)
+    except Exception as e:
+        print(f"Warning: could not read {path}: {e}", file=sys.stderr)
+        return {}
+
+
+def merge_stats(dst, src):
+    for logtype, entry in src.items():
+        into = dst.get(logtype)
+        if into is None:
+            dst[logtype] = entry
+            continue
+        into["op"].extend(entry["op"])
+        into["spawn"].extend(entry["spawn"])
+    return dst
+
+
+def collect(paths, program, jobs):
+    """Collect stats from paths (or stdin if empty), using up to jobs processes."""
+    if not paths:
+        return collect_chunks(iter_chunks(sys.stdin), program)
+    jobs = min(jobs, len(paths))
+    if jobs <= 1:
+        stats = {}
+        for path in paths:
+            merge_stats(stats, collect_path((path, program)))
+        return stats
     stats = {}
-    for line in lines:
-        m = LINE_RE.search(line)
-        if not m:
-            continue
-        if not matches_program(m.group("pid"), program):
-            continue
-        logtype = m.group("logtype")
-        op_ms = parse_duration_ms(m.group("op"))
-        spawn_ms = parse_duration_ms(m.group("spawn"))
-        entry = stats.setdefault(logtype, {"op": [], "spawn": []})
-        if op_ms is not None:
-            entry["op"].append(op_ms)
-        if spawn_ms is not None:
-            entry["spawn"].append(spawn_ms)
+    with ProcessPoolExecutor(max_workers=jobs) as pool:
+        for s in pool.map(collect_path, [(p, program) for p in paths]):
+            merge_stats(stats, s)
     return stats
 
 
@@ -185,13 +252,20 @@ def main():
         "(uses its sigmaos-node-logs subdir if present).",
     )
     parser.add_argument(
+        "--jobs",
+        "-j",
+        type=int,
+        default=os.cpu_count() or 1,
+        help="Number of processes to scan log files with (default: number of CPUs).",
+    )
+    parser.add_argument(
         "files",
         nargs="*",
         help="Log files to read. If none are given and --dir is unset, reads stdin.",
     )
     args = parser.parse_args()
 
-    stats = collect(iter_lines(args.files, args.dir_path), args.program)
+    stats = collect(input_paths(args.files, args.dir_path), args.program, args.jobs)
 
     if not stats:
         print(

@@ -35,7 +35,7 @@ SYS_NAME="${SYS_NAME:-co-sandbox}"
 SYS_NAME_CAMEL="${SYS_NAME_CAMEL:-CoSandbox}"
 
 # Figure 10
-echo "Generating MR graph (new)..."
+echo "Generating MR word count graph (new)..."
 MR_RES_DIR=$RES_OUT_DIR/mr_vs_corral
 MR_UX=$MR_RES_DIR/mr-wc-wiki10G-bench.json-warm
 MR_S3=$MR_RES_DIR/mr-wc-wiki10G-bench-s3.json-warm
@@ -62,7 +62,7 @@ $GRAPH_SCRIPTS_DIR/mr_vs_corral_warm_only.py \
 #  --s3_cosandbox_mapper_dir $MR_S3-cosandbox-mapper \
 #  --s3_cosandbox_reducer_dir $MR_S3-cosandbox-reducer \
 
-echo "Done generating MR graph (new)..."
+echo "Done generating MR word count graph (new)..."
 
 # The grep workload runs on its own dataset size (see corralApps in TestCorral
 # and mrApps in TestMR), so it gets its own graph rather than sharing the
@@ -86,6 +86,22 @@ echo "Done generating MR vs corral grep graph..."
 #$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_imgresize_rpc_multiplexing --out $GRAPH_OUT_DIR/be_imgresize_rpc_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 40 --prefix "imgresize-"
 #echo "Done generating Figure 12..."
 
+export COSANDBOXES=""
+export COSANDBOXES="_cosandboxes"
+
 echo "Generating MR+MR multiplexing graph..."
-$GRAPH_SCRIPTS_DIR/bebe-tpt.py --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000 --out $GRAPH_OUT_DIR/be_mr_multiplexing.pdf --nrealm 4 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 96 --prefix "mr-" --xmax 70000
+$GRAPH_SCRIPTS_DIR/bebe-tpt.py \
+  --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000${COSANDBOXES}_dedicatedux8 \
+  --out $GRAPH_OUT_DIR/be_mr_multiplexing.pdf --nrealm 1 --units "MB/sec" --title "Aggregate Throughput Balancing 4 Realms' BE Applications" --total_ncore 128 --prefix "mr-" --xmax 70000
 echo "Done generating MR+MR multiplexing graph..."
+
+# Where the cluster's CPU goes while the MR job above runs: needs the run to have
+# been made with CPU_MON in SIGMADEBUG, and prints the per-service breakdown it
+# graphs. --include_procs adds the workload's own CPU, to show the
+# infrastructure's share of the node rather than just its magnitude. fsuxd is
+# split between the machines the job dedicated to serving its data and the rest,
+# which is what says whether dedicating them was worth it.
+echo "Generating infrastructure CPU utilization graph..."
+$GRAPH_SCRIPTS_DIR/cpu-util.py --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000${COSANDBOXES}_dedicatedux8 --out $GRAPH_OUT_DIR/be_mr_multiplexing_cpu_util.pdf --title "Infrastructure CPU Utilization" --xmax 70
+$GRAPH_SCRIPTS_DIR/cpu-util.py --measurement_dir $RES_OUT_DIR/be_mr_multiplexing_mem3000${COSANDBOXES}_dedicatedux8 --out $GRAPH_OUT_DIR/be_mr_multiplexing_cpu_util_all.pdf --title "Cluster CPU Utilization" --include_procs --xmax 70
+echo "Done generating infrastructure CPU utilization graph..."

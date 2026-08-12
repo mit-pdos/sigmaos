@@ -2,10 +2,10 @@
 
 This tutorial helps you writing applications with SigmaOS by making you
 familiar with its main APIs.  Applications (user procs) using SigmaOS live in
-`cmd/user`.  The root directory contains the support packages for the major
-applications: `mr` (a MapReduce Library), `hotel` and `socialnetwork` (two
-microservices based on DeathStarBench), `imgresized` (an image resizing
-service), and `kv` (a sharded key-value service).  The exercises below will
+`cmd/user`.  The `apps` directory contains the support packages for the major
+applications: `apps/mr` (a MapReduce Library), `apps/hotel` and
+`apps/socialnetwork` (two microservices based on DeathStarBench), and
+`apps/imgresize` (an image resizing service).  The exercises below will
 help you get familiar with the SigmaOS APIs; the last one, exercise 4, puts the
 earlier exercises together into a simple application.
 
@@ -15,19 +15,20 @@ This section describes the SigmaOS client-side interface and the libraries that
 implement it. The following list of libraries is not exhaustive (many of them
 call into other libraries), but most SigmaOS clients and `procs` will use only
 a subset of these libraries:
-  - `fslib`: This is the main library that all clients use to interact in
+  - `sigmaclnt/fslib`: This is the main library that all clients use to interact in
     SigmaOS. It defines common file-system operations (like `Open`, `Write`,
     `Read`, `Close`).
-  - `procclnt`: This library designs and implements the `proc` API. `proc`s,
-    benchmarks, and tests use the `procclnt` API to `Spawn`, `Evict`, and
+  - `sigmaclnt/procclnt`: This library designs and implements the `proc` API. `proc`s,
+    benchmarks, and tests use the `sigmaclnt/procclnt` API to `Spawn`, `Evict`, and
     `Wait` for `proc`s.
   - `sigmaclnt`: This library unifies the `fslib` and `procclnt` structures
     into a single interface. It is mostly for convenience.
-  - `semclnt`: This library defines the SigmaOS equivalent of semaphores.
-  - `leaderclnt`: This library uses `electclnt` to implement leader
+  - `util/coordination/semaphore`: This library defines the SigmaOS equivalent
+    of semaphores.
+  - `ft/leaderclnt`: This library uses `ft/leaderclnt/electclnt` to implement leader
     election, and fence directories and services with the leader's
     epoch.
-  - `rpcclnt`: This library implements general-purpose RPCs on top of
+  - `rpc/clnt`: This library implements general-purpose RPCs on top of
     SigmaOS.
 
 ## Server-side libraries
@@ -50,7 +51,8 @@ be useful when implementing additional clients and servers:
     and `procs` in SigmaOS use to communicate. It is loosely based on the 9P
     protocol, with some additions for fault-tolerance (such as `Watch`es) and
     performance (such as `Put`, `Get`, and `WriteRead`).
-  - `sessp`: This library defines messages for the session layer of SigmaOS.
+  - `session/proto`: This library defines messages for the session layer of
+    SigmaOS.
 
 ### Exercise 1: Create, write, and read files in named
 
@@ -96,7 +98,8 @@ $ ./stop.sh; go test -v sigmaos/example --start --run Named
 ```
 
 Now extend `TestExerciseNamed` to implement the exercise.
-`fslib/fslib_test.go` and `fslib/file.go` may provide inspiration.
+`sigmaclnt/fslib/fslib_test.go` and `sigmaclnt/fslib/file.go` may provide
+inspiration.
 (If you are unfamiliar with Golang, check the out [Go
 tutorial](https://go.dev/doc/tutorial/getting-started).
 
@@ -136,7 +139,7 @@ and `scanner.Split(bufio.ScanWords)` may be helpful.
 
 ### Exercise 3: Spawn a `proc`
 
-In this exercise, you will familiarize yourself with the `procclnt` API.  The
+In this exercise, you will familiarize yourself with the `sigmaclnt/procclnt` API.  The
 function `TestExerciseProc` spawns the example proc from `cmd/user/example/`.
 The test function runs this proc using `Spawn`, which queues the proc for
 execution. The test function waits until the proc starts, and then waits until
@@ -251,15 +254,15 @@ list, refer to the debbug package's [list of selectors](../debug/selector.go).
 
 ### Exercise 5: Run and extend an RPC server. 
 
-In this exercise, you will familiarize with SigmaOS RPC, specifically `rpcclnt`
+In this exercise, you will familiarize with SigmaOS RPC, specifically `rpc/clnt`
 and `sigmasrv` by running a simple RPC server that echo its input:
-  - [ ] Navigate to the `example_echo_server` directory. Check the files and
+  - [ ] Navigate to the `example/example_echo_server` directory. Check the files and
     try running the test cases. If you have already built SigmaOS through
-    `build.sh`, you may run `go test sigmaos/example_echo_server -v --start`.
+    `build.sh`, you may run `go test sigmaos/example/example_echo_server -v --start`.
     Overall, the test case starts an instance of the Echo server, then starts a
     client sending request to the server. By default, all operations are local. 
   - [ ] To see the logs, source the environment variable file
-    `example_echo_server/echo_env.sh` before running test, and run `logs.sh`
+    `example/example_echo_server/echo_env.sh` before running test, and run `logs.sh`
     afterwards. You may modify the content of the environment variable file to
     turn on/off logging for different modules.  After finishing test and
     logging, you may run `stop.sh` to clear up.
@@ -274,19 +277,20 @@ You can use `echo_env.sh` to set SIGMADEBUG.
 ### Optional exercises for RPC server
   - [ ] Try to modify the echo server so that it caches results by connecting
     to some caching client. Existing caching implementations can be found at
-    `cacheclnt`, `memcached`, and `kv`. Example usage can be found at `hotel`
-    and `socialnetwork`, which are two major example applications built on top
-    of SigmaOS.
+    `apps/cache/clnt` and `apps/memcached`. Example usage can be found at
+    `apps/hotel` and `apps/socialnetwork`, which are two major example
+    applications built on top of SigmaOS.
   - [ ] Try to modify the echo server so that it reads and writes to a database
     by connecting to a database proxy. Existing implementations can be found at
-    `dbd` and `dbclnt`.  
-  - [ ] Try to profile the echo server through `perf` package, described below.
+    `cmd/kernel/dbd`.  
+  - [ ] Try to profile the echo server through `util/perf` package, described
+    below.
 
 ## Performance debugging
 
 We have developed a variety of performance measurement tools for SigmaOS, built
 on Golang's performance monitoring infrastructure. The performance measurement
-tools are defined and implemented in the [perf](../perf/util.go) package.
+tools are defined and implemented in the [perf](../util/perf/util.go) package.
 Currently, the `perf.Perf` struct can be used to collect CPU, memory, mutex, or
 blocking profiles from the `go` runtime. The resulting traces are compatible
 with the go pprof tool. The Golang documentation has good writeups and docs
@@ -304,7 +308,7 @@ particularly useful:
 
 Similarly to the `debug` package, output from the `perf` package is controlled
 through an environment variable `SIGMAPERF`. The full list of `perf` selectors
-is available [here](../perf/selector.go). For example, in order to collect
+is available [here](../util/perf/selector.go). For example, in order to collect
 a CPU pprof trace and a mutex trace for `named`, set:
 
 ```

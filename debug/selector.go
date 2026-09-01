@@ -417,3 +417,9 @@ const (
 	SIM_RAW_UTIL     Tselector = "SIM_RAW_UTIL"
 	SIM_AUTOSCALE    Tselector = "SIM_AUTOSCALE"
 )
+
+// PageRank
+
+const (
+	PAGERANK Tselector = "PAGERANK"
+)
